@@ -58,7 +58,7 @@ jobs:
 
     steps:
       - name: Checkout ZeroWrt
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
@@ -119,11 +119,17 @@ jobs:
             --tree "$LEDE_DIR" \
             --device "$ZEROWRT_DEVICE"
 
+      - name: Bind ccache directory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/.ccache" /builder/ccache
+          sudo mount --bind /builder/ccache "$GITHUB_WORKSPACE/.ccache"
+          sudo chown -R "$(id -u):$(id -g)" /builder/ccache "$GITHUB_WORKSPACE/.ccache"
+
       - name: Restore ccache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
-          path: /builder/ccache
-          key: zerowrt-ccache-${{ runner.os }}-${{ env.ZEROWRT_DEVICE }}-${{ env.ZEROWRT_REF }}-v1
+          path: .ccache
+          key: zerowrt-ccache-${{ runner.os }}-${{ env.ZEROWRT_DEVICE }}-${{ env.ZEROWRT_REF }}-v2
 
       - name: Prepare ccache
         run: |
@@ -162,7 +168,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload firmware
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ZeroWrt-${{ github.run_number }}
           path: dist/*
@@ -195,7 +201,7 @@ jobs:
 
       - name: Upload build logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ZeroWrt-logs-${{ github.run_number }}
           path: dist/*-tail.log

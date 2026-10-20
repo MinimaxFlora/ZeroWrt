@@ -16,3 +16,6 @@ __pycache__/
 
 # Local logs
 *.log
+
+# ccache dir created for CI cache bind mount
+.ccache/

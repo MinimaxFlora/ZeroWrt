@@ -172,6 +172,8 @@ def _render_config(target: dict, packages: list[str]) -> str:
     lines.extend(f"{package}=y" for package in sorted(packages))
     lines.extend(
         [
+            # CCACHE is only visible when DEVEL is enabled.
+            "CONFIG_DEVEL=y",
             "CONFIG_CCACHE=y",
             'CONFIG_CCACHE_DIR="/builder/ccache"',
             # PassWall: keep Xray only, drop the large sing-box core.
@@ -207,6 +209,7 @@ def generate(tree: Path, device: str) -> dict:
         profile = f"CONFIG_TARGET_{target['board']}_{target['subtarget']}_DEVICE_{target['name']}=y"
     required = [
         profile,
+        "CONFIG_CCACHE=y",
         "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y",
         "CONFIG_PACKAGE_xray-core=y",
         *[f"{package}=y" for package in packages],

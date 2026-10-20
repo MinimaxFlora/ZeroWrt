@@ -191,10 +191,15 @@ Argon `master` 内置设置界面时，脚本会自动从 `.config` 中去掉 `l
 
 现在改为安全的 ccache：
 
-- `.config` 写入 `CONFIG_CCACHE=y`、`CONFIG_CCACHE_DIR="/builder/ccache"`
-- 工作流缓存 `/builder/ccache`，key：`zerowrt-ccache-<os>-<device>-<ref>-v1`
+- `.config` 写入 `CONFIG_DEVEL=y`、`CONFIG_CCACHE=y`、`CONFIG_CCACHE_DIR="/builder/ccache"`（`CCACHE` 只有在 `DEVEL` 开启时才不会被 `defconfig` 丢弃）
+- `actions/cache` 只归档 workspace 内的路径，所以先把 `/builder/ccache` bind mount 到 `$GITHUB_WORKSPACE/.ccache`，再缓存 `.ccache`
+- key：`zerowrt-ccache-<os>-<device>-<ref>-v2`
 - 不缓存 `staging_dir`/`build_dir`，不会破坏 make 状态
 - 首次构建仍需完整编译，后续构建复用编译对象
+
+之前缓存只有 295 字节，是因为直接写 `/builder/ccache` 时 `actions/cache` 实际在 workspace 下找路径，归档成了空目录；bind mount 后才是真实内容。
+
+工作流 action 也已升级到 Node 24 版本：`actions/checkout@v6`、`actions/cache@v5`、`actions/upload-artifact@v6`、`actions/setup-python@v6`。
 
 `ccache` 只加速重复编译，不改变工具链逻辑，构建稳定性优先。
 

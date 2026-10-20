@@ -249,6 +249,8 @@ class ConfigRenderTest(unittest.TestCase):
         self.assertNotIn("=y=y", text)
         self.assertNotIn("luci-compat", text)
         self.assertNotIn("CONFIG_VERSION_DIST", text)
+        self.assertIn("CONFIG_DEVEL=y", text)
+        self.assertIn("CONFIG_CCACHE=y", text)
         self.assertIn("CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y", text)
         self.assertIn("# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox is not set", text)
         self.assertIn("# CONFIG_PACKAGE_sing-box is not set", text)

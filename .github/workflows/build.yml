@@ -2,11 +2,34 @@ name: Build ZeroWrt
 
 on:
   workflow_dispatch:
+    inputs:
+      ip:
+        description: "LAN IP (management address), e.g. 10.0.0.1"
+        required: true
+        type: string
+        default: "10.0.0.1"
+      wifi_name:
+        description: "WiFi name prefix; -2.4G / -5G / -6G is appended automatically"
+        required: true
+        type: string
+        default: "ZeroWrt"
+      wifi_password:
+        description: "WiFi password: 8-63 chars, letters/digits/!@#$%^&*()_+.:=?- only"
+        required: true
+        type: string
+        default: "ZeroWrt123"
+      device:
+        description: "Device profile"
+        required: true
+        type: choice
+        default: "ruijie_rg-x60"
+        options:
+          - ruijie_rg-x60
+
   push:
     branches: [main]
     paths:
       - "scripts/**"
-      - "configs/**"
       - "assets/**"
       - ".github/workflows/**"
 
@@ -39,20 +62,19 @@ jobs:
           python3 --version
           uname -a
 
-      # Mirrors sbwml/actions@free-disk: remove preinstalled toolchains,
-      # create swap and join the root disk with /mnt through LVM.
-      - name: Free disk space and merge disks
+      # Fast path: large runners already have enough space, so nothing is
+      # deleted or merged. Small runners are cleaned up and merged with LVM.
+      - name: Prepare build space
         run: |
           python3 scripts/zerowrt.py system free-disk \
             --build-dir "$BUILD_ROOT" \
             --swap-gb 4 \
-            --reserve-gb 6
+            --reserve-gb 6 \
+            --min-free-gb 50
 
-      # Mirrors sbwml/actions@openwrt-build-setup.
       - name: Install build dependencies
         run: python3 scripts/zerowrt.py system install-deps
 
-      # Mirrors sbwml/actions@install-llvm.
       - name: Install LLVM
         run: python3 scripts/zerowrt.py system install-llvm
 
@@ -70,7 +92,15 @@ jobs:
         run: python3 scripts/zerowrt.py source feeds --tree "$LEDE_DIR"
 
       - name: Apply core customisations
-        run: python3 scripts/zerowrt.py source customize --tree "$LEDE_DIR"
+        env:
+          ZEROWRT_IP: ${{ github.event.inputs.ip || '10.0.0.1' }}
+          ZEROWRT_WIFI_NAME: ${{ github.event.inputs.wifi_name || 'ZeroWrt' }}
+          ZEROWRT_WIFI_PASSWORD: ${{ github.event.inputs.wifi_password || 'ZeroWrt123' }}
+        run: |
+          python3 scripts/zerowrt.py source customize \
+            --tree "$LEDE_DIR" \
+            --ip "$ZEROWRT_IP" \
+            --wifi-name "$ZEROWRT_WIFI_NAME"
 
       - name: Add external packages and branding
         run: |
@@ -79,7 +109,12 @@ jobs:
             --assets "$GITHUB_WORKSPACE/assets"
 
       - name: Generate .config
-        run: python3 scripts/zerowrt.py config generate --tree "$LEDE_DIR"
+        env:
+          ZEROWRT_DEVICE: ${{ github.event.inputs.device || 'ruijie_rg-x60' }}
+        run: |
+          python3 scripts/zerowrt.py config generate \
+            --tree "$LEDE_DIR" \
+            --device "$ZEROWRT_DEVICE"
 
       - name: Download source archives
         env:

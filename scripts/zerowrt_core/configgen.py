@@ -1,27 +1,26 @@
-"""Generate the OpenWrt ``.config`` for the ZeroWrt firmware.
+"""Generate the OpenWrt ``.config`` for the selected ZeroWrt device.
 
-The target is read from ``configs/zerowrt.config``. If no target is pinned
-there, it is detected from the LEDE source tree (the private branch already
-carries the Ruijie RG-X60 support).
+The device profile is supplied by the workflow (``--device``) and looked up in
+the LEDE tree. Package selections live here, in one place, instead of a
+separate config file.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import re
 from pathlib import Path
 
 from . import util
 
-DEVICE_PATTERN = re.compile(r"rg[-_]?x60", re.I)
-
-DEFAULT_PACKAGES = [
-    "CONFIG_PACKAGE_luci-theme-argon=y",
-    "CONFIG_PACKAGE_luci-app-argon-config=y",
-    "CONFIG_PACKAGE_luci-app-passwall=y",
-    "CONFIG_PACKAGE_luci-app-openclash=y",
-    "CONFIG_PACKAGE_luci-app-ssr-plus=y",
+# Packages added to the image. Dependencies (luci-compat, lyaml, ...) are
+# resolved by OpenWrt itself and must not be listed here.
+PACKAGES = [
+    "CONFIG_PACKAGE_luci-theme-argon",
+    "CONFIG_PACKAGE_luci-app-argon-config",
+    "CONFIG_PACKAGE_luci-app-passwall",
+    "CONFIG_PACKAGE_luci-app-openclash",
+    "CONFIG_PACKAGE_luci-app-ssr-plus",
 ]
 
 
@@ -33,25 +32,8 @@ def _board_subtargets(board_dir: Path) -> list[str]:
         if match:
             subtargets = match.group(1).split()
     if not subtargets:
-        subtargets = [p.name for p in board_dir.iterdir() if p.is_dir() and (p / "target.mk").exists()]
+        subtargets = [path.name for path in board_dir.iterdir() if path.is_dir() and (path / "target.mk").exists()]
     return subtargets
-
-
-def _device_blocks(image_mk: Path):
-    text = util.read_text(image_mk)
-    for match in re.finditer(r"^define\s+Device/(\S+)\s*$", text, re.M):
-        end = text.find("\nendef", match.end())
-        block = text[match.end() : end if end != -1 else len(text)]
-        model = re.search(r"^\s*DEVICE_MODEL\s*:?=\s*(.+?)\s*$", block, re.M)
-        dts = re.search(r"^\s*DEVICE_DTS\s*:?=\s*(.+?)\s*$", block, re.M)
-        vendor = re.search(r"^\s*DEVICE_VENDOR\s*:?=\s*(.+?)\s*$", block, re.M)
-        yield {
-            "name": match.group(1).strip(),
-            "model": (model.group(1).strip() if model else ""),
-            "dts": (dts.group(1).strip() if dts else ""),
-            "vendor": (vendor.group(1).strip() if vendor else ""),
-            "block": block,
-        }
 
 
 def _image_makefiles(board_dir: Path):
@@ -64,183 +46,111 @@ def _image_makefiles(board_dir: Path):
             yield path
 
 
-def detect_device(tree: Path, hint: str | None = None) -> dict:
-    """Find the RG-X60 device definition in target/linux."""
+def _device_blocks(image_mk: Path):
+    text = util.read_text(image_mk)
+    for match in re.finditer(r"^define\s+Device/(\S+)\s*$", text, re.M):
+        end = text.find("\nendef", match.end())
+        block = text[match.end() : end if end != -1 else len(text)]
+        model = re.search(r"^\s*DEVICE_MODEL\s*:?=\s*(.+?)\s*$", block, re.M)
+        dts = re.search(r"^\s*DEVICE_DTS\s*:?=\s*(.+?)\s*$", block, re.M)
+        vendor = re.search(r"^\s*DEVICE_VENDOR\s*:?=\s*(.+?)\s*$", block, re.M)
+        yield {
+            "name": match.group(1).strip(),
+            "model": model.group(1).strip() if model else "",
+            "dts": dts.group(1).strip() if dts else "",
+            "vendor": vendor.group(1).strip() if vendor else "",
+        }
+
+
+def _resolve_subtarget(board_dir: Path, image_mk: Path, subtargets: list[str]) -> str | None:
+    if image_mk.parent.name != "image":
+        return None
+    owner = image_mk.parent.parent
+    if owner == board_dir:
+        stem = image_mk.stem
+        if stem in subtargets:
+            return stem
+        return subtargets[0] if len(subtargets) == 1 else None
+    return owner.name if owner.name in subtargets else None
+
+
+def _all_devices(tree: Path) -> list[str]:
+    names: list[str] = []
+    linux = Path(tree) / "target" / "linux"
+    for board_dir in sorted(path for path in linux.iterdir() if path.is_dir()):
+        for image_mk in _image_makefiles(board_dir):
+            names.extend(device["name"] for device in _device_blocks(image_mk))
+    return sorted(set(names))
+
+
+def find_device(tree: Path, name: str) -> dict:
+    """Return target information for a device profile name."""
     tree = Path(tree)
     linux = tree / "target" / "linux"
     if not linux.exists():
         raise util.BuildError(f"no target/linux directory in {tree}")
 
-    candidates: list[dict] = []
-    for board_dir in sorted(p for p in linux.iterdir() if p.is_dir()):
+    normalized = name.replace("-", "_").lower()
+    for board_dir in sorted(path for path in linux.iterdir() if path.is_dir()):
         subtargets = _board_subtargets(board_dir)
         for image_mk in _image_makefiles(board_dir):
-            parent = image_mk.parent
-            if parent.name != "image":
-                continue
-            owner = parent.parent
-            if owner == board_dir:
-                stem = image_mk.stem
-                subtarget = stem if stem in subtargets else (subtargets[0] if len(subtargets) == 1 else None)
-            else:
-                subtarget = owner.name
-            if not subtarget or subtarget not in subtargets:
+            subtarget = _resolve_subtarget(board_dir, image_mk, subtargets)
+            if not subtarget:
                 continue
             for device in _device_blocks(image_mk):
-                haystack = f"{device['name']} {device['model']} {device['dts']} {device['vendor']}"
-                if not DEVICE_PATTERN.search(haystack):
+                if device["name"].replace("-", "_").lower() != normalized:
                     continue
-                device.update(
-                    board=board_dir.name,
-                    subtarget=subtarget,
-                    source=str(image_mk.relative_to(tree)),
-                )
-                candidates.append(device)
+                return {
+                    "board": board_dir.name,
+                    "subtarget": subtarget,
+                    "name": device["name"],
+                    "model": device["model"],
+                    "vendor": device["vendor"],
+                    "source": str(image_mk.relative_to(tree)),
+                }
 
+    candidates = [item for item in _all_devices(tree) if "rg-x60" in item.lower()]
     if not candidates:
-        available = _ruijie_devices(tree)
-        message = (
-            "could not find a Ruijie RG-X60 device in the LEDE tree.\n"
-            "Pin the target explicitly in configs/zerowrt.config, for example:\n"
-            "  CONFIG_TARGET_mediatek=y\n"
-            "  CONFIG_TARGET_mediatek_filogic=y\n"
-            "  CONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60-pro=y"
-        )
-        if available:
-            message += "\nDevices mentioning 'ruijie': " + ", ".join(sorted(available))
-        raise util.BuildError(message)
-
-    hint_key = (hint or "").strip().lower()
-    hint_norm = re.sub(r"[-_]", "", hint_key)
-
-    def score(device: dict) -> tuple:
-        name = device["name"].lower()
-        name_norm = re.sub(r"[-_]", "", name)
-        value = 0
-        if hint_norm:
-            if hint_norm == name_norm:
-                value += 1000
-            elif hint_norm in name_norm:
-                value += 100
-        if re.search(r"rg[-_]?x60$", name):
-            value += 40
-        if "pro" not in name:
-            value += 20
-        if "pro" not in hint_key and "pro" in name:
-            value -= 15
-        return (value, -len(name))
-
-    candidates.sort(key=score, reverse=True)
-    best = candidates[0]
-    util.log(
-        f"detected device {best['name']} ({best['vendor']} {best['model']}) "
-        f"on {best['board']}/{best['subtarget']} via {best['source']}"
+        candidates = _all_devices(tree)[:40]
+    raise util.BuildError(
+        f"device profile {name!r} was not found in {tree}/target/linux.\nAvailable devices: " + ", ".join(candidates)
     )
-    if len(candidates) > 1:
-        util.log("other matching devices: " + ", ".join(sorted(c["name"] for c in candidates[1:])))
-    return best
 
 
-def _ruijie_devices(tree: Path) -> list[str]:
-    names: list[str] = []
-    for image_mk in (Path(tree) / "target" / "linux").glob("**/image/*.mk"):
-        for device in _device_blocks(image_mk):
-            if "ruijie" in f"{device['name']} {device['vendor']} {device['model']}".lower():
-                names.append(device["name"])
-    return names
-
-
-def parse_overrides(path: Path | None) -> dict[str, str]:
-    """Read ``KEY=VALUE`` lines from configs/zerowrt.config."""
-    values: dict[str, str] = {}
-    if not path or not Path(path).exists():
-        return values
-    for raw in util.read_text(Path(path)).splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        if "=" not in line or not line.startswith("CONFIG_"):
-            util.warn(f"ignoring unsupported config line: {raw}")
-            continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip()
-    return values
-
-
-def _target_from_overrides(overrides: dict[str, str]) -> dict | None:
-    for key in overrides:
-        match = re.fullmatch(r"CONFIG_TARGET_([a-zA-Z0-9_]+?)_([a-zA-Z0-9_]+)_DEVICE_(\S+)", key)
-        if match and overrides[key] == "y":
-            return {
-                "board": match.group(1),
-                "subtarget": match.group(2),
-                "name": match.group(3),
-                "model": "",
-                "vendor": "",
-                "source": "configs/zerowrt.config",
-            }
-    return None
-
-
-def _render_config(target: dict, overrides: dict[str, str]) -> str:
-    values: dict[str, str] = {}
-    values[f"CONFIG_TARGET_{target['board']}"] = "y"
-    values[f"CONFIG_TARGET_{target['board']}_{target['subtarget']}"] = "y"
-    values[f"CONFIG_TARGET_{target['board']}_{target['subtarget']}_DEVICE_{target['name']}"] = "y"
-
-    if not overrides:
-        for line in DEFAULT_PACKAGES:
-            key, value = line.split("=", 1)
-            values[key] = value
-
-    for key, value in overrides.items():
-        if key.startswith("CONFIG_TARGET_"):
-            continue
-        values[key] = value
-
-    lines = ["# Generated by ZeroWrt - do not edit, use configs/zerowrt.config"]
-    target_lines = [key for key in values if key.startswith("CONFIG_TARGET_")]
-    other_lines = [key for key in values if not key.startswith("CONFIG_TARGET_")]
-    for key in sorted(target_lines):
-        lines.append(f"{key}={values[key]}")
-    for key in sorted(other_lines):
-        lines.append(f"{key}={values[key]}")
+def _render_config(target: dict) -> str:
+    lines = ["# Generated by ZeroWrt - do not edit"]
+    prefix = f"CONFIG_TARGET_{target['board']}_{target['subtarget']}_DEVICE_{target['name']}"
+    lines.extend(
+        [
+            f"CONFIG_TARGET_{target['board']}=y",
+            f"CONFIG_TARGET_{target['board']}_{target['subtarget']}=y",
+            f"{prefix}=y",
+        ]
+    )
+    lines.extend(f"{package}=y" for package in sorted(PACKAGES))
     return "\n".join(lines) + "\n"
 
 
-def generate(tree: Path, config_file: Path | None, *, device: str | None = None) -> dict:
+def generate(tree: Path, device: str) -> dict:
     tree = Path(tree)
-    overrides = parse_overrides(config_file)
+    target = find_device(tree, device)
+    util.log(
+        f"device {target['name']} ({target['vendor']} {target['model']}) on {target['board']}/{target['subtarget']}"
+    )
 
-    target = _target_from_overrides(overrides)
-    if target:
-        util.log(
-            f"using target from {config_file}: "
-            f"{target['board']}/{target['subtarget']} device {target['name']}"
-        )
-    else:
-        target = detect_device(tree, hint=device or os.environ.get("DEVICE_PROFILE"))
-
-    config_text = _render_config(target, overrides)
-    write_config = tree / ".config"
-    util.write_text(write_config, config_text)
-    util.log(f"wrote {write_config}")
+    config_path = tree / ".config"
+    util.write_text(config_path, _render_config(target))
+    util.log(f"wrote {config_path}")
 
     util.header("Resolving configuration (make defconfig)")
     log_path = tree / "defconfig.log"
     util.run(["make", "defconfig"], cwd=tree, log_path=log_path, check=True)
 
-    resolved = util.read_text(write_config)
+    resolved = util.read_text(config_path)
     required = [
         f"CONFIG_TARGET_{target['board']}_{target['subtarget']}_DEVICE_{target['name']}=y",
-        "CONFIG_PACKAGE_luci-theme-argon=y",
-        "CONFIG_PACKAGE_luci-app-passwall=y",
-        "CONFIG_PACKAGE_luci-app-openclash=y",
-        "CONFIG_PACKAGE_luci-app-ssr-plus=y",
+        *[f"{package}=y" for package in PACKAGES],
     ]
-    if (tree / "package" / "new" / "luci-app-argon-config").exists():
-        required.append("CONFIG_PACKAGE_luci-app-argon-config=y")
-
     missing = [item for item in required if item not in resolved]
     if missing:
         tail = "\n".join(util.read_text(log_path).splitlines()[-40:])
@@ -255,17 +165,15 @@ def generate(tree: Path, config_file: Path | None, *, device: str | None = None)
         "board": target["board"],
         "subtarget": target["subtarget"],
         "device": target["name"],
-        "device_model": target.get("model", ""),
-        "device_vendor": target.get("vendor", ""),
+        "device_model": target["model"],
+        "device_vendor": target["vendor"],
     }
     version = re.search(r'^CONFIG_VERSION_NUMBER="?([^"\n]+)"?$', resolved, re.M)
     info["version"] = version.group(1) if version else ""
 
-    info_path = tree / ".zerowrt-info.json"
-    util.write_text(info_path, json.dumps(info, indent=2) + "\n")
+    util.write_text(tree / ".zerowrt-info.json", json.dumps(info, indent=2) + "\n")
     util.log(
-        f"configuration ready: {info['board']}/{info['subtarget']} "
-        f"device={info['device']} version={info['version']}"
+        f"configuration ready: {info['board']}/{info['subtarget']} device={info['device']} version={info['version']}"
     )
     return info
 

@@ -15,6 +15,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+from contextlib import ExitStack
 from pathlib import Path
 
 
@@ -133,11 +134,11 @@ def run(
             raise BuildError(f"command failed ({proc.returncode}): {shown}\n{output[-4000:]}")
         return proc.returncode, output
 
-    log_file = None
-    try:
+    with ExitStack() as stack:
+        log_file = None
         if log_path:
             Path(log_path).parent.mkdir(parents=True, exist_ok=True)
-            log_file = open(log_path, "a", encoding="utf-8", errors="replace")
+            log_file = stack.enter_context(open(log_path, "a", encoding="utf-8", errors="replace"))
 
         proc = subprocess.Popen(
             cmd,
@@ -158,9 +159,6 @@ def run(
             if log_file is not None:
                 log_file.write(line)
         code = proc.wait(timeout=timeout)
-    finally:
-        if log_file is not None:
-            log_file.close()
 
     if check and code != 0:
         raise BuildError(f"command failed ({code}): {shown}")
@@ -275,4 +273,4 @@ def clone(
 
 
 def human_gib(num_bytes: int) -> str:
-    return f"{num_bytes / (1024 ** 3):.1f} GiB"
+    return f"{num_bytes / (1024**3):.1f} GiB"

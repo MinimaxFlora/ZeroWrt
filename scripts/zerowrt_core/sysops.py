@@ -87,6 +87,44 @@ def _device(path: str) -> str:
     return util.sudo_output(["df", "-P", path]).splitlines()[-1].split()[0]
 
 
+GIB = 1024**3
+
+
+def _available_gb(path: str) -> float:
+    try:
+        return _df_field(path, 3) / GIB
+    except util.BuildError:
+        return 0.0
+
+
+def _swap_total_gb() -> float:
+    meminfo = Path("/proc/meminfo")
+    if not meminfo.exists():
+        return 0.0
+    for line in util.read_text(meminfo).splitlines():
+        if line.startswith("SwapTotal:"):
+            try:
+                return int(line.split()[1]) / (1024**2)
+            except (IndexError, ValueError):
+                return 0.0
+    return 0.0
+
+
+def _mnt_is_separate() -> bool:
+    if not Path("/mnt").is_dir():
+        return False
+    try:
+        return _device("/mnt") != _device("/")
+    except util.BuildError:
+        return False
+
+
+def _prepare_build_dir(build_dir: Path) -> None:
+    user = _run_user()
+    util.sudo_run(["mkdir", "-p", str(build_dir), str(build_dir / "tmp")], check=False)
+    util.sudo_run(["chown", "-R", f"{user}:{user}", str(build_dir)], check=False)
+
+
 def _delete_swap() -> None:
     util.sudo_run(["swapoff", "-a"], check=False)
     for swapfile in SWAPFILE_CANDIDATES:
@@ -97,7 +135,7 @@ def _create_swap(swap_gb: int) -> None:
     if swap_gb <= 0:
         util.log("swap creation disabled")
         return
-    target = "/mnt/swapfile" if Path("/mnt").is_dir() else "/swapfile"
+    target = "/mnt/swapfile" if _mnt_is_separate() else "/swapfile"
     util.header(f"Creating {swap_gb} GiB swap at {target}")
     util.sudo_run(["rm", "-f", target], check=False)
     # fallocate is much faster than dd; fall back when the filesystem
@@ -201,9 +239,34 @@ def merge_disks(build_dir: Path, *, reserve_gb: int = 2, swap_size_gb: int = 4) 
     util.log(f"build space ready at {build_dir}")
 
 
-def free_disk(build_dir: str = "/builder", *, reserve_gb: int = 2, swap_size_gb: int = 4) -> None:
+def free_disk(
+    build_dir: str = "/builder",
+    *,
+    reserve_gb: int = 2,
+    swap_size_gb: int = 4,
+    min_free_gb: float = 50.0,
+) -> None:
+    """Make sure the runner has enough disk and swap for a full build.
+
+    Large runners often already provide plenty of space; in that case no
+    preinstalled software is removed and no LVM volume is created.
+    """
     build_dir_path = Path(build_dir)
     show_system()
+
+    probe = str(build_dir_path) if build_dir_path.exists() else "/"
+    free_gb = _available_gb(probe)
+    swap_gb = _swap_total_gb()
+    if free_gb >= min_free_gb:
+        if swap_gb < swap_size_gb:
+            util.log(f"{free_gb:.1f} GiB free is enough; adjusting swap from {swap_gb:.1f} to {swap_size_gb} GiB")
+            _delete_swap()
+            _create_swap(swap_size_gb)
+        else:
+            util.log(f"{free_gb:.1f} GiB free and {swap_gb:.1f} GiB swap available; skipping cleanup and disk merge")
+        _prepare_build_dir(build_dir_path)
+        _report_build_space(build_dir_path)
+        return
 
     util.header("Removing unneeded runner components")
     for directory in HEAVY_DIRECTORIES:
@@ -217,14 +280,25 @@ def free_disk(build_dir: str = "/builder", *, reserve_gb: int = 2, swap_size_gb:
         quiet=True,
     )
 
-    _delete_swap()
-    _create_swap(swap_size_gb)
-    merge_disks(build_dir_path, reserve_gb=reserve_gb, swap_size_gb=swap_size_gb)
-    util.sudo_run(["sysctl", "-w", "vm.drop_caches=3"], check=False, quiet=True)
+    if swap_gb < swap_size_gb:
+        _delete_swap()
+        _create_swap(swap_size_gb)
+    else:
+        util.log(f"existing {swap_gb:.1f} GiB swap is sufficient")
 
+    if _available_gb("/") < min_free_gb and _mnt_is_separate():
+        merge_disks(build_dir_path, reserve_gb=reserve_gb, swap_size_gb=swap_size_gb)
+    else:
+        _prepare_build_dir(build_dir_path)
+
+    util.sudo_run(["sysctl", "-w", "vm.drop_caches=3"], check=False, quiet=True)
+    _report_build_space(build_dir_path)
+
+
+def _report_build_space(build_dir: Path) -> None:
     util.header("Build space")
     util.run(["free", "-h"], check=False)
-    util.run(["df", "-h", str(build_dir_path)], check=False)
+    util.run(["df", "-h", str(build_dir)], check=False)
 
 
 APT_GROUPS = [
@@ -310,9 +384,7 @@ def _apt_install(packages: list[str]) -> None:
         return
     util.warn("batch install failed, retrying package by package")
     for package in packages:
-        code, _ = util.sudo_run(
-            ["apt-get", "install", "-y", package], env=env, check=False, quiet=True
-        )
+        code, _ = util.sudo_run(["apt-get", "install", "-y", package], env=env, check=False, quiet=True)
         if code != 0:
             util.warn(f"not installed (optional): {package}")
 

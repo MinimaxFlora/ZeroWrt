@@ -147,9 +147,13 @@ def _fix_openclash(openclash_dir: Path) -> None:
 
 def _validate_layout(new_dir: Path) -> None:
     checks = {
-        "package/new/passwall-luci/luci-app-passwall/Makefile": (new_dir / "passwall-luci" / "luci-app-passwall" / "Makefile"),
+        "package/new/passwall-luci/luci-app-passwall/Makefile": (
+            new_dir / "passwall-luci" / "luci-app-passwall" / "Makefile"
+        ),
         "package/new/passwall-packages/xray-core/Makefile": (new_dir / "passwall-packages" / "xray-core" / "Makefile"),
-        "package/new/openclash/luci-app-openclash/Makefile": (new_dir / "openclash" / "luci-app-openclash" / "Makefile"),
+        "package/new/openclash/luci-app-openclash/Makefile": (
+            new_dir / "openclash" / "luci-app-openclash" / "Makefile"
+        ),
     }
     missing = [name for name, path in checks.items() if not path.exists()]
     if missing:

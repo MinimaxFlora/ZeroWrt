@@ -13,7 +13,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from zerowrt_core import build, configgen, images, packages, source, util  # noqa: E402
+from zerowrt_core import build, configgen, images, packages, settings, source, util  # noqa: E402
 
 
 class TempTreeTest(unittest.TestCase):
@@ -32,6 +32,40 @@ class TempTreeTest(unittest.TestCase):
         else:
             path.write_text(content, encoding="utf-8")
         return path
+
+
+class SettingsTest(unittest.TestCase):
+    def test_defaults_are_valid(self) -> None:
+        value = settings.BuildSettings().validated()
+        self.assertEqual(value.ip, "10.0.0.1")
+        self.assertEqual(value.ssid("2g"), "ZeroWrt-2.4G")
+        self.assertEqual(value.ssid("5g"), "ZeroWrt-5G")
+
+    def test_custom_names(self) -> None:
+        value = settings.BuildSettings(wifi_name="MyNet").validated()
+        self.assertEqual(value.ssid("2g"), "MyNet-2.4G")
+        self.assertEqual(value.ssid("6g"), "MyNet-6G")
+
+    def test_invalid_ip(self) -> None:
+        with self.assertRaises(util.BuildError):
+            settings.BuildSettings(ip="10.0.0.999").validated()
+
+    def test_short_password(self) -> None:
+        with self.assertRaises(util.BuildError):
+            settings.BuildSettings(wifi_password="short").validated()
+
+    def test_environment_override(self) -> None:
+        value = settings.BuildSettings.from_environment(
+            {
+                "ZEROWRT_IP": "192.168.8.1",
+                "ZEROWRT_WIFI_NAME": "Lab",
+                "ZEROWRT_WIFI_PASSWORD": "password123",
+                "ZEROWRT_DEVICE": "ruijie_rg-x60-pro",
+            }
+        )
+        self.assertEqual(value.ip, "192.168.8.1")
+        self.assertEqual(value.ssid("5g"), "Lab-5G")
+        self.assertEqual(value.device, "ruijie_rg-x60-pro")
 
 
 class CorePatchesTest(TempTreeTest):
@@ -65,23 +99,24 @@ sed -i -e '/OPENWRT_RELEASE/d' /usr/lib/os-release
 echo 'OPENWRT_RELEASE="LEDE R@BUILD_DATE@"' >> /usr/lib/os-release
 """
 
-    TARGET_MK = """\
-DEFAULT_PACKAGES.router:=\\
-\tluci-app-arpbind luci-app-ssr-plus luci-app-vlmcsd \\
-\tluci-app-wol curl
-"""
-
     WIFI_SCRIPT = """\
 mac80211_emit_detect() {
-\tlocal dev="$1"
 \tlocal band="$3"
 \tlocal ssid="$default_ssid"
+\tlocal key="$default_key"
+\tlocal encryption="$default_encryption"
 
 \t[ -n "$ssid" ] || ssid="LEDE"
+\tkey="$default_key"
 
-\tuci -q batch <<-EOF
-\t\tset wireless.${iface}.ssid='${ssid}'
-\tEOF
+\tcase "$band" in
+\t\t6g)
+\t\t\t[ -n "$encryption" ] || encryption="owe"
+\t\t;;
+\t\t*)
+\t\t\t[ -n "$encryption" ] || encryption="none"
+\t\t;;
+\tesac
 }
 """
 
@@ -90,14 +125,18 @@ mac80211_emit_detect() {
         self.write("package/base-files/files/bin/config_generate", self.CONFIG_GENERATE)
         self.write("package/base-files/luci/bin/config_generate", self.CONFIG_GENERATE)
         self.write("package/lean/default-settings/files/zzz-default-settings", self.DEFAULT_SETTINGS)
-        self.write("include/target.mk", self.TARGET_MK)
-        self.write("package/lean/luci-app-ssr-plus/Makefile", "include $(TOPDIR)/rules.mk\n")
         self.write("package/kernel/mac80211/files/lib/wifi/mac80211.sh", self.WIFI_SCRIPT)
         return self.root
 
     def test_core_customisations(self) -> None:
         tree = self.prepare()
-        source.apply_core_customisations(tree)
+        build_settings = settings.BuildSettings(
+            ip="192.168.8.1",
+            wifi_name="LabNet",
+            wifi_password="password123",
+            device="ruijie_rg-x60",
+        ).validated()
+        source.apply_core_customisations(tree, build_settings)
 
         version = util.read_text(tree / "include/version.mk")
         self.assertIn("VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),ZeroWrt)", version)
@@ -106,27 +145,25 @@ mac80211_emit_detect() {
         for relative in source.CORE_FILES.values():
             if relative.name == "config_generate":
                 text = util.read_text(tree / relative)
-                self.assertIn('lan) ipad=${ipaddr:-"10.0.0.1"}', text)
+                self.assertIn('lan) ipad=${ipaddr:-"192.168.8.1"}', text)
                 self.assertIn("hostname='ZeroWrt'", text)
                 self.assertNotIn("192.168.1.1", text)
 
-        settings = util.read_text(tree / source.CORE_FILES["default_settings"])
-        self.assertIn("DISTRIB_DESCRIPTION='ZeroWrt '", settings)
-        self.assertIn('OPENWRT_RELEASE="ZeroWrt R@BUILD_DATE@"', settings)
-        self.assertNotIn("LEDE", settings)
-
-        target_mk = util.read_text(tree / "include/target.mk")
-        self.assertIn("luci-app-ssr-plus", target_mk)
-        self.assertIn("luci-app-arpbind", target_mk)
-        self.assertTrue((tree / "package/lean/luci-app-ssr-plus").exists())
+        default_settings = util.read_text(tree / source.CORE_FILES["default_settings"])
+        self.assertIn("DISTRIB_DESCRIPTION='ZeroWrt '", default_settings)
+        self.assertIn('OPENWRT_RELEASE="ZeroWrt R@BUILD_DATE@"', default_settings)
+        self.assertNotIn("LEDE", default_settings)
 
         wifi = util.read_text(tree / source.WIFI_SCRIPTS[0])
-        self.assertIn('2g) ssid="ZeroWrt-2.4G"', wifi)
-        self.assertIn('5g) ssid="ZeroWrt-5G"', wifi)
+        self.assertIn("2g) ssid=LabNet-2.4G", wifi)
+        self.assertIn("5g) ssid=LabNet-5G", wifi)
+        self.assertIn("key=password123", wifi)
+        self.assertIn('encryption="psk2"', wifi)
+        self.assertIn('encryption="sae"', wifi)
         self.assertNotIn('ssid="LEDE"', wifi)
 
 
-class DeviceDetectionTest(TempTreeTest):
+class DeviceLookupTest(TempTreeTest):
     def prepare(self) -> Path:
         self.write("target/linux/mediatek/Makefile", "SUBTARGETS:=filogic mt7622\nKERNEL_PATCHVER:=6.12\n")
         self.write("target/linux/mediatek/filogic/target.mk", "DEFAULT_PACKAGES += kmod-mt7986-firmware\n")
@@ -147,101 +184,44 @@ define Device/ruijie_rg-x60-pro
   DEVICE_DTS := mt7986a-ruijie-rg-x60-pro
 endef
 TARGET_DEVICES += ruijie_rg-x60-pro
-
-define Device/other_vendor
-  DEVICE_MODEL := Something
-endef
 """,
         )
         return self.root
 
-    def test_prefers_non_pro_device(self) -> None:
-        device = configgen.detect_device(self.prepare())
-        self.assertEqual(device["name"], "ruijie_rg-x60")
+    def test_find_device(self) -> None:
+        device = configgen.find_device(self.prepare(), "ruijie_rg-x60")
         self.assertEqual(device["board"], "mediatek")
         self.assertEqual(device["subtarget"], "filogic")
+        self.assertEqual(device["model"], "RG-X60")
 
-    def test_hint_selects_pro(self) -> None:
-        device = configgen.detect_device(self.prepare(), hint="ruijie_rg-x60-pro")
+    def test_find_pro_device(self) -> None:
+        device = configgen.find_device(self.prepare(), "ruijie_rg-x60-pro")
         self.assertEqual(device["name"], "ruijie_rg-x60-pro")
 
     def test_missing_device_raises(self) -> None:
-        self.write("target/linux/mediatek/Makefile", "SUBTARGETS:=filogic\n")
-        self.write("target/linux/mediatek/filogic/target.mk", "")
-        self.write("target/linux/mediatek/image/filogic.mk", "define Device/x\n  DEVICE_MODEL := Y\nendef\n")
+        self.prepare()
         with self.assertRaises(util.BuildError):
-            configgen.detect_device(self.root)
+            configgen.find_device(self.root, "missing_device")
 
 
-class ConfigRenderTest(TempTreeTest):
-    def test_target_lines_and_ssr_removal(self) -> None:
-        text = configgen._render_config(
-            {"board": "mediatek", "subtarget": "filogic", "name": "ruijie_rg-x60"},
-            {
-                "CONFIG_PACKAGE_luci-app-filetransfer": "y",
-            },
-        )
+class ConfigRenderTest(unittest.TestCase):
+    def test_target_and_packages(self) -> None:
+        target = {
+            "board": "mediatek",
+            "subtarget": "filogic",
+            "name": "ruijie_rg-x60",
+            "model": "RG-X60",
+            "vendor": "Ruijie",
+        }
+        text = configgen._render_config(target)
         self.assertIn("CONFIG_TARGET_mediatek=y", text)
         self.assertIn("CONFIG_TARGET_mediatek_filogic=y", text)
         self.assertIn("CONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60=y", text)
-        self.assertIn("CONFIG_PACKAGE_luci-app-filetransfer=y", text)
+        for package in configgen.PACKAGES:
+            self.assertIn(f"{package}=y", text)
         self.assertNotIn("=y=y", text)
         self.assertNotIn("luci-compat", text)
         self.assertNotIn("CONFIG_VERSION_DIST", text)
-        self.assertLess(text.index("CONFIG_TARGET_mediatek=y"), text.index("CONFIG_PACKAGE_"))
-
-    def test_defaults_when_no_overrides(self) -> None:
-        text = configgen._render_config(
-            {"board": "mediatek", "subtarget": "filogic", "name": "ruijie_rg-x60"}, {}
-        )
-        for package in (
-            "luci-theme-argon",
-            "luci-app-argon-config",
-            "luci-app-passwall",
-            "luci-app-openclash",
-            "luci-app-ssr-plus",
-        ):
-            self.assertIn(f"CONFIG_PACKAGE_{package}=y", text)
-
-    def test_overrides_from_file(self) -> None:
-        config = self.write("zerowrt.config", "# comment\nCONFIG_PACKAGE_foo=y\nbad line\n")
-        overrides = configgen.parse_overrides(config)
-        self.assertEqual(overrides, {"CONFIG_PACKAGE_foo": "y"})
-
-    def test_pinned_target_is_used(self) -> None:
-        overrides = {
-            "CONFIG_TARGET_mediatek": "y",
-            "CONFIG_TARGET_mediatek_filogic": "y",
-            "CONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60-pro": "y",
-        }
-        target = configgen._target_from_overrides(overrides)
-        self.assertIsNotNone(target)
-        self.assertEqual(target["board"], "mediatek")
-        self.assertEqual(target["subtarget"], "filogic")
-        self.assertEqual(target["name"], "ruijie_rg-x60-pro")
-
-
-class CollectTest(TempTreeTest):
-    def test_collect_renames_firmware(self) -> None:
-        self.write(
-            ".zerowrt-info.json",
-            '{"board": "mediatek", "subtarget": "filogic", '
-            '"device": "ruijie_rg-x60-pro", "version": "24.10.5"}\n',
-        )
-        source_dir = self.root / "bin/targets/mediatek/filogic"
-        source_dir.mkdir(parents=True)
-        firmware = "zerowrt-24.10.5-mediatek-filogic-ruijie_rg-x60-pro-squashfs-sysupgrade.bin"
-        (source_dir / firmware).write_bytes(b"firmware")
-        (source_dir / "zerowrt-24.10.5-mediatek-filogic-ruijie_rg-x60-pro.manifest").write_text("{}")
-        (source_dir / "config.buildinfo").write_text("CONFIG_X=y\n")
-
-        out = self.root / "dist"
-        build.collect(self.root, out)
-        names = {path.name for path in out.iterdir()}
-        self.assertIn("ZeroWrt-24.10.5-ruijie_rg-x60-pro-squashfs-sysupgrade.bin", names)
-        self.assertIn("SHA256SUMS", names)
-        self.assertIn("BUILD_INFO.txt", names)
-        self.assertIn("config.buildinfo", names)
 
 
 class ImageTest(unittest.TestCase):
@@ -281,9 +261,7 @@ class ArgonBrandingTest(TempTreeTest):
         )
         defaults = app / "root/etc/uci-defaults/luci-argon-config"
         defaults.parent.mkdir(parents=True)
-        defaults.write_text(
-            'uci -q set "argon.@global[0].online_wallpaper"="bing"\n', encoding="utf-8"
-        )
+        defaults.write_text('uci -q set "argon.@global[0].online_wallpaper"="bing"\n', encoding="utf-8")
 
         packages.patch_argon_theme(self.root / "package/new/luci-theme-argon", REPO_ROOT / "assets")
         packages.patch_argon_config(app)
@@ -298,6 +276,28 @@ class ArgonBrandingTest(TempTreeTest):
         self.assertIn("option online_wallpaper 'none'", text)
         self.assertNotIn("'bing'", text)
         self.assertIn('"none"', defaults.read_text(encoding="utf-8"))
+
+
+class CollectTest(TempTreeTest):
+    def test_collect_renames_firmware(self) -> None:
+        self.write(
+            ".zerowrt-info.json",
+            '{"board": "mediatek", "subtarget": "filogic", "device": "ruijie_rg-x60-pro", "version": "24.10.5"}\n',
+        )
+        source_dir = self.root / "bin/targets/mediatek/filogic"
+        source_dir.mkdir(parents=True)
+        firmware = "zerowrt-24.10.5-mediatek-filogic-ruijie_rg-x60-pro-squashfs-sysupgrade.bin"
+        (source_dir / firmware).write_bytes(b"firmware")
+        (source_dir / "zerowrt-24.10.5-mediatek-filogic-ruijie_rg-x60-pro.manifest").write_text("{}")
+        (source_dir / "config.buildinfo").write_text("CONFIG_X=y\n")
+
+        out = self.root / "dist"
+        build.collect(self.root, out)
+        names = {path.name for path in out.iterdir()}
+        self.assertIn("ZeroWrt-24.10.5-ruijie_rg-x60-pro-squashfs-sysupgrade.bin", names)
+        self.assertIn("SHA256SUMS", names)
+        self.assertIn("BUILD_INFO.txt", names)
+        self.assertIn("config.buildinfo", names)
 
 
 if __name__ == "__main__":

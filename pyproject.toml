@@ -1,0 +1,13 @@
+[project]
+name = "zerowrt"
+version = "0.1.0"
+description = "ZeroWrt firmware build automation"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["src-check", "tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]

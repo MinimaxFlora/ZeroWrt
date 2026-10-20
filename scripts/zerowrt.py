@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from zerowrt_core import build, configgen, packages, source, sysops, util  # noqa: E402
+from zerowrt_core import build, configgen, packages, settings, source, sysops, util  # noqa: E402
 
 DEFAULT_TREE = Path(os.environ.get("LEDE_DIR") or "/builder/lede")
 DEFAULT_ASSETS = Path(__file__).resolve().parent.parent / "assets"
@@ -31,6 +31,7 @@ def cmd_system_free_disk(args: argparse.Namespace) -> None:
         str(Path(args.build_dir)),
         reserve_gb=args.reserve_gb,
         swap_size_gb=args.swap_gb,
+        min_free_gb=args.min_free_gb,
     )
 
 
@@ -57,7 +58,18 @@ def cmd_source_feeds(args: argparse.Namespace) -> None:
 
 
 def cmd_source_customize(args: argparse.Namespace) -> None:
-    source.apply_core_customisations(Path(args.tree))
+    current = settings.BuildSettings.from_environment()
+    build_settings = settings.BuildSettings(
+        ip=args.ip or current.ip,
+        wifi_name=args.wifi_name or current.wifi_name,
+        wifi_password=current.wifi_password if args.wifi_password is None else args.wifi_password,
+        device=current.device,
+    ).validated()
+    util.log(
+        f"LAN IP {build_settings.ip}, WiFi {build_settings.ssid('2g')} / "
+        f"{build_settings.ssid('5g')}, device {build_settings.device}"
+    )
+    source.apply_core_customisations(Path(args.tree), build_settings)
 
 
 def cmd_packages_add(args: argparse.Namespace) -> None:
@@ -66,8 +78,8 @@ def cmd_packages_add(args: argparse.Namespace) -> None:
 
 
 def cmd_config_generate(args: argparse.Namespace) -> None:
-    config_file = Path(args.config_file) if args.config_file else None
-    configgen.generate(Path(args.tree), config_file, device=args.device)
+    device = args.device or settings.BuildSettings.from_environment().device
+    configgen.generate(Path(args.tree), device)
 
 
 def cmd_build_download(args: argparse.Namespace) -> None:
@@ -96,6 +108,12 @@ def build_parser() -> argparse.ArgumentParser:
     free_disk.add_argument("--build-dir", default="/builder")
     free_disk.add_argument("--swap-gb", type=int, default=4)
     free_disk.add_argument("--reserve-gb", type=int, default=2)
+    free_disk.add_argument(
+        "--min-free-gb",
+        type=float,
+        default=50.0,
+        help="skip cleanup/merge when this much space is already free",
+    )
     free_disk.set_defaults(func=cmd_system_free_disk)
 
     deps = system_sub.add_parser("install-deps", help="install OpenWrt build dependencies")
@@ -118,8 +136,15 @@ def build_parser() -> argparse.ArgumentParser:
     feeds.add_argument("--tree", default=str(DEFAULT_TREE))
     feeds.set_defaults(func=cmd_source_feeds)
 
-    customize = src_sub.add_parser("customize", help="apply version, IP and branding patches")
+    customize = src_sub.add_parser("customize", help="apply version, IP and WiFi patches")
     customize.add_argument("--tree", default=str(DEFAULT_TREE))
+    customize.add_argument("--ip", default=None, help="LAN IP (default: ZEROWRT_IP or 10.0.0.1)")
+    customize.add_argument("--wifi-name", default=None, help="WiFi name prefix (default: ZEROWRT_WIFI_NAME)")
+    customize.add_argument(
+        "--wifi-password",
+        default=None,
+        help="WiFi password, 8-63 characters (default: ZEROWRT_WIFI_PASSWORD)",
+    )
     customize.set_defaults(func=cmd_source_customize)
 
     pkg = sub.add_parser("packages", help="add external packages and theme branding")
@@ -133,11 +158,7 @@ def build_parser() -> argparse.ArgumentParser:
     config_sub = config.add_subparsers(dest="config_command", required=True)
     generate = config_sub.add_parser("generate", help="write .config and run defconfig")
     generate.add_argument("--tree", default=str(DEFAULT_TREE))
-    generate.add_argument(
-        "--config-file",
-        default=str(Path(__file__).resolve().parent.parent / "configs" / "zerowrt.config"),
-    )
-    generate.add_argument("--device", default=None, help="device profile override")
+    generate.add_argument("--device", default=None, help="device profile (default: ZEROWRT_DEVICE or ruijie_rg-x60)")
     generate.set_defaults(func=cmd_config_generate)
 
     build_cmd = sub.add_parser("build", help="download, compile and collect")

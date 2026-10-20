@@ -6,12 +6,13 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 from pathlib import Path
 
 from . import util
+from .settings import BuildSettings
 
 DEFAULT_REF = "ruijie-rg-x60-new"
-LAN_IP = "10.0.0.1"
 
 # Feed packages that must disappear so that the ZeroWrt copies win.
 # - the argon theme/plugin are cloned from jerrykuku's repositories instead
@@ -53,28 +54,29 @@ WIFI_SCRIPTS = (
     Path("package/network/config/wifi-scripts/files/lib/wifi/mac80211.sh"),
 )
 
-# The stock generators assign one SSID to every radio. A per-band assignment is
-# substituted so 2.4 GHz and 5 GHz never share a network name.
-BAND_SSIDS = {
-    "2g": "ZeroWrt-2.4G",
-    "5g": "ZeroWrt-5G",
-    "6g": "ZeroWrt-6G",
-}
-
-SSID_LINE_RE = re.compile(
-    r'^(?P<indent>[ \t]*)\[ -n "\$ssid" \] \|\| ssid=(["\']?)(?:LEDE|OpenWrt)\2[ \t]*$', re.M
-)
-SSID_FALLBACK_RE = re.compile(
-    r'^(?P<indent>[ \t]*)ssid=(["\']?)(?:LEDE|OpenWrt)\2[ \t]*$', re.M
-)
+SSID_LINE_RE = re.compile(r'^(?P<indent>[ \t]*)\[ -n "\$ssid" \] \|\| ssid=(["\']?)(?:LEDE|OpenWrt)\2[ \t]*$', re.M)
+SSID_FALLBACK_RE = re.compile(r'^(?P<indent>[ \t]*)ssid=(["\']?)(?:LEDE|OpenWrt)\2[ \t]*$', re.M)
+KEY_LINE_RE = re.compile(r'^(?P<indent>[ \t]*)key="\$default_key"[ \t]*$', re.M)
 
 
-def _ssid_block(indent: str) -> str:
+def _ssid_block(indent: str, settings: BuildSettings) -> str:
     lines = [f'{indent}case "$band" in']
-    for band, ssid in BAND_SSIDS.items():
-        lines.append(f'{indent}\t{band}) ssid="{ssid}" ;;')
-    lines.append(f'{indent}\t*) ssid="ZeroWrt" ;;')
+    for band in ("2g", "5g", "6g"):
+        lines.append(f"{indent}\t{band}) ssid={shlex.quote(settings.ssid(band))} ;;")
+    lines.append(f"{indent}\t*) ssid={shlex.quote(settings.wifi_name)} ;;")
     lines.append(f"{indent}esac")
+    return "\n".join(lines)
+
+
+def _wifi_key_block(indent: str, settings: BuildSettings) -> str:
+    key = shlex.quote(settings.wifi_password)
+    lines = [
+        f"{indent}key={key}",
+        f'{indent}case "$band" in',
+        f'{indent}\t6g) encryption="sae" ;;',
+        f'{indent}\t*) encryption="psk2" ;;',
+        f"{indent}esac",
+    ]
     return "\n".join(lines)
 
 
@@ -160,8 +162,7 @@ def update_feeds(tree: Path) -> None:
     missing = [name for name, path in critical.items() if not path.exists()]
     if missing:
         raise util.BuildError(
-            "feeds install did not provide: " + ", ".join(missing) + "\n"
-            "Check feeds-install.log in the build tree."
+            "feeds install did not provide: " + ", ".join(missing) + "\nCheck feeds-install.log in the build tree."
         )
 
 
@@ -181,7 +182,7 @@ def patch_version_mk(tree: Path) -> None:
             util.warn(f"{variable} default already customised or format changed")
 
 
-def patch_config_generate(tree: Path) -> None:
+def patch_config_generate(tree: Path, ip: str) -> None:
     util.header("Patching config_generate (LAN IP / hostname)")
     for relative in (CORE_FILES["config_generate"], CORE_FILES["config_generate_luci"]):
         path = Path(tree) / relative
@@ -192,8 +193,8 @@ def patch_config_generate(tree: Path) -> None:
         text = util.read_text(path)
         original = text
         # Default LAN address used by the generated /etc/config/network.
-        text = text.replace('"192.168.1.1"', f'"{LAN_IP}"')
-        text = re.sub(r'(lan\)\s*ipad=\$\{ipaddr:-")[^"]+(")', rf"\g<1>{LAN_IP}\g<2>", text)
+        text = text.replace('"192.168.1.1"', f'"{ip}"')
+        text = re.sub(r'(lan\)\s*ipad=\$\{ipaddr:-")[^"]+(")', rf"\g<1>{ip}\g<2>", text)
         # Default hostname of the generated /etc/config/system.
         text = re.sub(r"(hostname=')(?:LEDE|OpenWrt)(')", r"\g<1>ZeroWrt\g<2>", text)
 
@@ -204,8 +205,8 @@ def patch_config_generate(tree: Path) -> None:
             util.warn(f"{relative}: no known defaults matched")
 
         final = util.read_text(path)
-        if "10.0.0.1" not in final:
-            raise util.BuildError(f"{relative}: LAN address was not changed to 10.0.0.1")
+        if ip not in final:
+            raise util.BuildError(f"{relative}: LAN address was not changed to {ip}")
         if "hostname='ZeroWrt'" not in final:
             util.warn(f"{relative}: hostname default was not changed")
 
@@ -237,10 +238,10 @@ def patch_default_settings(tree: Path) -> None:
         util.warn("OPENWRT_RELEASE was not updated to ZeroWrt")
 
 
-def patch_wireless(tree: Path) -> None:
-    """Give 2.4 GHz and 5 GHz distinct ZeroWrt SSIDs."""
+def patch_wireless(tree: Path, settings: BuildSettings) -> None:
+    """Apply the configured SSID and password to the stock WiFi generator."""
     tree = Path(tree)
-    util.header("Patching default WiFi names")
+    util.header("Patching default WiFi configuration")
 
     candidates = [tree / relative for relative in WIFI_SCRIPTS]
     if not any(path.exists() for path in candidates):
@@ -255,42 +256,45 @@ def patch_wireless(tree: Path) -> None:
         if not path.exists():
             continue
         text = util.read_text(path)
-        new_text, count = SSID_LINE_RE.subn(lambda match: _ssid_block(match.group("indent")), text)
+        new_text, count = SSID_LINE_RE.subn(lambda match: _ssid_block(match.group("indent"), settings), text)
         if count == 0:
-            new_text, count = SSID_FALLBACK_RE.subn(
-                lambda match: _ssid_block(match.group("indent")), text
-            )
+            new_text, count = SSID_FALLBACK_RE.subn(lambda match: _ssid_block(match.group("indent"), settings), text)
         if count == 0:
             continue
+
+        new_text, key_count = KEY_LINE_RE.subn(lambda match: _wifi_key_block(match.group("indent"), settings), new_text)
+        if key_count == 0:
+            raise util.BuildError(f"{path.relative_to(tree)}: WiFi key default not found")
+
         util.write_text(path, new_text)
         patched.append(path)
-        util.log(f"{path.relative_to(tree)}: replaced {count} default SSID assignment(s)")
+        util.log(f"{path.relative_to(tree)}: SSIDs {settings.ssid('2g')} / {settings.ssid('5g')}")
 
     if not patched:
         raise util.BuildError(
-            "no default SSID assignment was found in the LEDE wireless scripts; "
-            "cannot set ZeroWrt-2.4G / ZeroWrt-5G"
+            "no default SSID assignment was found in the LEDE wireless scripts; cannot apply the WiFi settings"
         )
 
     for path in patched:
         text = util.read_text(path)
-        missing = [ssid for ssid in BAND_SSIDS.values() if ssid not in text]
+        missing = [settings.ssid(band) for band in ("2g", "5g") if shlex.quote(settings.ssid(band)) not in text]
         if missing:
-            raise util.BuildError(
-                f"{path.relative_to(tree)}: missing band SSIDs {', '.join(missing)}"
-            )
+            raise util.BuildError(f"{path.relative_to(tree)}: missing SSIDs {', '.join(missing)}")
+        expected_encryption = 'encryption="psk2"'
+        if expected_encryption not in text:
+            raise util.BuildError(f"{path.relative_to(tree)}: expected {expected_encryption} was not applied")
 
 
-def apply_core_customisations(tree: Path) -> None:
+def apply_core_customisations(tree: Path, settings: BuildSettings) -> None:
     tree = Path(tree)
     patch_version_mk(tree)
-    patch_config_generate(tree)
+    patch_config_generate(tree, settings.ip)
     patch_default_settings(tree)
-    patch_wireless(tree)
-    verify_core(tree)
+    patch_wireless(tree, settings)
+    verify_core(tree, settings)
 
 
-def verify_core(tree: Path) -> None:
+def verify_core(tree: Path, settings: BuildSettings) -> None:
     tree = Path(tree)
     util.header("Verifying core customisations")
     problems: list[str] = []
@@ -303,15 +307,15 @@ def verify_core(tree: Path) -> None:
 
     for relative in (CORE_FILES["config_generate"], CORE_FILES["config_generate_luci"]):
         path = tree / relative
-        if path.exists() and "10.0.0.1" not in util.read_text(path):
-            problems.append(f"{relative} does not default to 10.0.0.1")
+        if path.exists() and settings.ip not in util.read_text(path):
+            problems.append(f"{relative} does not default to {settings.ip}")
 
     for relative in WIFI_SCRIPTS:
         path = tree / relative
         if path.exists():
             text = util.read_text(path)
-            if "ZeroWrt-2.4G" not in text or "ZeroWrt-5G" not in text:
-                problems.append(f"{relative} does not set ZeroWrt-2.4G / ZeroWrt-5G")
+            if shlex.quote(settings.ssid("2g")) not in text or shlex.quote(settings.ssid("5g")) not in text:
+                problems.append(f"{relative} does not set {settings.ssid('2g')} / {settings.ssid('5g')}")
 
     if problems:
         raise util.BuildError("core customisation failed:\n  - " + "\n  - ".join(problems))

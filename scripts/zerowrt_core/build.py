@@ -7,7 +7,7 @@ import json
 import os
 import re
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from . import util
@@ -93,9 +93,7 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
     files = [p for p in files if p.is_file()]
 
     for path in files:
-        has_device = bool(device) and re.search(
-            rf"-{re.escape(device).replace('_', '[-_]')}[-.]", path.name
-        )
+        has_device = bool(device) and re.search(rf"-{re.escape(device).replace('_', '[-_]')}[-.]", path.name)
         if path.suffix in {".bin", ".itb", ".gz", ".tar"} and has_device:
             suffix = _artifact_suffix(path.name, device)
             stem = _sanitize(f"ZeroWrt-{version}-{device}-{suffix}")
@@ -122,7 +120,7 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
     commit = os.environ.get("LEDE_COMMIT", "")
     lines = [
         "ZeroWrt firmware",
-        f"built: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+        f"built: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}",
         f"tree: {board}/{subtarget}",
         f"device: {device} ({info.get('device_vendor', '')} {info.get('device_model', '')})".strip(),
         f"version: {version}",

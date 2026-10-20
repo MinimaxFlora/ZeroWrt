@@ -214,7 +214,7 @@ class ConfigRenderTest(unittest.TestCase):
             "model": "RG-X60",
             "vendor": "Ruijie",
         }
-        text = configgen._render_config(target)
+        text = configgen._render_config(target, configgen.PACKAGES)
         self.assertIn("CONFIG_TARGET_mediatek=y", text)
         self.assertIn("CONFIG_TARGET_mediatek_filogic=y", text)
         self.assertIn("CONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60=y", text)
@@ -223,6 +223,14 @@ class ConfigRenderTest(unittest.TestCase):
         self.assertNotIn("=y=y", text)
         self.assertNotIn("luci-compat", text)
         self.assertNotIn("CONFIG_VERSION_DIST", text)
+
+
+class PackageSelectionTest(TempTreeTest):
+    def test_argon_app_only_when_cloned(self) -> None:
+        package = "CONFIG_PACKAGE_luci-app-argon-config"
+        self.assertNotIn(package, configgen._packages(self.root))
+        (self.root / "package/new/luci-app-argon-config").mkdir(parents=True)
+        self.assertIn(package, configgen._packages(self.root))
 
 
 class ImageTest(unittest.TestCase):

@@ -17,7 +17,7 @@ from pathlib import Path
 from . import images, util
 
 ARGON_THEME_REPO = "jerrykuku/luci-theme-argon"
-ARGON_THEME_REF = "v2.4.8"
+ARGON_THEME_REF = "master"
 ARGON_CONFIG_REPO = "jerrykuku/luci-app-argon-config"
 ARGON_CONFIG_REF = "master"
 PASSWALL_REPO = "Openwrt-Passwall/openwrt-passwall"
@@ -82,11 +82,12 @@ def add_external_packages(tree: Path) -> None:
 
     integrated = theme_is_integrated(theme_dir)
     if integrated:
-        # v3 ships the settings app inside the theme. Keep the tree buildable
-        # and explain the deviation instead of producing file conflicts.
+        # Argon 3.x ships the settings app inside the theme. Keep the tree
+        # buildable and explain the deviation instead of creating file
+        # conflicts with the standalone migration package.
         util.warn(
-            "the Argon theme checkout integrates luci-app-argon-config; "
-            "the standalone app is skipped to avoid duplicate files"
+            "Argon master includes the configuration app; the standalone "
+            "luci-app-argon-config is skipped to avoid duplicate files"
         )
         util.remove_path(theme_dir / "compat")
         config_dir = None
@@ -203,7 +204,8 @@ def patch_argon_theme(theme_dir: Path, assets_dir: Path) -> None:
             webp_path.write_bytes(webp)
             util.log(f"login background: {webp_path.relative_to(theme_dir)}")
         else:
-            util.warn("Pillow is unavailable; the WebP login background was not generated")
+            util.warn("Pillow cannot write WebP; falling back to bg1.jpg in templates")
+            _replace_references(theme_dir, "bg1.webp", "bg1.jpg")
 
     # Keep the file name referenced by every Argon template, but render the
     # ZeroWrt logo inside it.
@@ -235,6 +237,17 @@ def patch_argon_theme(theme_dir: Path, assets_dir: Path) -> None:
                 # Without Pillow, reuse the source PNG and let the browser scale it.
                 target.write_bytes(logo)
     util.log("favicons replaced")
+
+
+def _replace_references(theme_dir: Path, old: str, new: str) -> None:
+    """Rewrite template/JS references from one background file to another."""
+    for path in Path(theme_dir).rglob("*"):
+        if path.suffix not in {".ut", ".htm", ".html", ".js"} or not path.is_file():
+            continue
+        text = util.read_text(path)
+        if old in text:
+            util.write_text(path, text.replace(old, new))
+            util.log(f"{path.relative_to(theme_dir)}: {old} -> {new}")
 
 
 def _template_mentions(theme_dir: Path, needle: str) -> bool:

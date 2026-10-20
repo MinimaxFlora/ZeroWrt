@@ -82,8 +82,8 @@ push:
 | 发行描述 | `package/lean/default-settings/files/zzz-default-settings` | `DISTRIB_DESCRIPTION`、`OPENWRT_RELEASE` 中的 LEDE 改为 ZeroWrt |
 | 管理 IP | `package/base-files/files/bin/config_generate`<br>`package/base-files/luci/bin/config_generate` | 写入 Actions 里的 `ip`，主机名默认 `ZeroWrt` |
 | WiFi 名称与密码 | `package/kernel/mac80211/files/lib/wifi/mac80211.sh` | 2.4G/5G/6G 分别生成 SSID；WPA2/WPA3 密码 |
-| Argon 主题 | `package/new/luci-theme-argon` | 固定 v2.4.8，默认登录背景、Logo、favicon 替换为 `assets/` 素材 |
-| Argon 在线壁纸 | `luci-app-argon-config/root/etc/config/argon` | `online_wallpaper` 改为 `none` |
+| Argon 主题 | `package/new/luci-theme-argon` | 跟踪 `master`（3.x），默认登录背景、Logo、favicon 替换为 `assets/` 素材 |
+| Argon 在线壁纸 | 主题包内 `root/etc/config/argon` | `online_wallpaper` 改为 `none`（3.x 默认已是 none，仍会显式写入） |
 | 代理插件 | `package/new/passwall-*`、`package/new/openclash` | PassWall + OpenClash，保留 SSR Plus+ |
 | 软件包列表 | `scripts/zerowrt_core/configgen.py` | 统一在 `PACKAGES` 中维护 |
 
@@ -91,7 +91,18 @@ push:
 
 ### 关于 Argon 版本
 
-`luci-theme-argon` 固定 **v2.4.8**。3.x 把设置界面合并进主题包，会与独立的 `luci-app-argon-config` 产生同名文件冲突。v2.4.8 的登录页使用 `img/bg1.jpg`、Logo 使用 `img/argon.svg`，与本项目一致。
+`luci-theme-argon` 使用仓库默认分支 **`master`**（3.x）。
+
+3.x 已把 Argon 设置界面合并进主题包：主题自身提供 `/etc/config/argon`、`Argon Config` 菜单、rpcd 和品牌设置。如果再把独立的 `luci-app-argon-config` 装进去，两个包会写同一批文件（`/etc/config/argon`、menu、rpcd），产生文件冲突。因此脚本检测到主题已内置设置界面时，会跳过独立插件并打印警告；设置页面仍然在 **系统 → Argon 主题设置**。
+
+如果你确实要旧版“主题 + 独立插件”的组合，可把工作流环境变量改为：
+
+```yaml
+env:
+  ARGON_THEME_REF: v2.4.8
+```
+
+v2.4.8 的登录页使用 `img/bg1.jpg`；master 使用 `img/bg1.webp`，脚本会按模板自动生成对应的背景文件。
 
 ## 五、设备
 
@@ -118,12 +129,14 @@ ruijie_rg-x60-pro   (mediatek/filogic)
 ```python
 PACKAGES = [
     "CONFIG_PACKAGE_luci-theme-argon",
-    "CONFIG_PACKAGE_luci-app-argon-config",
+    "CONFIG_PACKAGE_luci-app-argon-config",  # 仅当独立插件被克隆（非 3.x 主题）时使用
     "CONFIG_PACKAGE_luci-app-passwall",
     "CONFIG_PACKAGE_luci-app-openclash",
     "CONFIG_PACKAGE_luci-app-ssr-plus",
 ]
 ```
+
+Argon `master` 内置设置界面时，脚本会自动从 `.config` 中去掉 `luci-app-argon-config`，避免安装不存在的独立包。
 
 `luci-compat`、`lyaml` 等依赖由 OpenWrt 自动解析，不重复声明。
 

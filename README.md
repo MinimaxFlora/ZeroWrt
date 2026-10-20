@@ -96,7 +96,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 | Argon 外观 | 主题包内 `root/etc/config/argon` | 亮色模式、主色 `#2E9D72`、暗色主色 `#4CAF86`、在线壁纸 `none` |
 | 网站图标 | `package/new/luci-theme-argon/.../icon/*`、`package/base-files/files/www/favicon.ico` | 主题 favicon + `/favicon.ico` 都使用 ZeroWrt Logo |
 | 移除 SSR Plus+ | `include/target.mk`、`feeds/helloworld` | 删除默认 SSR Plus+ 插件及默认包引用 |
-| 代理插件 | `package/new/passwall-*`、`package/new/openclash` | PassWall + OpenClash |
+| 代理插件 | `package/new/passwall-*`、`package/new/openclash` | PassWall（仅 Xray，无 Sing-Box）+ OpenClash |
 | 软件包列表 | `scripts/zerowrt_core/configgen.py` | 统一在 `PACKAGES` 中维护 |
 
 替换品牌素材：覆盖 `assets/background.jpg`、`assets/logo.png` 后重新运行。
@@ -171,6 +171,14 @@ PACKAGES = [
 ```
 
 ShadowSocksR Plus+ 已从 `include/target.mk` 默认包、`feeds/helloworld` 和最终 `.config` 中移除。
+
+PassWall 只保留 Xray 核心，显式关闭 Sing-Box，避免固件变大：
+
+```ini
+CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y
+# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox is not set
+# CONFIG_PACKAGE_sing-box is not set
+```
 
 Argon `master` 内置设置界面时，脚本会自动从 `.config` 中去掉 `luci-app-argon-config`，避免安装不存在的独立包。
 

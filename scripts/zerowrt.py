@@ -90,6 +90,14 @@ def cmd_build_compile(args: argparse.Namespace) -> None:
     build.compile_firmware(Path(args.tree), _jobs(args.jobs))
 
 
+def cmd_build_toolchain(args: argparse.Namespace) -> None:
+    build.build_toolchain(Path(args.tree), _jobs(args.jobs))
+
+
+def cmd_build_touch(args: argparse.Namespace) -> None:
+    build.touch_toolchain(Path(args.tree))
+
+
 def cmd_build_collect(args: argparse.Namespace) -> None:
     build.collect(Path(args.tree), Path(args.out))
 
@@ -175,6 +183,15 @@ def build_parser() -> argparse.ArgumentParser:
     compile_.add_argument("--tree", default=str(DEFAULT_TREE))
     compile_.add_argument("--jobs", default=None)
     compile_.set_defaults(func=cmd_build_compile)
+
+    toolchain = build_sub.add_parser("toolchain", help="build the toolchain for the cache")
+    toolchain.add_argument("--tree", default=str(DEFAULT_TREE))
+    toolchain.add_argument("--jobs", default=None)
+    toolchain.set_defaults(func=cmd_build_toolchain)
+
+    touch = build_sub.add_parser("touch", help="refresh timestamps of a cached toolchain")
+    touch.add_argument("--tree", default=str(DEFAULT_TREE))
+    touch.set_defaults(func=cmd_build_touch)
 
     collect = build_sub.add_parser("collect")
     collect.add_argument("--tree", default=str(DEFAULT_TREE))

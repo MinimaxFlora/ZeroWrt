@@ -39,6 +39,7 @@ class SettingsTest(unittest.TestCase):
         value = settings.BuildSettings().validated()
         self.assertEqual(value.ip, "10.0.0.1")
         self.assertEqual(value.device, "ruijie_rg-x60-new")
+        self.assertEqual(value.wifi_password, "1234567890")
         self.assertEqual(value.ssid("2g"), "ZeroWrt-2.4G")
         self.assertEqual(value.ssid("5g"), "ZeroWrt-5G")
 
@@ -75,6 +76,8 @@ VERSION_DIST:=$(call qstrip,$(CONFIG_VERSION_DIST))
 VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),OpenWrt)
 VERSION_MANUFACTURER:=$(call qstrip,$(CONFIG_VERSION_MANUFACTURER))
 VERSION_MANUFACTURER:=$(if $(VERSION_MANUFACTURER),$(VERSION_MANUFACTURER),OpenWrt)
+VERSION_NUMBER:=$(call qstrip,$(CONFIG_VERSION_NUMBER))
+VERSION_NUMBER:=$(if $(VERSION_NUMBER),$(VERSION_NUMBER),24.10.5)
 """
 
     CONFIG_GENERATE = """\
@@ -142,6 +145,10 @@ mac80211_emit_detect() {
         version = util.read_text(tree / "include/version.mk")
         self.assertIn("VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),ZeroWrt)", version)
         self.assertIn("VERSION_MANUFACTURER:=$(if $(VERSION_MANUFACTURER),$(VERSION_MANUFACTURER),ZeroWrt)", version)
+        self.assertIn(
+            f"VERSION_NUMBER:=$(if $(VERSION_NUMBER),$(VERSION_NUMBER),{configgen.build_date()})",
+            version,
+        )
 
         for relative in source.CORE_FILES.values():
             if relative.name == "config_generate":
@@ -162,6 +169,22 @@ mac80211_emit_detect() {
         self.assertIn('encryption="psk2"', wifi)
         self.assertIn('encryption="sae"', wifi)
         self.assertNotIn('ssid="LEDE"', wifi)
+
+    def test_ssr_plus_removed(self) -> None:
+        tree = self.prepare()
+        self.write("include/target.mk", "DEFAULT_PACKAGES.router += luci-app-ssr-plus luci-app-wol\n")
+        self.write("package/lean/luci-app-ssr-plus/Makefile", "include $(TOPDIR)/rules.mk\n")
+        self.write("target/linux/mediatek/filogic/target.mk", "DEFAULT_PACKAGES += luci-app-ssr-plus\n")
+        build_settings = settings.BuildSettings().validated()
+
+        source.apply_core_customisations(tree, build_settings)
+
+        self.assertFalse((tree / "package/lean/luci-app-ssr-plus").exists())
+        self.assertNotIn("luci-app-ssr-plus", util.read_text(tree / "include/target.mk"))
+        self.assertNotIn(
+            "luci-app-ssr-plus",
+            util.read_text(tree / "target/linux/mediatek/filogic/target.mk"),
+        )
 
 
 class DeviceLookupTest(TempTreeTest):
@@ -223,6 +246,15 @@ class ConfigRenderTest(unittest.TestCase):
         self.assertNotIn("=y=y", text)
         self.assertNotIn("luci-compat", text)
         self.assertNotIn("CONFIG_VERSION_DIST", text)
+        self.assertIn(f'CONFIG_VERSION_NUMBER="{configgen.build_date()}"', text)
+
+    def test_x86_64_profile(self) -> None:
+        target = configgen.resolve_target(Path("."), "x86_64")
+        text = configgen._render_config(target, configgen.PACKAGES)
+        self.assertIn("CONFIG_TARGET_x86=y", text)
+        self.assertIn("CONFIG_TARGET_x86_64=y", text)
+        self.assertIn("CONFIG_TARGET_x86_64_Generic=y", text)
+        self.assertNotIn("_DEVICE_", text)
 
 
 class PackageSelectionTest(TempTreeTest):
@@ -272,17 +304,32 @@ class ArgonBrandingTest(TempTreeTest):
         defaults.parent.mkdir(parents=True)
         defaults.write_text('uci -q set "argon.@global[0].online_wallpaper"="bing"\n', encoding="utf-8")
 
+        footer = self.root / "package/new/luci-theme-argon/ucode/template/themes/argon/footer_login.ut"
+        footer.parent.mkdir(parents=True)
+        footer.write_text(
+            "const firmware_info = version.distname + ' ' + version.distversion + '-' + version.distrevision;\n",
+            encoding="utf-8",
+        )
+
         packages.patch_argon_theme(self.root / "package/new/luci-theme-argon", REPO_ROOT / "assets")
         packages.patch_argon_config(app)
+        packages.patch_root_favicon(self.root, REPO_ROOT / "assets")
 
         expected_bg = (REPO_ROOT / "assets" / "background.jpg").read_bytes()
         self.assertEqual((static / "img" / "bg1.jpg").read_bytes(), expected_bg)
         self.assertIn("data:image/png;base64,", (static / "img" / "argon.svg").read_text())
         self.assertEqual((static / "favicon.ico").read_bytes()[:4], b"\x00\x00\x01\x00")
         self.assertEqual(images.png_size((static / "icon" / "favicon-16x16.png").read_bytes()), (16, 16))
+        self.assertNotIn("distrevision", footer.read_text(encoding="utf-8"))
+        root_icon = self.root / "package/base-files/files/www/favicon.ico"
+        self.assertEqual(root_icon.read_bytes()[:4], b"\x00\x00\x01\x00")
 
         text = config.read_text(encoding="utf-8")
         self.assertIn("option online_wallpaper 'none'", text)
+        self.assertIn("option mode 'light'", text)
+        self.assertIn("option primary '#2E9D72'", text)
+        self.assertIn("option dark_primary '#4CAF86'", text)
+        self.assertIn("option dark_primary_mode 'custom'", text)
         self.assertNotIn("'bing'", text)
         self.assertIn('"none"', defaults.read_text(encoding="utf-8"))
 
@@ -307,6 +354,21 @@ class CollectTest(TempTreeTest):
         self.assertIn("SHA256SUMS", names)
         self.assertIn("BUILD_INFO.txt", names)
         self.assertIn("config.buildinfo", names)
+
+    def test_collect_x86_image(self) -> None:
+        self.write(
+            ".zerowrt-info.json",
+            '{"board": "x86", "subtarget": "64", "device": "Generic", "artifact": "x86_64", "version": "20261020"}\n',
+        )
+        source_dir = self.root / "bin/targets/x86/64"
+        source_dir.mkdir(parents=True)
+        firmware = "openwrt-x86-64-generic-squashfs-combined-efi.img.gz"
+        (source_dir / firmware).write_bytes(b"firmware")
+
+        out = self.root / "dist"
+        build.collect(self.root, out)
+        names = {path.name for path in out.iterdir()}
+        self.assertIn("ZeroWrt-20261020-x86_64-squashfs-combined-efi.img.gz", names)
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ on:
         description: "WiFi password: 8-63 chars, letters/digits/!@#$%^&*()_+.:=?- only"
         required: true
         type: string
-        default: "ZeroWrt123"
+        default: "1234567890"
       device:
         description: "Device profile"
         required: true
@@ -25,7 +25,7 @@ on:
         default: "ruijie_rg-x60-new"
         options:
           - ruijie_rg-x60-new
-          - ruijie_rg-x60-pro
+          - x86_64
 
   push:
     branches: [main]
@@ -45,12 +45,16 @@ env:
   PYTHONUNBUFFERED: "1"
   BUILD_ROOT: /builder
   LEDE_DIR: /builder/lede
+  ZEROWRT_DEVICE: ${{ github.event.inputs.device || 'ruijie_rg-x60-new' }}
+  TOOLCHAIN_CACHE_VERSION: v1
 
 jobs:
   build:
     name: Compile ZeroWrt
     runs-on: ubuntu-24.04
     timeout-minutes: 360
+    env:
+      ZEROWRT_REF: ${{ secrets.LEDE_REF || 'ruijie-rg-x60-new' }}
 
     steps:
       - name: Checkout ZeroWrt
@@ -96,7 +100,7 @@ jobs:
         env:
           ZEROWRT_IP: ${{ github.event.inputs.ip || '10.0.0.1' }}
           ZEROWRT_WIFI_NAME: ${{ github.event.inputs.wifi_name || 'ZeroWrt' }}
-          ZEROWRT_WIFI_PASSWORD: ${{ github.event.inputs.wifi_password || 'ZeroWrt123' }}
+          ZEROWRT_WIFI_PASSWORD: ${{ github.event.inputs.wifi_password || '1234567890' }}
         run: |
           python3 scripts/zerowrt.py source customize \
             --tree "$LEDE_DIR" \
@@ -110,12 +114,44 @@ jobs:
             --assets "$GITHUB_WORKSPACE/assets"
 
       - name: Generate .config
-        env:
-          ZEROWRT_DEVICE: ${{ github.event.inputs.device || 'ruijie_rg-x60-new' }}
         run: |
           python3 scripts/zerowrt.py config generate \
             --tree "$LEDE_DIR" \
             --device "$ZEROWRT_DEVICE"
+
+      - name: Restore toolchain cache
+        id: toolchain-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            /builder/lede/staging_dir/host
+            /builder/lede/staging_dir/toolchain-*
+            /builder/lede/build_dir/host
+            /builder/lede/build_dir/toolchain-*
+          key: zerowrt-toolchain-${{ runner.os }}-${{ env.ZEROWRT_DEVICE }}-${{ env.ZEROWRT_REF }}-${{ env.TOOLCHAIN_CACHE_VERSION }}
+
+      - name: Refresh cached toolchain timestamps
+        if: steps.toolchain-cache.outputs.cache-hit == 'true'
+        run: python3 scripts/zerowrt.py build touch --tree "$LEDE_DIR"
+
+      - name: Build toolchain (cache miss)
+        if: steps.toolchain-cache.outputs.cache-hit != 'true'
+        env:
+          TMPDIR: /builder/tmp
+        run: |
+          mkdir -p "$TMPDIR"
+          python3 scripts/zerowrt.py build toolchain --tree "$LEDE_DIR" --jobs "$(nproc)"
+
+      - name: Save toolchain cache
+        if: steps.toolchain-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            /builder/lede/staging_dir/host
+            /builder/lede/staging_dir/toolchain-*
+            /builder/lede/build_dir/host
+            /builder/lede/build_dir/toolchain-*
+          key: zerowrt-toolchain-${{ runner.os }}-${{ env.ZEROWRT_DEVICE }}-${{ env.ZEROWRT_REF }}-${{ env.TOOLCHAIN_CACHE_VERSION }}
 
       - name: Download source archives
         env:

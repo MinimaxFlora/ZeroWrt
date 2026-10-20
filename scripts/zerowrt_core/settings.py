@@ -15,7 +15,7 @@ from . import util
 
 DEFAULT_IP = "10.0.0.1"
 DEFAULT_WIFI_NAME = "ZeroWrt"
-DEFAULT_WIFI_PASSWORD = "ZeroWrt123"
+DEFAULT_WIFI_PASSWORD = "1234567890"
 DEFAULT_DEVICE = "ruijie_rg-x60-new"
 
 DEVICE_RE = re.compile(r"[A-Za-z0-9_.-]{1,64}")

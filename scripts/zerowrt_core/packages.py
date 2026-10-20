@@ -236,7 +236,33 @@ def patch_argon_theme(theme_dir: Path, assets_dir: Path) -> None:
             else:
                 # Without Pillow, reuse the source PNG and let the browser scale it.
                 target.write_bytes(logo)
-    util.log("favicons replaced")
+    util.log("theme favicons replaced")
+
+    _patch_argon_footer(theme_dir)
+
+
+def _patch_argon_footer(theme_dir: Path) -> None:
+    """Drop the empty revision suffix from the login page firmware string."""
+    path = Path(theme_dir) / "ucode" / "template" / "themes" / "argon" / "footer_login.ut"
+    if not path.exists():
+        return
+    text = util.read_text(path)
+    old = "version.distname + ' ' + version.distversion + '-' + version.distrevision"
+    new = "version.distname + ' ' + version.distversion"
+    if old not in text:
+        util.warn("Argon footer version expression not found; login footer left unchanged")
+        return
+    util.write_text(path, text.replace(old, new))
+    util.log("login footer version uses ZeroWrt <date>")
+
+
+def patch_root_favicon(tree: Path, assets_dir: Path) -> None:
+    """Install the same icon at /www/favicon.ico for browser root requests."""
+    logo = (Path(assets_dir) / "logo.png").read_bytes()
+    path = Path(tree) / "package" / "base-files" / "files" / "www" / "favicon.ico"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(images.png_to_ico(logo))
+    util.log("installed /www/favicon.ico")
 
 
 def _replace_references(theme_dir: Path, old: str, new: str) -> None:
@@ -261,6 +287,25 @@ def _template_mentions(theme_dir: Path, needle: str) -> bool:
     return False
 
 
+ARGON_OPTIONS = {
+    "online_wallpaper": "none",
+    "mode": "light",
+    "primary": "#2E9D72",
+    "dark_primary": "#4CAF86",
+    "dark_primary_mode": "custom",
+}
+
+
+def _set_option(text: str, name: str, value: str) -> str:
+    pattern = re.compile(rf"^[ \t]*option[ \t]+{name}[ \t]+.*$", re.M)
+    line = f"\toption {name} '{value}'"
+    if pattern.search(text):
+        return pattern.sub(line, text, count=1)
+    if "config global" in text:
+        return text.replace("config global", f"config global\n{line}", 1)
+    return text + f"\nconfig global\n{line}\n"
+
+
 def patch_argon_config(app_dir: Path) -> None:
     app_dir = Path(app_dir)
     config = app_dir / "root" / "etc" / "config" / "argon"
@@ -268,18 +313,16 @@ def patch_argon_config(app_dir: Path) -> None:
         util.warn(f"Argon config not found: {config}")
         return
 
-    util.header("Disabling the Argon online wallpaper")
+    util.header("Configuring Argon theme")
     text = util.read_text(config)
-    line = re.compile(r"^[ \t]*option[ \t]+online_wallpaper[ \t]+.*$", re.M)
-    if line.search(text):
-        text = line.sub("\toption online_wallpaper 'none'", text)
-    elif "config global" in text:
-        text = text.replace("config global", "config global\n\toption online_wallpaper 'none'", 1)
-    else:
-        text += "\nconfig global\n\toption online_wallpaper 'none'\n"
+    for name, value in ARGON_OPTIONS.items():
+        text = _set_option(text, name, value)
     _write_text_if_changed(config, text)
-    if "option online_wallpaper 'none'" not in util.read_text(config):
-        raise util.BuildError("failed to set online_wallpaper to none")
+
+    final = util.read_text(config)
+    missing = [name for name, value in ARGON_OPTIONS.items() if f"option {name} '{value}'" not in final]
+    if missing:
+        raise util.BuildError(f"failed to set Argon options: {', '.join(missing)}")
     util.log(f"patched {config.relative_to(app_dir)}")
 
     # Fresh installs only; make upgrades from the old Bing switch agree too.
@@ -299,6 +342,7 @@ def apply_argon_branding(tree: Path, assets_dir: Path) -> None:
         raise util.BuildError("Argon theme was not cloned")
 
     patch_argon_theme(theme, assets_dir)
+    patch_root_favicon(tree, assets_dir)
 
     app = tree / "package" / "new" / "luci-app-argon-config"
     if app.exists():

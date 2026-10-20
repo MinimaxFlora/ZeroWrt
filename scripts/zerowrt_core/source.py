@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 import re
 import shlex
+from datetime import datetime
 from pathlib import Path
 
 from . import util
@@ -22,6 +23,7 @@ FEED_CONFLICTS = {
     "luci-app-argon-config",
     "luci-app-passwall",
     "luci-app-openclash",
+    "luci-app-ssr-plus",
     # PassWall core libraries (see Openwrt-Passwall/openwrt-passwall README)
     "xray-core",
     "v2ray-geodata",
@@ -166,6 +168,37 @@ def update_feeds(tree: Path) -> None:
         )
 
 
+def remove_ssr_plus(tree: Path) -> None:
+    """Drop ShadowSocksR Plus+ from the feed, the tree and default packages."""
+    tree = Path(tree)
+    util.header("Removing ShadowSocksR Plus+")
+
+    removed: list[Path] = []
+    for base in (tree / "package", tree / "feeds"):
+        _prune_packages(base, {"luci-app-ssr-plus"}, removed=removed)
+    for path in removed:
+        util.log(f"removed {path.relative_to(tree)}")
+
+    token_re = re.compile(r"(?<![\w./-])luci-app-ssr-plus(?![\w./-])[ \t]*")
+    patched: list[Path] = []
+    candidates = [tree / "include" / "target.mk"]
+    linux_dir = tree / "target" / "linux"
+    if linux_dir.exists():
+        candidates.extend(linux_dir.rglob("*.mk"))
+    for path in candidates:
+        if not path.exists():
+            continue
+        text = util.read_text(path)
+        if "luci-app-ssr-plus" not in text:
+            continue
+        util.write_text(path, token_re.sub(" ", text))
+        patched.append(path)
+        util.log(f"{path.relative_to(tree)}: removed luci-app-ssr-plus")
+
+    if not removed and not patched:
+        util.warn("luci-app-ssr-plus was not present")
+
+
 def patch_version_mk(tree: Path) -> None:
     path = Path(tree) / CORE_FILES["version"]
     if not path.exists():
@@ -180,6 +213,19 @@ def patch_version_mk(tree: Path) -> None:
             replaced += util.replace_text(path, old, new, required=False)
         if replaced == 0 and f"{variable}:=$(if $({variable}),$({variable}),ZeroWrt)" not in util.read_text(path):
             util.warn(f"{variable} default already customised or format changed")
+
+    version = datetime.now().strftime("%Y%m%d")
+    text = util.read_text(path)
+    new_text, count = re.subn(
+        r"(VERSION_NUMBER:=\$\(if \$\(VERSION_NUMBER\),\$\(VERSION_NUMBER\),)[^)\n]+(\))",
+        rf"\g<1>{version}\g<2>",
+        text,
+    )
+    if count:
+        util.write_text(path, new_text)
+        util.log(f"VERSION_NUMBER default set to {version}")
+    else:
+        util.warn("VERSION_NUMBER default was not found")
 
 
 def patch_config_generate(tree: Path, ip: str) -> None:
@@ -291,6 +337,7 @@ def apply_core_customisations(tree: Path, settings: BuildSettings) -> None:
     patch_config_generate(tree, settings.ip)
     patch_default_settings(tree)
     patch_wireless(tree, settings)
+    remove_ssr_plus(tree)
     verify_core(tree, settings)
 
 
@@ -316,6 +363,10 @@ def verify_core(tree: Path, settings: BuildSettings) -> None:
             text = util.read_text(path)
             if shlex.quote(settings.ssid("2g")) not in text or shlex.quote(settings.ssid("5g")) not in text:
                 problems.append(f"{relative} does not set {settings.ssid('2g')} / {settings.ssid('5g')}")
+
+    target_mk = tree / "include" / "target.mk"
+    if target_mk.exists() and "luci-app-ssr-plus" in util.read_text(target_mk):
+        problems.append("include/target.mk still references luci-app-ssr-plus")
 
     if problems:
         raise util.BuildError("core customisation failed:\n  - " + "\n  - ".join(problems))

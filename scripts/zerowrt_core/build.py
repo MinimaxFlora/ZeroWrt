@@ -30,13 +30,50 @@ def compile_firmware(tree: Path, jobs: int) -> None:
     util.log("firmware compiled")
 
 
+def build_toolchain(tree: Path, jobs: int) -> None:
+    """Build the toolchain once so it can be cached between workflow runs."""
+    tree = Path(tree)
+    util.header(f"Building toolchain (make -j{jobs} toolchain/compile)")
+    util.run(
+        ["make", f"-j{jobs}", "toolchain/compile"],
+        cwd=tree,
+        log_path=tree / "toolchain.log",
+        check=True,
+    )
+    util.log("toolchain compiled")
+
+
+def touch_toolchain(tree: Path) -> None:
+    """Refresh timestamps of restored toolchain files so make does not rebuild."""
+    tree = Path(tree)
+    patterns = (
+        "staging_dir/host",
+        "staging_dir/toolchain-*",
+        "build_dir/host",
+        "build_dir/toolchain-*",
+    )
+    touched = 0
+    for pattern in patterns:
+        for base in tree.glob(pattern):
+            if not base.exists():
+                continue
+            for root, dirs, files in os.walk(base):
+                for name in [*dirs, *files]:
+                    try:
+                        os.utime(Path(root) / name, None)
+                        touched += 1
+                    except OSError:
+                        continue
+    util.log(f"refreshed {touched} toolchain path(s) from cache")
+
+
 def _sanitize(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-")
 
 
 def _artifact_suffix(filename: str, device: str) -> str:
     """Return the part of a build artifact name after the device name."""
-    device_pattern = re.compile(rf"-{re.escape(device).replace('_', '[-_]')}[-.]")
+    device_pattern = re.compile(rf"-{re.escape(device).replace('_', '[-_]')}[-.]", re.I)
     match = device_pattern.search(filename)
     if match:
         return filename[match.end() :]
@@ -69,6 +106,7 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
     board = info.get("board", "")
     subtarget = info.get("subtarget", "")
     device = info.get("device", "")
+    artifact = info.get("artifact") or device
     version = _version_from_tree(tree, info)
 
     targets = tree / "bin" / "targets"
@@ -85,7 +123,20 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     collected: list[Path] = []
 
-    patterns = ["*.bin", "*.itb", "*.img.gz", "*.tar", "*.manifest", "*.buildinfo"]
+    patterns = [
+        "*.bin",
+        "*.itb",
+        "*.img",
+        "*.img.gz",
+        "*.iso",
+        "*.efi",
+        "*.vmdk",
+        "*.vhdx",
+        "*.qcow2",
+        "*.tar",
+        "*.manifest",
+        "*.buildinfo",
+    ]
     files: list[Path] = []
     for pattern in patterns:
         files.extend(sorted(source_dir.glob(pattern)))
@@ -93,10 +144,10 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
     files = [p for p in files if p.is_file()]
 
     for path in files:
-        has_device = bool(device) and re.search(rf"-{re.escape(device).replace('_', '[-_]')}[-.]", path.name)
-        if path.suffix in {".bin", ".itb", ".gz", ".tar"} and has_device:
+        has_device = bool(device) and re.search(rf"-{re.escape(device).replace('_', '[-_]')}[-.]", path.name, re.I)
+        if path.suffix in {".bin", ".itb", ".gz", ".iso", ".efi", ".vmdk", ".vhdx", ".qcow2", ".tar"} and has_device:
             suffix = _artifact_suffix(path.name, device)
-            stem = _sanitize(f"ZeroWrt-{version}-{device}-{suffix}")
+            stem = _sanitize(f"ZeroWrt-{version}-{artifact}-{suffix}")
             new_name = stem
         else:
             new_name = path.name

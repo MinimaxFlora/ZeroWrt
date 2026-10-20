@@ -32,8 +32,8 @@ ZeroWrt 是基于 LEDE 源码（私有源码仓库的 `ruijie-rg-x60-new` 分支
 | --- | --- | --- |
 | `ip` | `10.0.0.1` | 管理地址 / LAN IP |
 | `wifi_name` | `ZeroWrt` | WiFi 名称前缀，自动生成 `-2.4G`、`-5G`、`-6G` |
-| `wifi_password` | `ZeroWrt123` | WiFi 密码，8–63 位，仅字母/数字/`!@#$%^&*()_+.:=?-`；不经过命令行、不打印 |
-| `device` | `ruijie_rg-x60-new` | 设备 profile（选择框，另有 `ruijie_rg-x60-pro`） |
+| `wifi_password` | `1234567890` | WiFi 密码，8–63 位，仅字母/数字/`!@#$%^&*()_+.:=?-`；不经过命令行、不打印 |
+| `device` | `ruijie_rg-x60-new` | 设备选择：`ruijie_rg-x60-new` 或 `x86_64` |
 
 例如 `wifi_name=MyNet` 时，实际 SSID 为：
 
@@ -69,8 +69,9 @@ push:
 5. **更新 feeds**：删除 feeds 里的 Argon 主题/插件和 PassWall 冲突包
 6. **核心定制**：版本、IP、主机名、WiFi 名称/密码
 7. **添加第三方包与主题品牌化**
-8. **生成 `.config`**：设备 profile 查表 + 固定软件包列表
-9. **下载、编译、收集产物**
+8. **生成 `.config`**：设备/profile 选择 + 固定软件包列表 + 日期版本号
+9. **加载工具链缓存**：命中则跳过工具链编译，只刷新时间戳；未命中先执行 `make toolchain/compile`，任务结束后自动缓存
+10. **下载、编译、收集产物**
 
 产物在本次 Run 的 **Artifacts** 中：`ZeroWrt-<run_number>`，包含固件、`SHA256SUMS`、`BUILD_INFO.txt`。
 
@@ -78,13 +79,15 @@ push:
 
 | 项目 | 实现位置 | 说明 |
 | --- | --- | --- |
-| 固件名 `ZeroWrt` | `include/version.mk` | `VERSION_DIST`、`VERSION_MANUFACTURER` 改为 `ZeroWrt` |
+| 固件名 `ZeroWrt` | `include/version.mk` | `VERSION_DIST`、`VERSION_MANUFACTURER` 改为 `ZeroWrt`；版本号改为构建日期 |
 | 发行描述 | `package/lean/default-settings/files/zzz-default-settings` | `DISTRIB_DESCRIPTION`、`OPENWRT_RELEASE` 中的 LEDE 改为 ZeroWrt |
 | 管理 IP | `package/base-files/files/bin/config_generate`<br>`package/base-files/luci/bin/config_generate` | 写入 Actions 里的 `ip`，主机名默认 `ZeroWrt` |
 | WiFi 名称与密码 | `package/kernel/mac80211/files/lib/wifi/mac80211.sh` | 2.4G/5G/6G 分别生成 SSID；WPA2/WPA3 密码 |
-| Argon 主题 | `package/new/luci-theme-argon` | 跟踪 `master`（3.x），默认登录背景、Logo、favicon 替换为 `assets/` 素材 |
-| Argon 在线壁纸 | 主题包内 `root/etc/config/argon` | `online_wallpaper` 改为 `none`（3.x 默认已是 none，仍会显式写入） |
-| 代理插件 | `package/new/passwall-*`、`package/new/openclash` | PassWall + OpenClash，保留 SSR Plus+ |
+| Argon 主题 | `package/new/luci-theme-argon` | 跟踪 `master`（3.x），登录背景、登录 Logo、网站图标全部替换为 `assets/` 素材 |
+| Argon 外观 | 主题包内 `root/etc/config/argon` | 亮色模式、主色 `#2E9D72`、暗色主色 `#4CAF86`、在线壁纸 `none` |
+| 网站图标 | `package/new/luci-theme-argon/.../icon/*`、`package/base-files/files/www/favicon.ico` | 主题 favicon + `/favicon.ico` 都使用 ZeroWrt Logo |
+| 移除 SSR Plus+ | `include/target.mk`、`feeds/helloworld` | 删除默认 SSR Plus+ 插件及默认包引用 |
+| 代理插件 | `package/new/passwall-*`、`package/new/openclash` | PassWall + OpenClash |
 | 软件包列表 | `scripts/zerowrt_core/configgen.py` | 统一在 `PACKAGES` 中维护 |
 
 替换品牌素材：覆盖 `assets/background.jpg`、`assets/logo.png` 后重新运行。
@@ -104,15 +107,30 @@ env:
 
 v2.4.8 的登录页使用 `img/bg1.jpg`；master 使用 `img/bg1.webp`，脚本会按模板自动生成对应的背景文件。
 
+主题默认外观由脚本写入 `root/etc/config/argon`：
+
+```ini
+option mode 'light'
+option primary '#2E9D72'
+option dark_primary '#4CAF86'
+option dark_primary_mode 'custom'
+option online_wallpaper 'none'
+```
+
+同时替换登录 Logo、主题 `favicon.ico`、`icon/*.png` 以及根路径 `/www/favicon.ico`，浏览器标签页和 “Argon 主题设置” 里的图标都会显示 `assets/logo.png`。
+
 ## 五、设备
 
-设备由 Actions 的 `device` 参数选择，脚本在 `target/linux/*/**/image/*.mk` 中按 `define Device/<name>` 精确查找，并自动推导 board/subtarget。
+设备由 Actions 的 `device` 参数选择：
 
-当前只有：
+- `ruijie_rg-x60-new`：在 `target/linux/mediatek/image/filogic.mk` 中按 `define Device/ruijie_rg-x60-new` 查找，自动得到 `mediatek/filogic`
+- `x86_64`：固定使用 `x86/64` 的 `Generic` profile，生成 `CONFIG_TARGET_x86_64_Generic=y`
+
+当前支持：
 
 ```
-ruijie_rg-x60-new   (mediatek/filogic)
-ruijie_rg-x60-pro   (mediatek/filogic)
+ruijie_rg-x60-new   (mediatek/filogic, 设备 profile)
+x86_64              (x86/64, Generic profile)
 ```
 
 以后新增设备时：
@@ -122,7 +140,15 @@ ruijie_rg-x60-pro   (mediatek/filogic)
 
 如果名称写错，工作流会失败并列出源码树里包含 `rg-x60` 的设备名，便于排查。
 
-## 六、软件包
+## 六、固件版本与登录页
+
+固件版本号使用构建日期（例如 `20261020`）：
+
+- `scripts/zerowrt_core/configgen.py` 在 `.config` 写入 `CONFIG_VERSION_NUMBER`
+- `include/version.mk` 的 `VERSION_NUMBER` 默认值也会改为日期
+- Argon 登录页 footer 去掉了空的 `revision` 后缀，因此显示为 `ZeroWrt 20261020`，不再出现 `ZeroWrt 24.10.5-`
+
+## 七、软件包
 
 包列表在 `scripts/zerowrt_core/configgen.py`：
 
@@ -132,15 +158,27 @@ PACKAGES = [
     "CONFIG_PACKAGE_luci-app-argon-config",  # 仅当独立插件被克隆（非 3.x 主题）时使用
     "CONFIG_PACKAGE_luci-app-passwall",
     "CONFIG_PACKAGE_luci-app-openclash",
-    "CONFIG_PACKAGE_luci-app-ssr-plus",
 ]
 ```
+
+ShadowSocksR Plus+ 已从 `include/target.mk` 默认包、`feeds/helloworld` 和最终 `.config` 中移除。
 
 Argon `master` 内置设置界面时，脚本会自动从 `.config` 中去掉 `luci-app-argon-config`，避免安装不存在的独立包。
 
 `luci-compat`、`lyaml` 等依赖由 OpenWrt 自动解析，不重复声明。
 
-## 七、代码质量（QC）
+## 八、构建加速（工具链缓存）
+
+工作流在生成 `.config` 之后会恢复/保存工具链缓存，避免每次重新编译 GCC 和 host 工具：
+
+- 缓存路径：`staging_dir/host`、`staging_dir/toolchain-*`、`build_dir/host`、`build_dir/toolchain-*`
+- 缓存 key：`zerowrt-toolchain-<os>-<device>-<ref>-<TOOLCHAIN_CACHE_VERSION>`
+- 命中：只执行 `build touch` 刷新时间戳，跳过 `make toolchain/compile`
+- 未命中：先执行 `make toolchain/compile`，工具链编译完成后立即保存缓存（后续固件编译失败也不会丢）
+
+首次构建仍需编译工具链；之后同一设备/分支会直接加载缓存。如果源码的 GCC 版本或工具链配置变化，请把 [build.yml](.github/workflows/build.yml) 里的 `TOOLCHAIN_CACHE_VERSION` 从 `v1` 改为 `v2`。
+
+## 九、代码质量（QC）
 
 - Ruff 配置：`pyproject.toml`（行宽 120，`E/F/W/I/UP/B/SIM`）
 - 单元测试：`tests/test_zerowrt.py`（设置校验、IP/SSID/密码补丁、设备查找、`.config` 生成、Argon 品牌化、产物命名）
@@ -158,7 +196,7 @@ python -m unittest discover -s tests -v
 python3 -m unittest discover -s tests -v
 ```
 
-## 八、目录结构
+## 十、目录结构
 
 ```
 .github/workflows/build.yml      # 编译工作流

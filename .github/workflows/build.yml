@@ -46,7 +46,7 @@ env:
   BUILD_ROOT: /builder
   LEDE_DIR: /builder/lede
   ZEROWRT_DEVICE: ${{ github.event.inputs.device || 'ruijie_rg-x60-new' }}
-  TOOLCHAIN_CACHE_VERSION: v1
+  CCACHE_DIR: /builder/ccache
 
 jobs:
   build:
@@ -119,39 +119,16 @@ jobs:
             --tree "$LEDE_DIR" \
             --device "$ZEROWRT_DEVICE"
 
-      - name: Restore toolchain cache
-        id: toolchain-cache
-        uses: actions/cache/restore@v4
+      - name: Restore ccache
+        uses: actions/cache@v4
         with:
-          path: |
-            /builder/lede/staging_dir/host
-            /builder/lede/staging_dir/toolchain-*
-            /builder/lede/build_dir/host
-            /builder/lede/build_dir/toolchain-*
-          key: zerowrt-toolchain-${{ runner.os }}-${{ env.ZEROWRT_DEVICE }}-${{ env.ZEROWRT_REF }}-${{ env.TOOLCHAIN_CACHE_VERSION }}
+          path: /builder/ccache
+          key: zerowrt-ccache-${{ runner.os }}-${{ env.ZEROWRT_DEVICE }}-${{ env.ZEROWRT_REF }}-v1
 
-      - name: Refresh cached toolchain timestamps
-        if: steps.toolchain-cache.outputs.cache-hit == 'true'
-        run: python3 scripts/zerowrt.py build touch --tree "$LEDE_DIR"
-
-      - name: Build toolchain (cache miss)
-        if: steps.toolchain-cache.outputs.cache-hit != 'true'
-        env:
-          TMPDIR: /builder/tmp
+      - name: Prepare ccache
         run: |
-          mkdir -p "$TMPDIR"
-          python3 scripts/zerowrt.py build toolchain --tree "$LEDE_DIR" --jobs "$(nproc)"
-
-      - name: Save toolchain cache
-        if: steps.toolchain-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            /builder/lede/staging_dir/host
-            /builder/lede/staging_dir/toolchain-*
-            /builder/lede/build_dir/host
-            /builder/lede/build_dir/toolchain-*
-          key: zerowrt-toolchain-${{ runner.os }}-${{ env.ZEROWRT_DEVICE }}-${{ env.ZEROWRT_REF }}-${{ env.TOOLCHAIN_CACHE_VERSION }}
+          mkdir -p "$CCACHE_DIR"
+          ccache --max-size=5G
 
       - name: Download source archives
         env:

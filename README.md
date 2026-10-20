@@ -70,7 +70,7 @@ push:
 6. **核心定制**：版本、IP、主机名、WiFi 名称/密码
 7. **添加第三方包与主题品牌化**
 8. **生成 `.config`**：设备/profile 选择 + 固定软件包列表
-9. **加载工具链缓存**：命中则跳过工具链编译，只刷新时间戳；未命中先执行 `make toolchain/compile`，完成立即保存缓存
+9. **加载 ccache 缓存**：复用已编译的对象文件，不改动 `staging_dir`/`build_dir` 的 stamp 状态
 10. **下载、编译、收集产物**
 11. **发布 Release**：tag 和 release 名称都使用设备名（`ruijie_rg-x60-new` / `x86_64`），上传 `dist/*`
 
@@ -176,16 +176,18 @@ Argon `master` 内置设置界面时，脚本会自动从 `.config` 中去掉 `l
 
 `luci-compat`、`lyaml` 等依赖由 OpenWrt 自动解析，不重复声明。
 
-## 八、构建加速（工具链缓存）
+## 八、构建加速（ccache）
 
-工作流在生成 `.config` 之后会恢复/保存工具链缓存，避免每次重新编译 GCC 和 host 工具：
+之前缓存整个工具链目录（`staging_dir/toolchain-*`、`build_dir/toolchain-*`）会与 make 的 stamp 状态不一致：缓存恢复后 `make` 仍尝试重建 binutils/gdb，最终报 `readelf.c: unknown type name 'off64_t'` 或 gdb `data-directory/python` 缺失。因此已移除工具链目录缓存。
 
-- 缓存路径：`staging_dir/host`、`staging_dir/toolchain-*`、`build_dir/host`、`build_dir/toolchain-*`
-- 缓存 key：`zerowrt-toolchain-<os>-<device>-<ref>-<TOOLCHAIN_CACHE_VERSION>`
-- 命中：只执行 `build touch` 刷新时间戳，跳过 `make toolchain/compile`
-- 未命中：先执行 `make toolchain/compile`，工具链编译完成后立即保存缓存（后续固件编译失败也不会丢）
+现在改为安全的 ccache：
 
-首次构建仍需编译工具链；之后同一设备/分支会直接加载缓存。如果源码的 GCC 版本或工具链配置变化，请把 [build.yml](.github/workflows/build.yml) 里的 `TOOLCHAIN_CACHE_VERSION` 从 `v1` 改为 `v2`。
+- `.config` 写入 `CONFIG_CCACHE=y`、`CONFIG_CCACHE_DIR="/builder/ccache"`
+- 工作流缓存 `/builder/ccache`，key：`zerowrt-ccache-<os>-<device>-<ref>-v1`
+- 不缓存 `staging_dir`/`build_dir`，不会破坏 make 状态
+- 首次构建仍需完整编译，后续构建复用编译对象
+
+`ccache` 只加速重复编译，不改变工具链逻辑，构建稳定性优先。
 
 ## 九、代码质量（QC）
 

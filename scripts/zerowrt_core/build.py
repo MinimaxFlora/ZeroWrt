@@ -30,43 +30,6 @@ def compile_firmware(tree: Path, jobs: int) -> None:
     util.log("firmware compiled")
 
 
-def build_toolchain(tree: Path, jobs: int) -> None:
-    """Build the toolchain once so it can be cached between workflow runs."""
-    tree = Path(tree)
-    util.header(f"Building toolchain (make -j{jobs} toolchain/compile)")
-    util.run(
-        ["make", f"-j{jobs}", "toolchain/compile"],
-        cwd=tree,
-        log_path=tree / "toolchain.log",
-        check=True,
-    )
-    util.log("toolchain compiled")
-
-
-def touch_toolchain(tree: Path) -> None:
-    """Refresh timestamps of restored toolchain files so make does not rebuild."""
-    tree = Path(tree)
-    patterns = (
-        "staging_dir/host",
-        "staging_dir/toolchain-*",
-        "build_dir/host",
-        "build_dir/toolchain-*",
-    )
-    touched = 0
-    for pattern in patterns:
-        for base in tree.glob(pattern):
-            if not base.exists():
-                continue
-            for root, dirs, files in os.walk(base):
-                for name in [*dirs, *files]:
-                    try:
-                        os.utime(Path(root) / name, None)
-                        touched += 1
-                    except OSError:
-                        continue
-    util.log(f"refreshed {touched} toolchain path(s) from cache")
-
-
 def _version_from_tree(tree: Path, info: dict) -> str:
     version = info.get("version") or ""
     if version:

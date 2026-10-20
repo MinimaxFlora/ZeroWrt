@@ -170,6 +170,12 @@ def _render_config(target: dict, packages: list[str]) -> str:
         ]
     )
     lines.extend(f"{package}=y" for package in sorted(packages))
+    lines.extend(
+        [
+            "CONFIG_CCACHE=y",
+            'CONFIG_CCACHE_DIR="/builder/ccache"',
+        ]
+    )
     return "\n".join(lines) + "\n"
 
 

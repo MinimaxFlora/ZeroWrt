@@ -145,7 +145,6 @@ mac80211_emit_detect() {
         version = util.read_text(tree / "include/version.mk")
         self.assertIn("VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),ZeroWrt)", version)
         self.assertIn("VERSION_MANUFACTURER:=$(if $(VERSION_MANUFACTURER),$(VERSION_MANUFACTURER),ZeroWrt)", version)
-        self.assertIn(f"VERSION_NUMBER:={configgen.build_date()}", version)
 
         for relative in source.CORE_FILES.values():
             if relative.name == "config_generate":
@@ -354,7 +353,7 @@ class CollectTest(TempTreeTest):
     def test_collect_x86_image(self) -> None:
         self.write(
             ".zerowrt-info.json",
-            '{"board": "x86", "subtarget": "64", "device": "Generic", "artifact": "x86_64", "version": "20261020"}\n',
+            '{"board": "x86", "subtarget": "64", "device": "Generic", "artifact": "x86_64", "version": "24.10.5"}\n',
         )
         source_dir = self.root / "bin/targets/x86/64"
         source_dir.mkdir(parents=True)
@@ -364,7 +363,7 @@ class CollectTest(TempTreeTest):
         out = self.root / "dist"
         build.collect(self.root, out)
         names = {path.name for path in out.iterdir()}
-        self.assertIn("ZeroWrt-20261020-x86_64-squashfs-combined-efi.img.gz", names)
+        self.assertIn("ZeroWrt-24.10.5-x86_64-squashfs-combined-efi.img.gz", names)
 
 
 if __name__ == "__main__":

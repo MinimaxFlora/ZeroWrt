@@ -63,7 +63,7 @@ push:
 1. **准备构建空间**
    - 与 sbwml 的 `free-disk` 行为一致：`/mnt` 独立时清理预装组件、创建 swap，并用 LVM 把根分区与 `/mnt` 合并成一个约 130 GiB 的卷
    - 只有 `/mnt` 与根分区是同一块盘、且根分区已有 50 GiB 空闲时，才跳过清理；swap 不足时只调整 swap
-2. **安装依赖**：对齐 sbwml 的 `openwrt-build-setup` 包列表，并补充 lvm2、xfsprogs、python3-pil 等
+2. **安装依赖**：对齐 sbwml 的 `openwrt-build-setup` 包列表，并补充 lvm2、xfsprogs、python3-pil 等；Docker 默认不装（当前配置没有 docker 插件），需要时运行 `system install-deps --docker`
 3. **安装 LLVM**：Clang 23.0.1 到 `/opt/clang`，与 `install-llvm` 使用同一版本
 4. **拉取私有源码**
 5. **更新 feeds**：删除 feeds 里的 Argon 主题/插件和 PassWall 冲突包

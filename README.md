@@ -80,7 +80,7 @@ push:
 
 | 项目 | 实现位置 | 说明 |
 | --- | --- | --- |
-| 固件名 `ZeroWrt` | `include/version.mk` | 只把 `VERSION_DIST`、`VERSION_MANUFACTURER` 的 `OpenWrt` 改为 `ZeroWrt`，版本号保持源码默认 |
+| 固件名 `ZeroWrt` | `include/version.mk` | `VERSION_DIST`、`VERSION_MANUFACTURER` 改为 `ZeroWrt`；版本号改为构建日期 |
 | 发行描述 | `package/lean/default-settings/files/zzz-default-settings` | `DISTRIB_DESCRIPTION`、`OPENWRT_RELEASE` 中的 LEDE 改为 ZeroWrt |
 | 管理 IP | `package/base-files/files/bin/config_generate`<br>`package/base-files/luci/bin/config_generate` | 写入 Actions 里的 `ip`，主机名默认 `ZeroWrt` |
 | WiFi 名称与密码 | `package/kernel/mac80211/files/lib/wifi/mac80211.sh` | 2.4G/5G/6G 分别生成 SSID；WPA2/WPA3 密码 |
@@ -143,20 +143,11 @@ x86_64              (x86/64, Generic profile)
 
 ## 六、固件版本与登录页
 
-只修改 `include/version.mk` 里的两行默认值：
+固件版本号使用构建日期（例如 `20261020`）：
 
-```make
-VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),ZeroWrt)
-VERSION_MANUFACTURER:=$(if $(VERSION_MANUFACTURER),$(VERSION_MANUFACTURER),ZeroWrt)
-```
-
-`VERSION_NUMBER` 保持源码默认（当前为 `24.10.5`），所以产物是：
-
-```
-ZeroWrt-24.10.5-<device>-squashfs-sysupgrade.bin
-```
-
-不再强制日期版本。Argon 登录页 footer 仍会去掉空的 `revision` 后缀，显示 `ZeroWrt 24.10.5`，不会出现末尾的 `-`。
+- `include/version.mk` 的 `VERSION_NUMBER` 默认值在构建时改为日期
+- `VERSION_NUMBER` 是隐藏 Kconfig 符号，不能写进 `.config`（会被 `defconfig` 丢弃），所以由 `version.mk` 提供
+- Argon 登录页 footer 去掉了空的 `revision` 后缀，因此显示为 `ZeroWrt 20261020`，不再出现 `ZeroWrt 24.10.5-`
 
 ## 七、软件包
 

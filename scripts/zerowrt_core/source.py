@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 import re
 import shlex
+from datetime import datetime
 from pathlib import Path
 
 from . import util
@@ -212,6 +213,32 @@ def patch_version_mk(tree: Path) -> None:
             replaced += util.replace_text(path, old, new, required=False)
         if replaced == 0 and f"{variable}:=$(if $({variable}),$({variable}),ZeroWrt)" not in util.read_text(path):
             util.warn(f"{variable} default already customised or format changed")
+
+    version = datetime.now().strftime("%Y%m%d")
+    text = util.read_text(path)
+    # Force the date: CONFIG_VERSION_NUMBER is a hidden Kconfig symbol, so it
+    # cannot be provided through .config reliably.
+    new_text, count = re.subn(
+        r"VERSION_NUMBER:=\$\(call qstrip,\$\(CONFIG_VERSION_NUMBER\)\)\s*\n"
+        r"VERSION_NUMBER:=\$\(if \$\(VERSION_NUMBER\),\$\(VERSION_NUMBER\),[^)\n]+\)",
+        f"VERSION_NUMBER:={version}",
+        text,
+    )
+    if count:
+        util.write_text(path, new_text)
+        util.log(f"VERSION_NUMBER forced to {version}")
+    else:
+        # Fallback for a slightly different upstream layout.
+        new_text, count = re.subn(
+            r"(VERSION_NUMBER:=\$\(if \$\(VERSION_NUMBER\),\$\(VERSION_NUMBER\),)[^)\n]+(\))",
+            rf"\g<1>{version}\g<2>",
+            text,
+        )
+        if count:
+            util.write_text(path, new_text)
+            util.log(f"VERSION_NUMBER default set to {version}")
+        else:
+            util.warn("VERSION_NUMBER default was not found")
 
 
 def patch_config_generate(tree: Path, ip: str) -> None:

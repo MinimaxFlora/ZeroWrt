@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 
 from . import util
@@ -34,6 +35,11 @@ PROFILE_TARGETS = {
         "source": "built-in",
     },
 }
+
+
+def build_date() -> str:
+    """Firmware version shown on the login page and in image names."""
+    return datetime.now().strftime("%Y%m%d")
 
 
 def resolve_target(tree: Path, name: str) -> dict:
@@ -171,6 +177,7 @@ def generate(tree: Path, device: str) -> dict:
     tree = Path(tree)
     target = resolve_target(tree, device)
     packages = _packages(tree)
+    version = build_date()
     util.log(
         f"device {target['name']} ({target['vendor']} {target['model']}) on {target['board']}/{target['subtarget']}"
     )
@@ -212,7 +219,7 @@ def generate(tree: Path, device: str) -> dict:
         "kind": target.get("kind", "device"),
     }
     resolved_version = re.search(r'^CONFIG_VERSION_NUMBER="?([^"\n]+)"?$', resolved, re.M)
-    info["version"] = resolved_version.group(1) if resolved_version else ""
+    info["version"] = resolved_version.group(1) if resolved_version else version
     util.write_text(tree / ".zerowrt-info.json", json.dumps(info, indent=2) + "\n")
     util.log(
         f"configuration ready: {info['board']}/{info['subtarget']} device={info['device']} version={info['version']}"

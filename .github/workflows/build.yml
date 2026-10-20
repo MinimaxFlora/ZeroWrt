@@ -58,7 +58,7 @@ jobs:
 
     steps:
       - name: Checkout ZeroWrt
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 1
 
@@ -126,7 +126,7 @@ jobs:
           sudo chown -R "$(id -u):$(id -g)" /builder/ccache "$GITHUB_WORKSPACE/.ccache"
 
       - name: Restore ccache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: .ccache
           key: zerowrt-ccache-${{ runner.os }}-${{ env.ZEROWRT_DEVICE }}-${{ env.ZEROWRT_REF }}-v2
@@ -168,7 +168,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload firmware
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ZeroWrt-${{ github.run_number }}
           path: dist/*
@@ -201,7 +201,7 @@ jobs:
 
       - name: Upload build logs on failure
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ZeroWrt-logs-${{ github.run_number }}
           path: dist/*-tail.log

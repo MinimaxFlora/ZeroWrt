@@ -238,7 +238,43 @@ def patch_argon_theme(theme_dir: Path, assets_dir: Path) -> None:
                 target.write_bytes(logo)
     util.log("theme favicons replaced")
 
+    _patch_branding_cache(theme_dir, icon_dir, logo)
     _patch_argon_footer(theme_dir)
+
+
+def _patch_branding_cache(theme_dir: Path, icon_dir: Path, logo: bytes) -> None:
+    """Point Argon at a fresh favicon filename and bust cached icon links."""
+    theme_dir = Path(theme_dir)
+    if icon_dir.exists():
+        resized = images.resize_png(logo, 32)
+        (icon_dir / "favicon-zerowrt.png").write_bytes(resized or logo)
+
+    branding = theme_dir / "htdocs" / "luci-static" / "resources" / "argon" / "branding.js"
+    if branding.exists():
+        text = util.read_text(branding)
+        old = "L.resource('../argon/icon/favicon-32x32.png')"
+        new = "L.resource('../argon/icon/favicon-zerowrt.png')"
+        if old in text:
+            util.write_text(branding, text.replace(old, new))
+            util.log("Argon branding UI uses the ZeroWrt favicon")
+        else:
+            util.warn("Argon branding.js default favicon reference not found")
+
+    head_meta = theme_dir / "ucode" / "template" / "themes" / "argon" / "head_meta.ut"
+    if head_meta.exists():
+        text = util.read_text(head_meta)
+        for name in (
+            "favicon.ico",
+            "icon/favicon-16x16.png",
+            "icon/favicon-32x32.png",
+            "icon/android-icon-192x192.png",
+            "icon/apple-icon-144x144.png",
+        ):
+            old = "{{ media }}/" + name + '"'
+            new = "{{ media }}/" + name + '?v=zerowrt"'
+            text = text.replace(old, new)
+        util.write_text(head_meta, text)
+        util.log("browser icon links are cache-busted")
 
 
 def _patch_argon_footer(theme_dir: Path) -> None:

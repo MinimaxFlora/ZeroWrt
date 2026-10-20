@@ -300,6 +300,16 @@ class ArgonBrandingTest(TempTreeTest):
         (static / "favicon.ico").write_bytes(b"old-icon")
         (static / "icon" / "favicon-16x16.png").write_bytes(b"old")
 
+        branding = self.root / "package/new/luci-theme-argon/htdocs/luci-static/resources/argon/branding.js"
+        branding.parent.mkdir(parents=True)
+        branding.write_text(
+            "var defaults = { favicon: L.resource('../argon/icon/favicon-32x32.png') };\n",
+            encoding="utf-8",
+        )
+        head_meta = self.root / "package/new/luci-theme-argon/ucode/template/themes/argon/head_meta.ut"
+        head_meta.parent.mkdir(parents=True, exist_ok=True)
+        head_meta.write_text('<link rel="icon" href="{{ media }}/favicon.ico">\n', encoding="utf-8")
+
         app = self.root / "package/new/luci-app-argon-config"
         config = app / "root/etc/config/argon"
         config.parent.mkdir(parents=True)
@@ -312,7 +322,7 @@ class ArgonBrandingTest(TempTreeTest):
         defaults.write_text('uci -q set "argon.@global[0].online_wallpaper"="bing"\n', encoding="utf-8")
 
         footer = self.root / "package/new/luci-theme-argon/ucode/template/themes/argon/footer_login.ut"
-        footer.parent.mkdir(parents=True)
+        footer.parent.mkdir(parents=True, exist_ok=True)
         footer.write_text(
             "const firmware_info = version.distname + ' ' + version.distversion + '-' + version.distrevision;\n",
             encoding="utf-8",
@@ -327,6 +337,9 @@ class ArgonBrandingTest(TempTreeTest):
         self.assertIn("data:image/png;base64,", (static / "img" / "argon.svg").read_text())
         self.assertEqual((static / "favicon.ico").read_bytes()[:4], b"\x00\x00\x01\x00")
         self.assertEqual(images.png_size((static / "icon" / "favicon-16x16.png").read_bytes()), (16, 16))
+        self.assertTrue((static / "icon" / "favicon-zerowrt.png").exists())
+        self.assertIn("favicon-zerowrt.png", branding.read_text(encoding="utf-8"))
+        self.assertIn("favicon.ico?v=zerowrt", head_meta.read_text(encoding="utf-8"))
         self.assertNotIn("distrevision", footer.read_text(encoding="utf-8"))
         root_icon = self.root / "package/base-files/files/www/favicon.ico"
         self.assertEqual(root_icon.read_bytes()[:4], b"\x00\x00\x01\x00")

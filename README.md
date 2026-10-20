@@ -95,7 +95,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 | WiFi 名称与密码 | `package/kernel/mac80211/files/lib/wifi/mac80211.sh` | 2.4G/5G/6G 分别生成 SSID；WPA2/WPA3 密码 |
 | Argon 主题 | `package/new/luci-theme-argon` | 跟踪 `master`（3.x），登录背景、登录 Logo、网站图标全部替换为 `assets/` 素材 |
 | Argon 外观 | 主题包内 `root/etc/config/argon` | 亮色模式、主色 `#2E9D72`、暗色主色 `#4CAF86`、在线壁纸 `none` |
-| 网站图标 | `package/new/luci-theme-argon/.../icon/*`、`package/base-files/files/www/favicon.ico` | 主题 favicon + `/favicon.ico` 都使用 ZeroWrt Logo |
+| 网站图标 | `package/new/luci-theme-argon/.../icon/*`、`package/base-files/files/www/favicon.ico` | 主题 favicon + `/favicon.ico` 都使用 ZeroWrt Logo；`branding.js` 指向新的 `favicon-zerowrt.png`，模板链接加 `?v=zerowrt` 避免浏览器缓存 |
 | 移除 SSR Plus+ | `include/target.mk`、`feeds/helloworld` | 删除默认 SSR Plus+ 插件及默认包引用 |
 | 代理插件 | `package/new/passwall-*`、`package/new/openclash` | PassWall（仅 Xray，无 Sing-Box）+ OpenClash |
 | 软件包列表 | `scripts/zerowrt_core/configgen.py` | 统一在 `PACKAGES` 中维护 |
@@ -199,7 +199,7 @@ Argon `master` 内置设置界面时，脚本会自动从 `.config` 中去掉 `l
 
 之前缓存只有 295 字节，是因为直接写 `/builder/ccache` 时 `actions/cache` 实际在 workspace 下找路径，归档成了空目录；bind mount 后才是真实内容。
 
-工作流 action 也已升级到 Node 24 版本：`actions/checkout@v6`、`actions/cache@v5`、`actions/upload-artifact@v6`、`actions/setup-python@v6`。
+工作流 action 已升级到最新 Node 24 版本：`actions/checkout@v7.0.1`、`actions/cache@v6`、`actions/upload-artifact@v7.0.2`、`actions/setup-python@v7.0.0`。
 
 `ccache` 只加速重复编译，不改变工具链逻辑，构建稳定性优先。
 

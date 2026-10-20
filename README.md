@@ -76,11 +76,19 @@ push:
 
 产物在本次 Run 的 **Artifacts** 中：`ZeroWrt-<run_number>`，包含固件、`SHA256SUMS`、`BUILD_INFO.txt`。构建成功后还会自动创建/更新以设备命名的 Release；同一设备再次构建会删除旧 release/tag 后重新发布。
 
+固件文件保留 OpenWrt 原始命名，例如：
+
+```
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+```
+
+`VERSION_DIST=ZeroWrt` 已经让前缀变成 `zerowrt`，不再额外重命名为 `ZeroWrt-20261020-...`。
+
 ## 四、定制内容
 
 | 项目 | 实现位置 | 说明 |
 | --- | --- | --- |
-| 固件名 `ZeroWrt` | `include/version.mk` | `VERSION_DIST`、`VERSION_MANUFACTURER` 改为 `ZeroWrt`；版本号改为构建日期 |
+| 固件名 `ZeroWrt` | `include/version.mk` | 只把 `VERSION_DIST`、`VERSION_MANUFACTURER` 的 `OpenWrt` 改为 `ZeroWrt`；`VERSION_NUMBER` 设为构建日期仅用于登录页显示 |
 | 发行描述 | `package/lean/default-settings/files/zzz-default-settings` | `DISTRIB_DESCRIPTION`、`OPENWRT_RELEASE` 中的 LEDE 改为 ZeroWrt |
 | 管理 IP | `package/base-files/files/bin/config_generate`<br>`package/base-files/luci/bin/config_generate` | 写入 Actions 里的 `ip`，主机名默认 `ZeroWrt` |
 | WiFi 名称与密码 | `package/kernel/mac80211/files/lib/wifi/mac80211.sh` | 2.4G/5G/6G 分别生成 SSID；WPA2/WPA3 密码 |
@@ -182,7 +190,7 @@ Argon `master` 内置设置界面时，脚本会自动从 `.config` 中去掉 `l
 ## 九、代码质量（QC）
 
 - Ruff 配置：`pyproject.toml`（行宽 120，`E/F/W/I/UP/B/SIM`）
-- 单元测试：`tests/test_zerowrt.py`（设置校验、IP/SSID/密码补丁、设备查找、`.config` 生成、Argon 品牌化、产物命名）
+- 单元测试：`tests/test_zerowrt.py`（设置校验、IP/SSID/密码补丁、设备查找、`.config` 生成、Argon 品牌化、产物收集）
 - 质量工作流：[.github/workflows/quality.yml](.github/workflows/quality.yml)，在 push / PR 时运行：
 
 ```bash

@@ -67,19 +67,6 @@ def touch_toolchain(tree: Path) -> None:
     util.log(f"refreshed {touched} toolchain path(s) from cache")
 
 
-def _sanitize(name: str) -> str:
-    return re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-")
-
-
-def _artifact_suffix(filename: str, device: str) -> str:
-    """Return the part of a build artifact name after the device name."""
-    device_pattern = re.compile(rf"-{re.escape(device).replace('_', '[-_]')}[-.]", re.I)
-    match = device_pattern.search(filename)
-    if match:
-        return filename[match.end() :]
-    return filename
-
-
 def _version_from_tree(tree: Path, info: dict) -> str:
     version = info.get("version") or ""
     if version:
@@ -110,7 +97,6 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
     board = info.get("board", "")
     subtarget = info.get("subtarget", "")
     device = info.get("device", "")
-    artifact = info.get("artifact") or device
     version = _version_from_tree(tree, info)
 
     targets = tree / "bin" / "targets"
@@ -148,19 +134,12 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
     files = [p for p in files if p.is_file()]
 
     for path in files:
-        has_device = bool(device) and re.search(rf"-{re.escape(device).replace('_', '[-_]')}[-.]", path.name, re.I)
-        if path.suffix in {".bin", ".itb", ".gz", ".iso", ".efi", ".vmdk", ".vhdx", ".qcow2", ".tar"} and has_device:
-            suffix = _artifact_suffix(path.name, device)
-            stem = _sanitize(f"ZeroWrt-{version}-{artifact}-{suffix}")
-            new_name = stem
-        else:
-            new_name = path.name
-        destination = out_dir / new_name
+        destination = out_dir / path.name
         if destination.exists():
             destination.unlink()
         shutil.copy2(path, destination)
         collected.append(destination)
-        util.log(f"{path.name} -> {destination.name}")
+        util.log(f"collected {destination.name}")
 
     checksum_file = out_dir / "SHA256SUMS"
     lines = []

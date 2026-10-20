@@ -331,22 +331,22 @@ class ArgonBrandingTest(TempTreeTest):
 
 
 class CollectTest(TempTreeTest):
-    def test_collect_renames_firmware(self) -> None:
+    def test_collect_keeps_firmware_names(self) -> None:
         self.write(
             ".zerowrt-info.json",
-            '{"board": "mediatek", "subtarget": "filogic", "device": "ruijie_rg-x60-pro", "version": "24.10.5"}\n',
+            '{"board": "mediatek", "subtarget": "filogic", "device": "ruijie_rg-x60-pro", "version": "20261020"}\n',
         )
         source_dir = self.root / "bin/targets/mediatek/filogic"
         source_dir.mkdir(parents=True)
-        firmware = "zerowrt-24.10.5-mediatek-filogic-ruijie_rg-x60-pro-squashfs-sysupgrade.bin"
+        firmware = "zerowrt-mediatek-filogic-ruijie_rg-x60-pro-squashfs-sysupgrade.bin"
         (source_dir / firmware).write_bytes(b"firmware")
-        (source_dir / "zerowrt-24.10.5-mediatek-filogic-ruijie_rg-x60-pro.manifest").write_text("{}")
+        (source_dir / "zerowrt-mediatek-filogic-ruijie_rg-x60-pro.manifest").write_text("{}")
         (source_dir / "config.buildinfo").write_text("CONFIG_X=y\n")
 
         out = self.root / "dist"
         build.collect(self.root, out)
         names = {path.name for path in out.iterdir()}
-        self.assertIn("ZeroWrt-24.10.5-ruijie_rg-x60-pro-squashfs-sysupgrade.bin", names)
+        self.assertIn(firmware, names)
         self.assertIn("SHA256SUMS", names)
         self.assertIn("BUILD_INFO.txt", names)
         self.assertIn("config.buildinfo", names)
@@ -358,13 +358,13 @@ class CollectTest(TempTreeTest):
         )
         source_dir = self.root / "bin/targets/x86/64"
         source_dir.mkdir(parents=True)
-        firmware = "openwrt-x86-64-generic-squashfs-combined-efi.img.gz"
+        firmware = "zerowrt-x86-64-generic-squashfs-combined-efi.img.gz"
         (source_dir / firmware).write_bytes(b"firmware")
 
         out = self.root / "dist"
         build.collect(self.root, out)
         names = {path.name for path in out.iterdir()}
-        self.assertIn("ZeroWrt-20261020-x86_64-squashfs-combined-efi.img.gz", names)
+        self.assertIn(firmware, names)
 
 
 if __name__ == "__main__":

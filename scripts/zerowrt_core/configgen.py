@@ -21,6 +21,8 @@ PACKAGES = [
     "CONFIG_PACKAGE_luci-app-argon-config",
     "CONFIG_PACKAGE_luci-app-passwall",
     "CONFIG_PACKAGE_luci-app-openclash",
+    "CONFIG_PACKAGE_luci-app-ota",
+    "CONFIG_PACKAGE_luci-i18n-ota-zh-cn",
 ]
 
 # Targets that are selected by a regular target profile instead of a device.

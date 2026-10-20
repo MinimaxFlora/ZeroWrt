@@ -239,3 +239,42 @@ scripts/zerowrt_core/
 tests/test_zerowrt.py
 pyproject.toml
 ```
+
+## 十一、在线升级（OTA）与固件下载页
+
+固件内置 [luci-app-ota](https://github.com/MinimaxFlora/luci-app-ota)，菜单在 **系统 → 在线升级**（概览 / 配置）。
+插件用的更新索引和配套的下载页都由构建流程自动发布到本仓库的 `gh-pages` 分支（GitHub Pages）：
+
+```
+https://minimaxflora.github.io/ZeroWrt/            # 下载页：按设备列最新镜像、SHA256、更新日志
+https://minimaxflora.github.io/ZeroWrt/ota.json    # 插件读取的更新索引
+https://minimaxflora.github.io/ZeroWrt/history.json  # 下载页用的发布历史
+```
+
+流水线里新增的三步：
+
+1. `Add luci-app-ota`：把插件克隆到 `package/new/luci-app-ota`（`Generate .config` 之前）
+2. `Embed OTA metadata`：写入 `/etc/ota/build.json`、`version.date` 和默认更新源地址（`/etc/uci-defaults`），让固件能自报设备名与构建时间
+3. `Publish OTA page`：Release 发布后把页面、`ota.json`、`history.json` 推送到 `gh-pages` 分支
+
+每台设备构建完成后只更新自己在索引里的条目，不同设备的条目不会互相覆盖；所以
+`ruijie_rg-x60-new` 和 `x86_64` 各构建一次后，索引和下载页里两套设备就都齐了。
+x86 会分成「传统 BIOS」和「UEFI」两项，刷错会无法启动，下载页上用徽章区分。
+
+升级流程：检查更新 → 下载（SHA256 校验 + `sysupgrade -T` 预检镜像）→ 安装（可选保留配置）。
+
+设备上的命令行（输出 JSON，方便脚本调用）：
+
+```sh
+ota info       # 本地固件信息、设备标识、索引地址
+ota check      # 检查更新
+ota status     # 下载进度
+ota cancel     # 取消下载
+```
+
+> `version.date` 让 `SOURCE_DATE_EPOCH` 等于本次构建时间，从而 `/etc/os-release` 的
+> `OPENWRT_BUILD_DATE` 与 `/etc/ota/build.json` 的 `build_date` 完全一致；
+> 不写的话会退回 git 提交时间，同一个 commit 多次构建就分不出新旧了。
+
+仓库的 `Settings → Pages` 需要设为 **Deploy from a branch / `gh-pages` / `/`**（只需设置一次，
+本仓库已配置）。页面本身在插件仓库的 `site/` 目录，改样式或文案时改那里即可。

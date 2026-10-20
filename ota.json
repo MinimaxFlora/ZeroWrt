@@ -1,0 +1,7 @@
+{
+  "schema": 2,
+  "generator": "luci-app-ota tools/gen_ota_index.py",
+  "generated": 1792519143,
+  "dist": "ZeroWrt",
+  "devices": {}
+}

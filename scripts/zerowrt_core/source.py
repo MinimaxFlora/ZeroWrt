@@ -56,6 +56,9 @@ WIFI_SCRIPTS = (
     Path("package/network/config/wifi-scripts/files/lib/wifi/mac80211.sh"),
 )
 
+KERNEL_VERSION = "6.18"
+KERNEL_BOARDS = ("mediatek", "x86")
+
 SSID_LINE_RE = re.compile(r'^(?P<indent>[ \t]*)\[ -n "\$ssid" \] \|\| ssid=(["\']?)(?:LEDE|OpenWrt)\2[ \t]*$', re.M)
 SSID_FALLBACK_RE = re.compile(r'^(?P<indent>[ \t]*)ssid=(["\']?)(?:LEDE|OpenWrt)\2[ \t]*$', re.M)
 KEY_LINE_RE = re.compile(r'^(?P<indent>[ \t]*)key="\$default_key"[ \t]*$', re.M)
@@ -344,12 +347,39 @@ def patch_wireless(tree: Path, settings: BuildSettings) -> None:
             raise util.BuildError(f"{path.relative_to(tree)}: expected {expected_encryption} was not applied")
 
 
+def patch_kernel_version(tree: Path, version: str = KERNEL_VERSION) -> None:
+    """Switch the selected target boards to the requested kernel patch version."""
+    tree = Path(tree)
+    util.header(f"Switching kernel to {version}")
+    patched: list[Path] = []
+    for board in KERNEL_BOARDS:
+        path = tree / "target" / "linux" / board / "Makefile"
+        if not path.exists():
+            continue
+        text = util.read_text(path)
+        new_text, count = re.subn(r"^KERNEL_PATCHVER\s*:?=\s*.*$", f"KERNEL_PATCHVER:={version}", text, flags=re.M)
+        new_text, count2 = re.subn(
+            r"^KERNEL_TESTING_PATCHVER\s*:?=\s*.*$",
+            f"KERNEL_TESTING_PATCHVER:={version}",
+            new_text,
+            flags=re.M,
+        )
+        if count or count2:
+            util.write_text(path, new_text)
+            patched.append(path)
+            util.log(f"{path.relative_to(tree)}: kernel {version}")
+
+    if not patched:
+        raise util.BuildError("no target Makefile with KERNEL_PATCHVER was found; cannot switch the kernel")
+
+
 def apply_core_customisations(tree: Path, settings: BuildSettings) -> None:
     tree = Path(tree)
     patch_version_mk(tree)
     patch_config_generate(tree, settings.ip)
     patch_default_settings(tree)
     patch_wireless(tree, settings)
+    patch_kernel_version(tree)
     remove_ssr_plus(tree)
     verify_core(tree, settings)
 
@@ -380,6 +410,11 @@ def verify_core(tree: Path, settings: BuildSettings) -> None:
     target_mk = tree / "include" / "target.mk"
     if target_mk.exists() and "luci-app-ssr-plus" in util.read_text(target_mk):
         problems.append("include/target.mk still references luci-app-ssr-plus")
+
+    for board in KERNEL_BOARDS:
+        path = tree / "target" / "linux" / board / "Makefile"
+        if path.exists() and f"KERNEL_PATCHVER:={KERNEL_VERSION}" not in util.read_text(path):
+            problems.append(f"target/linux/{board}/Makefile does not use kernel {KERNEL_VERSION}")
 
     if problems:
         raise util.BuildError("core customisation failed:\n  - " + "\n  - ".join(problems))

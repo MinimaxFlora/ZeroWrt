@@ -130,6 +130,10 @@ mac80211_emit_detect() {
         self.write("package/base-files/luci/bin/config_generate", self.CONFIG_GENERATE)
         self.write("package/lean/default-settings/files/zzz-default-settings", self.DEFAULT_SETTINGS)
         self.write("package/kernel/mac80211/files/lib/wifi/mac80211.sh", self.WIFI_SCRIPT)
+        self.write(
+            "target/linux/mediatek/Makefile",
+            "KERNEL_PATCHVER:=6.12\nKERNEL_TESTING_PATCHVER:=6.18\n",
+        )
         return self.root
 
     def test_core_customisations(self) -> None:
@@ -145,6 +149,8 @@ mac80211_emit_detect() {
         version = util.read_text(tree / "include/version.mk")
         self.assertIn("VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),ZeroWrt)", version)
         self.assertIn("VERSION_MANUFACTURER:=$(if $(VERSION_MANUFACTURER),$(VERSION_MANUFACTURER),ZeroWrt)", version)
+        kernel = util.read_text(tree / "target/linux/mediatek/Makefile")
+        self.assertIn("KERNEL_PATCHVER:=6.18", kernel)
         self.assertIn(f"VERSION_NUMBER:={configgen.build_date()}", version)
 
         for relative in source.CORE_FILES.values():

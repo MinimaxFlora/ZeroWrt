@@ -90,6 +90,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 | --- | --- | --- |
 | 固件名 `ZeroWrt` | `include/version.mk` | 只把 `VERSION_DIST`、`VERSION_MANUFACTURER` 的 `OpenWrt` 改为 `ZeroWrt`；`VERSION_NUMBER` 设为构建日期仅用于登录页显示 |
 | 发行描述 | `package/lean/default-settings/files/zzz-default-settings` | `DISTRIB_DESCRIPTION`、`OPENWRT_RELEASE` 中的 LEDE 改为 ZeroWrt |
+| 内核版本 `6.18` | `target/linux/mediatek/Makefile`、`target/linux/x86/Makefile` | `KERNEL_PATCHVER`、`KERNEL_TESTING_PATCHVER` 改为 `6.18` |
 | 管理 IP | `package/base-files/files/bin/config_generate`<br>`package/base-files/luci/bin/config_generate` | 写入 Actions 里的 `ip`，主机名默认 `ZeroWrt` |
 | WiFi 名称与密码 | `package/kernel/mac80211/files/lib/wifi/mac80211.sh` | 2.4G/5G/6G 分别生成 SSID；WPA2/WPA3 密码 |
 | Argon 主题 | `package/new/luci-theme-argon` | 跟踪 `master`（3.x），登录背景、登录 Logo、网站图标全部替换为 `assets/` 素材 |

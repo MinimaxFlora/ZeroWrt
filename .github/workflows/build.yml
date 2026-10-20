@@ -1,0 +1,140 @@
+name: Build ZeroWrt
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - "configs/**"
+      - "assets/**"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zerowrt-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  BUILD_ROOT: /builder
+  LEDE_DIR: /builder/lede
+
+jobs:
+  build:
+    name: Compile ZeroWrt
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout ZeroWrt
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Show runner
+        run: |
+          python3 --version
+          uname -a
+
+      # Mirrors sbwml/actions@free-disk: remove preinstalled toolchains,
+      # create swap and join the root disk with /mnt through LVM.
+      - name: Free disk space and merge disks
+        run: |
+          python3 scripts/zerowrt.py system free-disk \
+            --build-dir "$BUILD_ROOT" \
+            --swap-gb 4 \
+            --reserve-gb 6
+
+      # Mirrors sbwml/actions@openwrt-build-setup.
+      - name: Install build dependencies
+        run: python3 scripts/zerowrt.py system install-deps
+
+      # Mirrors sbwml/actions@install-llvm.
+      - name: Install LLVM
+        run: python3 scripts/zerowrt.py system install-llvm
+
+      - name: Clone private LEDE source
+        env:
+          LEDE_REPO: ${{ secrets.LEDE_REPO }}
+          LEDE_TOKEN: ${{ secrets.LEDE_TOKEN }}
+          REF: ${{ secrets.LEDE_REF }}
+        run: |
+          python3 scripts/zerowrt.py source clone \
+            --dest "$LEDE_DIR" \
+            --ref "${REF:-ruijie-rg-x60-new}"
+
+      - name: Update feeds
+        run: python3 scripts/zerowrt.py source feeds --tree "$LEDE_DIR"
+
+      - name: Apply core customisations
+        run: python3 scripts/zerowrt.py source customize --tree "$LEDE_DIR"
+
+      - name: Add external packages and branding
+        run: |
+          python3 scripts/zerowrt.py packages add \
+            --tree "$LEDE_DIR" \
+            --assets "$GITHUB_WORKSPACE/assets"
+
+      - name: Generate .config
+        run: python3 scripts/zerowrt.py config generate --tree "$LEDE_DIR"
+
+      - name: Download source archives
+        env:
+          TMPDIR: /builder/tmp
+        run: |
+          mkdir -p "$TMPDIR"
+          python3 scripts/zerowrt.py build download --tree "$LEDE_DIR" --jobs "$(nproc)"
+
+      - name: Compile firmware
+        env:
+          TMPDIR: /builder/tmp
+        run: python3 scripts/zerowrt.py build compile --tree "$LEDE_DIR" --jobs "$(nproc)"
+
+      - name: Collect artifacts
+        run: python3 scripts/zerowrt.py build collect --tree "$LEDE_DIR" --out dist
+
+      - name: Build summary
+        if: success()
+        run: |
+          {
+            echo "## ZeroWrt build"
+            echo '```'
+            cat dist/BUILD_INFO.txt
+            echo
+            ls -lh dist
+            echo '```'
+            echo "### SHA256"
+            echo '```'
+            cat dist/SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZeroWrt-${{ github.run_number }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Trim build logs
+        if: failure()
+        run: |
+          mkdir -p dist
+          for log in build download defconfig feeds-update feeds-install; do
+            if [ -f "/builder/lede/$log.log" ]; then
+              tail -n 3000 "/builder/lede/$log.log" > "dist/$log-tail.log"
+            fi
+          done
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZeroWrt-logs-${{ github.run_number }}
+          path: dist/*-tail.log
+          if-no-files-found: ignore
+          retention-days: 7

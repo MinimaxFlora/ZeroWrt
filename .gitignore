@@ -1,0 +1,18 @@
+# Build outputs
+/dist/
+/bin/
+/build_dir/
+/staging_dir/
+/tmp/
+/dl/
+/logs/
+
+# LEDE tree (only ever created on CI)
+/lede/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Local logs
+*.log

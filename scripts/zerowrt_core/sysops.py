@@ -8,6 +8,7 @@ dependency besides the official GitHub ones.
 
 from __future__ import annotations
 
+import glob
 import os
 import re
 import shutil
@@ -43,6 +44,12 @@ HEAVY_DIRECTORIES = [
     "/opt/az",
     "/opt/microsoft",
     "/opt/pipx",
+]
+
+# Versioned toolchain directories that are removed with a glob.
+HEAVY_GLOBS = [
+    "/usr/local/aws*",
+    "/usr/local/julia*",
 ]
 
 SWAPFILE_CANDIDATES = ["/mnt/swapfile", "/swapfile"]
@@ -248,8 +255,10 @@ def free_disk(
 ) -> None:
     """Make sure the runner has enough disk and swap for a full build.
 
-    Large runners often already provide plenty of space; in that case no
-    preinstalled software is removed and no LVM volume is created.
+    When the runner has a separate /mnt disk the two filesystems are merged
+    (like sbwml/actions@free-disk) so the build gets one large volume. When
+    /mnt is not separate and the root disk is already large enough, the
+    expensive removal step is skipped.
     """
     build_dir_path = Path(build_dir)
     show_system()
@@ -257,7 +266,8 @@ def free_disk(
     probe = str(build_dir_path) if build_dir_path.exists() else "/"
     free_gb = _available_gb(probe)
     swap_gb = _swap_total_gb()
-    if free_gb >= min_free_gb:
+    mnt_separate = _mnt_is_separate()
+    if free_gb >= min_free_gb and not mnt_separate:
         if swap_gb < swap_size_gb:
             util.log(f"{free_gb:.1f} GiB free is enough; adjusting swap from {swap_gb:.1f} to {swap_size_gb} GiB")
             _delete_swap()
@@ -273,6 +283,10 @@ def free_disk(
         if Path(directory).exists():
             util.log(f"removing {directory}")
             util.sudo_run(["rm", "-rf", directory], check=False, quiet=True)
+    for pattern in HEAVY_GLOBS:
+        for matched in glob.glob(pattern):
+            util.log(f"removing {matched}")
+            util.sudo_run(["rm", "-rf", matched], check=False, quiet=True)
     # /opt is only used by preinstalled toolchains on GitHub runners.
     util.sudo_run(
         ["bash", "-c", "find /opt -mindepth 1 -maxdepth 1 ! -name '*runner*' -exec rm -rf {} +"],
@@ -286,7 +300,7 @@ def free_disk(
     else:
         util.log(f"existing {swap_gb:.1f} GiB swap is sufficient")
 
-    if _available_gb("/") < min_free_gb and _mnt_is_separate():
+    if mnt_separate:
         merge_disks(build_dir_path, reserve_gb=reserve_gb, swap_size_gb=swap_size_gb)
     else:
         _prepare_build_dir(build_dir_path)
@@ -313,6 +327,7 @@ APT_GROUPS = [
         "gcc-multilib",
         "libc6-dev-i386",
         "lib32gcc-s1",
+        "coreutils",
         "make",
         "pkg-config",
         "patch",
@@ -341,6 +356,7 @@ APT_GROUPS = [
     ],
     [
         "libncurses-dev",
+        "libncurses5-dev",
         "libssl-dev",
         "libelf-dev",
         "zlib1g-dev",
@@ -348,6 +364,7 @@ APT_GROUPS = [
         "libglib2.0-dev",
         "libreadline-dev",
         "libgnutls28-dev",
+        "gnutls-dev",
         "libplist-utils",
         "libpython3-dev",
         "libltdl-dev",

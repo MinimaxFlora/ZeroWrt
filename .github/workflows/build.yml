@@ -39,7 +39,7 @@ permissions:
 
 concurrency:
   group: zerowrt-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   PYTHONUNBUFFERED: "1"

@@ -61,10 +61,10 @@ push:
 ## 三、工作流做了什么
 
 1. **准备构建空间**
-   - 空闲空间达到 50 GiB 时不再删除预装组件，也不做磁盘合并；swap 不足时只调整 swap
-   - 空间不足时才删除预装组件，并在需要时用 LVM 合并根分区与 `/mnt`
-2. **安装依赖**：gcc、ncurses、python、lvm2、xfsprogs 等
-3. **安装 LLVM**：Clang 23.0.1 到 `/opt/clang`
+   - 与 sbwml 的 `free-disk` 行为一致：`/mnt` 独立时清理预装组件、创建 swap，并用 LVM 把根分区与 `/mnt` 合并成一个约 130 GiB 的卷
+   - 只有 `/mnt` 与根分区是同一块盘、且根分区已有 50 GiB 空闲时，才跳过清理；swap 不足时只调整 swap
+2. **安装依赖**：对齐 sbwml 的 `openwrt-build-setup` 包列表，并补充 lvm2、xfsprogs、python3-pil 等
+3. **安装 LLVM**：Clang 23.0.1 到 `/opt/clang`，与 `install-llvm` 使用同一版本
 4. **拉取私有源码**
 5. **更新 feeds**：删除 feeds 里的 Argon 主题/插件和 PassWall 冲突包
 6. **核心定制**：版本、IP、主机名、WiFi 名称/密码

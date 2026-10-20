@@ -69,11 +69,12 @@ push:
 5. **更新 feeds**：删除 feeds 里的 Argon 主题/插件和 PassWall 冲突包
 6. **核心定制**：版本、IP、主机名、WiFi 名称/密码
 7. **添加第三方包与主题品牌化**
-8. **生成 `.config`**：设备/profile 选择 + 固定软件包列表 + 日期版本号
-9. **加载工具链缓存**：命中则跳过工具链编译，只刷新时间戳；未命中先执行 `make toolchain/compile`，任务结束后自动缓存
+8. **生成 `.config`**：设备/profile 选择 + 固定软件包列表
+9. **加载工具链缓存**：命中则跳过工具链编译，只刷新时间戳；未命中先执行 `make toolchain/compile`，完成立即保存缓存
 10. **下载、编译、收集产物**
+11. **发布 Release**：tag 和 release 名称都使用设备名（`ruijie_rg-x60-new` / `x86_64`），上传 `dist/*`
 
-产物在本次 Run 的 **Artifacts** 中：`ZeroWrt-<run_number>`，包含固件、`SHA256SUMS`、`BUILD_INFO.txt`。
+产物在本次 Run 的 **Artifacts** 中：`ZeroWrt-<run_number>`，包含固件、`SHA256SUMS`、`BUILD_INFO.txt`。构建成功后还会自动创建/更新以设备命名的 Release；同一设备再次构建会删除旧 release/tag 后重新发布。
 
 ## 四、定制内容
 
@@ -144,8 +145,8 @@ x86_64              (x86/64, Generic profile)
 
 固件版本号使用构建日期（例如 `20261020`）：
 
-- `scripts/zerowrt_core/configgen.py` 在 `.config` 写入 `CONFIG_VERSION_NUMBER`
-- `include/version.mk` 的 `VERSION_NUMBER` 默认值也会改为日期
+- `include/version.mk` 的 `VERSION_NUMBER` 默认值在构建时改为日期
+- `VERSION_NUMBER` 是隐藏 Kconfig 符号，不能写进 `.config`（会被 `defconfig` 丢弃），所以由 `version.mk` 提供
 - Argon 登录页 footer 去掉了空的 `revision` 后缀，因此显示为 `ZeroWrt 20261020`，不再出现 `ZeroWrt 24.10.5-`
 
 ## 七、软件包

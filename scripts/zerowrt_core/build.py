@@ -86,10 +86,14 @@ def _version_from_tree(tree: Path, info: dict) -> str:
         return version
     version_mk = Path(tree) / "include" / "version.mk"
     if version_mk.exists():
+        text = util.read_text(version_mk)
         match = re.search(
             r"VERSION_NUMBER:=\$\(if \$\(VERSION_NUMBER\),\$\(VERSION_NUMBER\),([^)\s]+)\)",
-            util.read_text(version_mk),
+            text,
         )
+        if match:
+            return match.group(1)
+        match = re.search(r"^VERSION_NUMBER:=([0-9]{8})\s*$", text, re.M)
         if match:
             return match.group(1)
     return "unknown"

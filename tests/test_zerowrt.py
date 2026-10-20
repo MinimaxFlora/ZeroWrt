@@ -145,10 +145,7 @@ mac80211_emit_detect() {
         version = util.read_text(tree / "include/version.mk")
         self.assertIn("VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),ZeroWrt)", version)
         self.assertIn("VERSION_MANUFACTURER:=$(if $(VERSION_MANUFACTURER),$(VERSION_MANUFACTURER),ZeroWrt)", version)
-        self.assertIn(
-            f"VERSION_NUMBER:=$(if $(VERSION_NUMBER),$(VERSION_NUMBER),{configgen.build_date()})",
-            version,
-        )
+        self.assertIn(f"VERSION_NUMBER:={configgen.build_date()}", version)
 
         for relative in source.CORE_FILES.values():
             if relative.name == "config_generate":
@@ -246,7 +243,6 @@ class ConfigRenderTest(unittest.TestCase):
         self.assertNotIn("=y=y", text)
         self.assertNotIn("luci-compat", text)
         self.assertNotIn("CONFIG_VERSION_DIST", text)
-        self.assertIn(f'CONFIG_VERSION_NUMBER="{configgen.build_date()}"', text)
 
     def test_x86_64_profile(self) -> None:
         target = configgen.resolve_target(Path("."), "x86_64")

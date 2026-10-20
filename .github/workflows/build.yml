@@ -35,7 +35,7 @@ on:
       - ".github/workflows/**"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: zerowrt-${{ github.ref }}
@@ -192,11 +192,25 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Publish device release
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="$ZEROWRT_DEVICE"
+          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" >/dev/null 2>&1 || true
+          gh release create "$TAG" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$TAG" \
+            --notes-file dist/BUILD_INFO.txt
+
       - name: Trim build logs
         if: failure()
         run: |
           mkdir -p dist
-          for log in build download defconfig feeds-update feeds-install; do
+          for log in build download defconfig feeds-update feeds-install toolchain; do
             if [ -f "/builder/lede/$log.log" ]; then
               tail -n 3000 "/builder/lede/$log.log" > "dist/$log-tail.log"
             fi

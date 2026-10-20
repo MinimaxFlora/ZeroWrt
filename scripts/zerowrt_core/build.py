@@ -25,8 +25,16 @@ def download_sources(tree: Path, jobs: int) -> None:
 
 def compile_firmware(tree: Path, jobs: int) -> None:
     tree = Path(tree)
-    util.header(f"Compiling ZeroWrt (make -j{jobs})")
-    util.run(["make", f"-j{jobs}", "V=s"], cwd=tree, log_path=tree / "build.log", check=True)
+    # Same as the sbwml builder: one more job than CPUs, and ignore the
+    # optional n/m package errors so unrelated failures do not abort the world.
+    cores = jobs + 1
+    util.header(f'Compiling ZeroWrt (make -j{cores} IGNORE_ERRORS="n m")')
+    util.run(
+        ["make", f"-j{cores}", "IGNORE_ERRORS=n m", "V=s"],
+        cwd=tree,
+        log_path=tree / "build.log",
+        check=True,
+    )
     util.log("firmware compiled")
 
 

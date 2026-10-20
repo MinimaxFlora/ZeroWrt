@@ -71,7 +71,7 @@ push:
 7. **添加第三方包与主题品牌化**
 8. **生成 `.config`**：设备/profile 选择 + 固定软件包列表
 9. **加载 ccache 缓存**：复用已编译的对象文件，不改动 `staging_dir`/`build_dir` 的 stamp 状态
-10. **下载、编译、收集产物**
+10. **下载、编译、收集产物**：编译使用 `nproc + 1` 个并行任务和 `IGNORE_ERRORS="n m"`
 11. **发布 Release**：tag 和 release 名称都使用设备名（`ruijie_rg-x60-new` / `x86_64`），上传 `dist/*`
 
 产物在本次 Run 的 **Artifacts** 中：`ZeroWrt-<run_number>`，包含固件、`SHA256SUMS`、`BUILD_INFO.txt`。构建成功后还会自动创建/更新以设备命名的 Release；同一设备再次构建会删除旧 release/tag 后重新发布。

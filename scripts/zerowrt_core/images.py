@@ -35,24 +35,31 @@ def resize_png(data: bytes, size: int) -> bytes | None:
     Image = _pillow()
     if Image is None:
         return None
-    with Image.open(io.BytesIO(data)) as image:
-        image = image.convert("RGBA")
-        if image.size != (size, size):
-            resample = getattr(Image, "Resampling", Image).LANCZOS
-            image = image.resize((size, size), resample)
-        output = io.BytesIO()
-        image.save(output, format="PNG", optimize=True)
-        return output.getvalue()
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            image = image.convert("RGBA")
+            if image.size != (size, size):
+                resample = getattr(Image, "Resampling", Image).LANCZOS
+                image = image.resize((size, size), resample)
+            output = io.BytesIO()
+            image.save(output, format="PNG", optimize=True)
+            return output.getvalue()
+    except Exception:
+        return None
 
 
 def jpeg_to_webp(data: bytes, quality: int = 90) -> bytes | None:
+    """Convert the JPEG background to WebP, or return None when unsupported."""
     Image = _pillow()
     if Image is None:
         return None
-    with Image.open(io.BytesIO(data)) as image:
-        output = io.BytesIO()
-        image.save(output, format="WEBP", quality=quality, method=4)
-        return output.getvalue()
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            output = io.BytesIO()
+            image.save(output, format="WEBP", quality=quality, method=4)
+            return output.getvalue()
+    except Exception:
+        return None
 
 
 def png_to_ico(data: bytes, sizes: tuple[int, ...] = (16, 32, 48, 64, 128, 256)) -> bytes:
@@ -64,11 +71,14 @@ def png_to_ico(data: bytes, sizes: tuple[int, ...] = (16, 32, 48, 64, 128, 256))
     """
     Image = _pillow()
     if Image is not None:
-        with Image.open(io.BytesIO(data)) as image:
-            image = image.convert("RGBA")
-            output = io.BytesIO()
-            image.save(output, format="ICO", sizes=[(size, size) for size in sizes])
-            return output.getvalue()
+        try:
+            with Image.open(io.BytesIO(data)) as image:
+                image = image.convert("RGBA")
+                output = io.BytesIO()
+                image.save(output, format="ICO", sizes=[(size, size) for size in sizes])
+                return output.getvalue()
+        except Exception:
+            pass
 
     frames = []
     width, height = png_size(data)

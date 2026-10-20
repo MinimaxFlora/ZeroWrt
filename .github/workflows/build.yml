@@ -22,9 +22,10 @@ on:
         description: "Device profile"
         required: true
         type: choice
-        default: "ruijie_rg-x60"
+        default: "ruijie_rg-x60-new"
         options:
-          - ruijie_rg-x60
+          - ruijie_rg-x60-new
+          - ruijie_rg-x60-pro
 
   push:
     branches: [main]
@@ -110,7 +111,7 @@ jobs:
 
       - name: Generate .config
         env:
-          ZEROWRT_DEVICE: ${{ github.event.inputs.device || 'ruijie_rg-x60' }}
+          ZEROWRT_DEVICE: ${{ github.event.inputs.device || 'ruijie_rg-x60-new' }}
         run: |
           python3 scripts/zerowrt.py config generate \
             --tree "$LEDE_DIR" \

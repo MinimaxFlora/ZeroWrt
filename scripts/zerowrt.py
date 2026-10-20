@@ -158,7 +158,9 @@ def build_parser() -> argparse.ArgumentParser:
     config_sub = config.add_subparsers(dest="config_command", required=True)
     generate = config_sub.add_parser("generate", help="write .config and run defconfig")
     generate.add_argument("--tree", default=str(DEFAULT_TREE))
-    generate.add_argument("--device", default=None, help="device profile (default: ZEROWRT_DEVICE or ruijie_rg-x60)")
+    generate.add_argument(
+        "--device", default=None, help="device profile (default: ZEROWRT_DEVICE or ruijie_rg-x60-new)"
+    )
     generate.set_defaults(func=cmd_config_generate)
 
     build_cmd = sub.add_parser("build", help="download, compile and collect")

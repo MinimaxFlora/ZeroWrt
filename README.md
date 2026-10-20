@@ -33,7 +33,7 @@ ZeroWrt 是基于 LEDE 源码（私有源码仓库的 `ruijie-rg-x60-new` 分支
 | `ip` | `10.0.0.1` | 管理地址 / LAN IP |
 | `wifi_name` | `ZeroWrt` | WiFi 名称前缀，自动生成 `-2.4G`、`-5G`、`-6G` |
 | `wifi_password` | `ZeroWrt123` | WiFi 密码，8–63 位，仅字母/数字/`!@#$%^&*()_+.:=?-`；不经过命令行、不打印 |
-| `device` | `ruijie_rg-x60` | 设备 profile（选择框） |
+| `device` | `ruijie_rg-x60-new` | 设备 profile（选择框，另有 `ruijie_rg-x60-pro`） |
 
 例如 `wifi_name=MyNet` 时，实际 SSID 为：
 
@@ -100,7 +100,8 @@ push:
 当前只有：
 
 ```
-ruijie_rg-x60     (mediatek/filogic)
+ruijie_rg-x60-new   (mediatek/filogic)
+ruijie_rg-x60-pro   (mediatek/filogic)
 ```
 
 以后新增设备时：

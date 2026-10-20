@@ -38,6 +38,7 @@ class SettingsTest(unittest.TestCase):
     def test_defaults_are_valid(self) -> None:
         value = settings.BuildSettings().validated()
         self.assertEqual(value.ip, "10.0.0.1")
+        self.assertEqual(value.device, "ruijie_rg-x60-new")
         self.assertEqual(value.ssid("2g"), "ZeroWrt-2.4G")
         self.assertEqual(value.ssid("5g"), "ZeroWrt-5G")
 

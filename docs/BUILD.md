@@ -170,8 +170,17 @@ PACKAGES = [
     "CONFIG_PACKAGE_luci-app-argon-config",  # 仅当独立插件被克隆（非 3.x 主题）时使用
     "CONFIG_PACKAGE_luci-app-passwall",
     "CONFIG_PACKAGE_luci-app-openclash",
+    "CONFIG_PACKAGE_luci-app-ota",
+    "CONFIG_PACKAGE_luci-i18n-ota-zh-cn",
+    "CONFIG_PACKAGE_luci-app-ttyd",          # 终端：x86_64 与 RG-X60 都带
+    "CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn",
+    "CONFIG_PACKAGE_luci-app-turboacc",
+    "CONFIG_PACKAGE_luci-i18n-turboacc-zh-cn",
 ]
 ```
+
+`PACKAGES` 是两种设备共用的一份列表，因此 `luci-app-ttyd`（依赖 feeds 里的 `ttyd`，位于
+`coolsnowwolf/packages` 的 `utils/ttyd`）会同时进入 x86_64 和 `ruijie_rg-x60-new` 的固件。
 
 ShadowSocksR Plus+ 已从 `include/target.mk` 默认包、`feeds/helloworld` 和最终 `.config` 中移除。
 

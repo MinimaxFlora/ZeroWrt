@@ -23,6 +23,8 @@ PACKAGES = [
     "CONFIG_PACKAGE_luci-app-openclash",
     "CONFIG_PACKAGE_luci-app-ota",
     "CONFIG_PACKAGE_luci-i18n-ota-zh-cn",
+    "CONFIG_PACKAGE_luci-app-ttyd",
+    "CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn",
     "CONFIG_PACKAGE_luci-app-turboacc",
     "CONFIG_PACKAGE_luci-i18n-turboacc-zh-cn",
 ]

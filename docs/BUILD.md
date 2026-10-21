@@ -296,7 +296,7 @@ runner 和 action 都**钉死具体版本**，不追 latest：
 | `actions/checkout` | `v7.0.1` | Node 24 运行时 |
 | `actions/cache` | `v6.1.0` | Node 24 运行时 |
 | `actions/upload-artifact` | `v7.0.2` | v4 及更早跑在 Node 20 上，GitHub 已开始弃用 |
-| `actions/setup-python` | `v9.0.0` | Node 24 运行时 |
+| `actions/setup-python` | `v7.0.0` | Node 24 运行时 |
 
-升级方式：改版本号 → 跑一次工作流确认 → 保留新的精确 tag。不要写 `@v7` 这种浮动主版本，
+版本号以 **GitHub 上的 tag** 为准（`gh api --paginate repos/actions/<name>/tags`），不要看 `releases/latest`：像 `setup-python` 这样的 action 根本不发 release，那个接口会 404。不要写 `@v7` 这种浮动主版本，
 否则上游发版会在你没改任何东西的情况下换掉构建环境。

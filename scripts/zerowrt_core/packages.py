@@ -21,12 +21,11 @@ ARGON_THEME_REPO = "jerrykuku/luci-theme-argon"
 ARGON_THEME_REF = "master"
 ARGON_CONFIG_REPO = "jerrykuku/luci-app-argon-config"
 ARGON_CONFIG_REF = "master"
-PASSWALL_REPO = "Openwrt-Passwall/openwrt-passwall"
-PASSWALL_REF = "main"
-PASSWALL_PACKAGES_REPO = "Openwrt-Passwall/openwrt-passwall-packages"
-PASSWALL_PACKAGES_REF = "main"
-OPENCLASH_REPO = "vernesong/OpenClash"
-OPENCLASH_REF = "master"
+# One repository carries the PassWall toolchain, its two LuCI front ends and
+# OpenClash, so a build only needs a single checkout and upstream breakage can
+# be fixed in one place.
+HELLOWORLD_REPO = "MinimaxFlora/openwrt_helloworld"
+HELLOWORLD_REF = "main"
 
 PACKAGE_DIR_NAMES = {
     "luci-theme-argon",
@@ -100,30 +99,21 @@ def add_external_packages(tree: Path) -> None:
         if not (config_dir / "Makefile").exists():
             raise util.BuildError(f"luci-app-argon-config checkout is missing a Makefile: {config_dir}")
 
+    helloworld_dir = new_dir / "helloworld"
     _clone(
-        _env("PASSWALL_REPO", PASSWALL_REPO),
-        _env("PASSWALL_REF", PASSWALL_REF),
-        new_dir / "passwall-luci",
+        _env("HELLOWORLD_REPO", HELLOWORLD_REPO),
+        _env("HELLOWORLD_REF", HELLOWORLD_REF),
+        helloworld_dir,
     )
-    _clone(
-        _env("PASSWALL_PACKAGES_REPO", PASSWALL_PACKAGES_REPO),
-        _env("PASSWALL_PACKAGES_REF", PASSWALL_PACKAGES_REF),
-        new_dir / "passwall-packages",
-    )
-    _clone(
-        _env("OPENCLASH_REPO", OPENCLASH_REPO),
-        _env("OPENCLASH_REF", OPENCLASH_REF),
-        new_dir / "openclash",
-    )
-    _fix_openclash(new_dir / "openclash")
+    _fix_openclash(helloworld_dir)
 
     _validate_layout(new_dir)
 
 
-def _fix_openclash(openclash_dir: Path) -> None:
+def _fix_openclash(helloworld_dir: Path) -> None:
     """OpenClash calls po2lmo from the luci-base host build without declaring
     the dependency. Add it so a clean parallel build cannot race."""
-    makefile = Path(openclash_dir) / "luci-app-openclash" / "Makefile"
+    makefile = Path(helloworld_dir) / "luci-app-openclash" / "Makefile"
     if not makefile.exists():
         return
     text = util.read_text(makefile)
@@ -149,12 +139,12 @@ def _fix_openclash(openclash_dir: Path) -> None:
 
 def _validate_layout(new_dir: Path) -> None:
     checks = {
-        "package/new/passwall-luci/luci-app-passwall/Makefile": (
-            new_dir / "passwall-luci" / "luci-app-passwall" / "Makefile"
+        "package/new/helloworld/luci-app-passwall/Makefile": (
+            new_dir / "helloworld" / "luci-app-passwall" / "Makefile"
         ),
-        "package/new/passwall-packages/xray-core/Makefile": (new_dir / "passwall-packages" / "xray-core" / "Makefile"),
-        "package/new/openclash/luci-app-openclash/Makefile": (
-            new_dir / "openclash" / "luci-app-openclash" / "Makefile"
+        "package/new/helloworld/xray-core/Makefile": (new_dir / "helloworld" / "xray-core" / "Makefile"),
+        "package/new/helloworld/luci-app-openclash/Makefile": (
+            new_dir / "helloworld" / "luci-app-openclash" / "Makefile"
         ),
     }
     missing = [name for name, path in checks.items() if not path.exists()]

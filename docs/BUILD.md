@@ -99,7 +99,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 | Argon 外观 | 主题包内 `root/etc/config/argon` | 亮色模式、主色 `#2E9D72`、暗色主色 `#4CAF86`、在线壁纸 `none` |
 | 网站图标 | `package/new/luci-theme-argon/.../icon/*`、`package/base-files/files/www/favicon.ico` | 主题 favicon + `/favicon.ico` 都使用 ZeroWrt Logo；`branding.js` 指向新的 `favicon-zerowrt.png`，模板链接加 `?v=zerowrt` 避免浏览器缓存 |
 | 移除 SSR Plus+ | `include/target.mk`、`feeds/helloworld` | 删除默认 SSR Plus+ 插件及默认包引用 |
-| 代理插件 | `package/new/passwall-*`、`package/new/openclash` | PassWall（仅 Xray，无 Sing-Box）+ OpenClash |
+| 代理插件 | `package/new/helloworld/*` | 来自 [openwrt_helloworld](https://github.com/MinimaxFlora/openwrt_helloworld)：PassWall（仅 Xray，无 Sing-Box）、passwall2、OpenClash 与它们的内核软件包，版本更新和插件同步都在那个仓库里由 workflow 完成 |
 | 软件包列表 | `scripts/zerowrt_core/configgen.py` | 统一在 `PACKAGES` 中维护 |
 
 替换品牌素材：覆盖 `assets/background.jpg`、`assets/logo.png` 后重新运行。

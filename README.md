@@ -45,7 +45,7 @@ time it checks.
 - **Honest version checks** — the build timestamp decides "newer", with a version-string fallback; a date that cannot be determined is shown as unknown instead of being invented.
 - **Configuration from the workflow** — LAN IP, hostname and the three Wi-Fi SSIDs and passwords are inputs, not hand-edited files.
 - **Argon 3 branding** — background, login logo, favicon and palette (`#2E9D72` / `#4CAF86`) are replaced at build time.
-- **Proxy stack included** — PassWall (Xray only) and OpenClash, kept in sync by the build scripts.
+- **Proxy stack included** — PassWall (Xray only) and OpenClash, vendored from [openwrt_helloworld](https://github.com/MinimaxFlora/openwrt_helloworld) so the build depends on one checkout instead of four upstream repositories.
 - **Gated pipeline** — `ruff` and 18 unit tests run on every pull request.
 
 ## Supported devices

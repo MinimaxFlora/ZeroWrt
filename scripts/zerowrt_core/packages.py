@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import re
+from datetime import datetime
 from pathlib import Path
 
 from . import images, util
@@ -238,12 +239,21 @@ def patch_argon_theme(theme_dir: Path, assets_dir: Path) -> None:
                 target.write_bytes(logo)
     util.log("theme favicons replaced")
 
-    _patch_branding_cache(theme_dir, icon_dir, logo)
+    # One token per run: it changes the icon URLs, so a cached favicon from a
+    # previous build can never win over the current one.
+    token = datetime.now().strftime("%Y%m%d%H%M%S")
+    _patch_branding_cache(theme_dir, icon_dir, logo, token)
     _patch_argon_footer(theme_dir)
 
 
-def _patch_branding_cache(theme_dir: Path, icon_dir: Path, logo: bytes) -> None:
-    """Point Argon at a fresh favicon filename and bust cached icon links."""
+def _patch_branding_cache(theme_dir: Path, icon_dir: Path, logo: bytes, token: str) -> None:
+    """Point Argon at the ZeroWrt favicon and bust the browser cache.
+
+    ``token`` differs for every build and is appended to the icon URLs. A
+    plain filename would let a browser keep serving the favicon it cached
+    from an earlier firmware, which is exactly what happens on the Argon
+    branding settings page (it renders a plain ``<img>`` element).
+    """
     theme_dir = Path(theme_dir)
     if icon_dir.exists():
         resized = images.resize_png(logo, 32)
@@ -253,7 +263,9 @@ def _patch_branding_cache(theme_dir: Path, icon_dir: Path, logo: bytes) -> None:
     if branding.exists():
         text = util.read_text(branding)
         old = "L.resource('../argon/icon/favicon-32x32.png')"
-        new = "L.resource('../argon/icon/favicon-zerowrt.png')"
+        # L.resource() only whitelists path characters and silently drops an
+        # argument that contains a query string, so the token is appended here.
+        new = f"L.resource('../argon/icon/favicon-zerowrt.png') + '?v={token}'"
         if old in text:
             util.write_text(branding, text.replace(old, new))
             util.log("Argon branding UI uses the ZeroWrt favicon")
@@ -271,25 +283,60 @@ def _patch_branding_cache(theme_dir: Path, icon_dir: Path, logo: bytes) -> None:
             "icon/apple-icon-144x144.png",
         ):
             old = "{{ media }}/" + name + '"'
-            new = "{{ media }}/" + name + '?v=zerowrt"'
+            new = "{{ media }}/" + name + f'?v={token}"'
             text = text.replace(old, new)
         util.write_text(head_meta, text)
-        util.log("browser icon links are cache-busted")
+        util.log(f"browser icon links are cache-busted ({token})")
+
+    # The login logo is rewritten on every build as well.
+    logo_svg = theme_dir / "htdocs" / "luci-static" / "argon" / "img" / "argon.svg"
+    for template in ("header_login.ut", "login_background.ut", "head_meta.ut"):
+        path = theme_dir / "ucode" / "template" / "themes" / "argon" / template
+        if not path.exists():
+            continue
+        text = util.read_text(path)
+        if logo_svg.name not in text:
+            continue
+        updated = re.sub(r"(argon\.svg)(?!\?v=)", rf"\1?v={token}", text)
+        if updated != text:
+            util.write_text(path, updated)
+            util.log(f"{template}: login logo cache-busted")
 
 
 def _patch_argon_footer(theme_dir: Path) -> None:
-    """Drop the empty revision suffix from the login page firmware string."""
-    path = Path(theme_dir) / "ucode" / "template" / "themes" / "argon" / "footer_login.ut"
-    if not path.exists():
-        return
-    text = util.read_text(path)
-    old = "version.distname + ' ' + version.distversion + '-' + version.distrevision"
-    new = "version.distname + ' ' + version.distversion"
-    if old not in text:
-        util.warn("Argon footer version expression not found; login footer left unchanged")
-        return
-    util.write_text(path, text.replace(old, new))
-    util.log("login footer version uses ZeroWrt <date>")
+    """Drop the empty revision suffix from the firmware string in both footers.
+
+    The admin pages use template interpolation (``footer.ut``) while the login
+    page uses a ucode block (``footer_login.ut``); both render
+    "<dist> <version>-<revision>" and the revision is empty for ZeroWrt, which
+    left a trailing dash.
+    """
+    templates = Path(theme_dir) / "ucode" / "template" / "themes" / "argon"
+    replacements = {
+        "footer.ut": (
+            "{{ version.distname }} {{ version.distversion }}-{{ version.distrevision }}",
+            "{{ version.distname }} {{ version.distversion }}",
+        ),
+        "footer_login.ut": (
+            "version.distname + ' ' + version.distversion + '-' + version.distrevision",
+            "version.distname + ' ' + version.distversion",
+        ),
+    }
+
+    patched = []
+    for name, (old, new) in replacements.items():
+        path = templates / name
+        if not path.exists():
+            continue
+        text = util.read_text(path)
+        if old not in text:
+            util.warn(f"Argon {name}: version expression not found, left unchanged")
+            continue
+        util.write_text(path, text.replace(old, new))
+        patched.append(name)
+
+    if patched:
+        util.log("footer firmware string uses ZeroWrt <date>: " + ", ".join(patched))
 
 
 def patch_root_favicon(tree: Path, assets_dir: Path) -> None:

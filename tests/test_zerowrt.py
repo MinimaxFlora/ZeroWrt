@@ -321,10 +321,16 @@ class ArgonBrandingTest(TempTreeTest):
         defaults.parent.mkdir(parents=True)
         defaults.write_text('uci -q set "argon.@global[0].online_wallpaper"="bing"\n', encoding="utf-8")
 
-        footer = self.root / "package/new/luci-theme-argon/ucode/template/themes/argon/footer_login.ut"
-        footer.parent.mkdir(parents=True, exist_ok=True)
+        templates = self.root / "package/new/luci-theme-argon/ucode/template/themes/argon"
+        templates.mkdir(parents=True, exist_ok=True)
+        footer = templates / "footer_login.ut"
         footer.write_text(
             "const firmware_info = version.distname + ' ' + version.distversion + '-' + version.distrevision;\n",
+            encoding="utf-8",
+        )
+        admin_footer = templates / "footer.ut"
+        admin_footer.write_text(
+            "{{ version.distname }} {{ version.distversion }}-{{ version.distrevision }}\n",
             encoding="utf-8",
         )
 
@@ -338,9 +344,13 @@ class ArgonBrandingTest(TempTreeTest):
         self.assertEqual((static / "favicon.ico").read_bytes()[:4], b"\x00\x00\x01\x00")
         self.assertEqual(images.png_size((static / "icon" / "favicon-16x16.png").read_bytes()), (16, 16))
         self.assertTrue((static / "icon" / "favicon-zerowrt.png").exists())
-        self.assertIn("favicon-zerowrt.png", branding.read_text(encoding="utf-8"))
-        self.assertIn("favicon.ico?v=zerowrt", head_meta.read_text(encoding="utf-8"))
+        branding_text = branding.read_text(encoding="utf-8")
+        self.assertIn("favicon-zerowrt.png') + '?v=", branding_text)
+        self.assertRegex(branding_text, r"\?v=\d{14}'")
+        self.assertRegex(head_meta.read_text(encoding="utf-8"), r"favicon\.ico\?v=\d{14}")
         self.assertNotIn("distrevision", footer.read_text(encoding="utf-8"))
+        self.assertNotIn("distrevision", admin_footer.read_text(encoding="utf-8"))
+        self.assertIn("{{ version.distversion }}\n", admin_footer.read_text(encoding="utf-8"))
         root_icon = self.root / "package/base-files/files/www/favicon.ico"
         self.assertEqual(root_icon.read_bytes()[:4], b"\x00\x00\x01\x00")
 

@@ -24,10 +24,7 @@ ARGON_CONFIG_REF = "master"
 PASSWALL_REPO = "Openwrt-Passwall/openwrt-passwall"
 PASSWALL_REF = "main"
 PASSWALL_PACKAGES_REPO = "Openwrt-Passwall/openwrt-passwall-packages"
-# xray-core 26.10.17 was never tagged by Xray, so main cannot download it.
-# Temporarily use the commit of Openwrt-Passwall/openwrt-passwall-packages#759,
-# which bumps the package to 26.10.21; go back to "main" once that lands.
-PASSWALL_PACKAGES_REF = "bc50ff66d6965402d15b50b1ba57da126e72f597"
+PASSWALL_PACKAGES_REF = "main"
 OPENCLASH_REPO = "vernesong/OpenClash"
 OPENCLASH_REF = "master"
 

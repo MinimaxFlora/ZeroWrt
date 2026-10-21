@@ -127,7 +127,9 @@ jobs:
           echo "packaging $asset (from $dir)"
           tar -I "zstd -19 -T$(nproc --all)" -cf "toolchain-cache/$asset" ./{build_dir,dl,staging_dir,tmp}
           ls -lh "toolchain-cache/$asset"
-          echo "TOOLCHAIN_ASSET=toolchain-cache/$asset" >> "$GITHUB_ENV"
+          # Absolute path: the release action resolves "files" against the
+          # workspace, not against $LEDE_DIR.
+          echo "TOOLCHAIN_ASSET=$PWD/toolchain-cache/$asset" >> "$GITHUB_ENV"
 
       - name: Publish the toolchain release
         uses: softprops/action-gh-release@v3.0.3
@@ -141,6 +143,7 @@ jobs:
             Restored by the firmware build before compilation; regenerate it when
             the target, the libc or the GCC version changes.
           files: ${{ env.TOOLCHAIN_ASSET }}
+          fail_on_unmatched_files: true
           draft: false
           prerelease: false
           overwrite_files: true

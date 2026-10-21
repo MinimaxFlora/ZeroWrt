@@ -415,6 +415,7 @@ def patch_turboacc(tree: Path, settings: BuildSettings) -> None:
     path.chmod(0o755)
     util.log(f"wrote {path.relative_to(tree)} for {settings.device}")
 
+
 def apply_core_customisations(tree: Path, settings: BuildSettings) -> None:
     tree = Path(tree)
     patch_version_mk(tree)

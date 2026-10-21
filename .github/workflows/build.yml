@@ -192,6 +192,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="$ZEROWRT_DEVICE"
+          # Delete by id: a release left as a draft by an interrupted run is not
+          # reachable through its tag, and a leftover draft keeps the assets
+          # invisible.
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq ".[] | select(.tag_name == \"$TAG\") | .id" |
+            while read -r id; do
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+            done || true
           gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
           gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" >/dev/null 2>&1 || true
           gh release create "$TAG" dist/* \
@@ -199,6 +207,16 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "$TAG" \
             --notes-file dist/BUILD_INFO.txt
+
+          # A draft release hides every asset from anonymous clients, so the
+          # OTA download turns into a 404. Publish explicitly and verify.
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+          draft=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft')
+          echo "release draft flag: $draft"
+          if [ "$draft" != "false" ]; then
+            echo "release $TAG is still a draft; OTA downloads would 404"
+            exit 1
+          fi
 
       - name: Publish OTA page
         if: success()

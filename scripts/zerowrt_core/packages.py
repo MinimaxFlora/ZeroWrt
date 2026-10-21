@@ -24,15 +24,12 @@ ARGON_CONFIG_REF = "master"
 PASSWALL_REPO = "Openwrt-Passwall/openwrt-passwall"
 PASSWALL_REF = "main"
 PASSWALL_PACKAGES_REPO = "Openwrt-Passwall/openwrt-passwall-packages"
-PASSWALL_PACKAGES_REF = "main"
+# xray-core 26.10.17 was never tagged by Xray, so main cannot download it.
+# Temporarily use the commit of Openwrt-Passwall/openwrt-passwall-packages#759,
+# which bumps the package to 26.10.21; go back to "main" once that lands.
+PASSWALL_PACKAGES_REF = "bc50ff66d6965402d15b50b1ba57da126e72f597"
 OPENCLASH_REPO = "vernesong/OpenClash"
 OPENCLASH_REF = "master"
-
-# xray-core 26.10.17 was never tagged by Xray, so its download 404s. Point the
-# package at the closest release that actually exists until upstream catches up.
-XRAY_BROKEN_VERSION = "26.10.17"
-XRAY_VERSION = "26.10.21"
-XRAY_HASH = "44ef4874529a03848c90f1fdcfb763350fbc5f1de741ec90e0024d651df25650"
 
 PACKAGE_DIR_NAMES = {
     "luci-theme-argon",
@@ -116,7 +113,6 @@ def add_external_packages(tree: Path) -> None:
         _env("PASSWALL_PACKAGES_REF", PASSWALL_PACKAGES_REF),
         new_dir / "passwall-packages",
     )
-    _fix_xray(new_dir / "passwall-packages")
     _clone(
         _env("OPENCLASH_REPO", OPENCLASH_REPO),
         _env("OPENCLASH_REF", OPENCLASH_REF),
@@ -152,23 +148,6 @@ def _fix_openclash(openclash_dir: Path) -> None:
         )
     util.write_text(makefile, text)
     util.log("openclash: added luci-base/host build dependency (po2lmo)")
-
-
-def _fix_xray(packages_dir: Path) -> None:
-    """Retarget xray-core when the package pins a version Xray never released."""
-    makefile = Path(packages_dir) / "xray-core" / "Makefile"
-    if not makefile.exists():
-        util.warn("xray-core/Makefile is missing; skipping the version check")
-        return
-
-    text = util.read_text(makefile)
-    if f"PKG_VERSION:={XRAY_BROKEN_VERSION}" not in text:
-        return
-
-    text = text.replace(f"PKG_VERSION:={XRAY_BROKEN_VERSION}", f"PKG_VERSION:={XRAY_VERSION}")
-    text = re.sub(r"^PKG_HASH:=.*$", f"PKG_HASH:={XRAY_HASH}", text, count=1, flags=re.M)
-    util.write_text(makefile, text)
-    util.log(f"xray-core: retargeted {XRAY_BROKEN_VERSION} -> {XRAY_VERSION}")
 
 
 def _validate_layout(new_dir: Path) -> None:

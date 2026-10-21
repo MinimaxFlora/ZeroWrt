@@ -8,7 +8,7 @@
 
 ### LEDE tabanlı özel yazılım, web arayüzünden tek tıkla güncelleme.
 
-**Commit at, yazılımı al. LuCI'yi aç, güncelle'ye bas.**
+**Tek komut derler, tek tık günceller.**
 
 [![Derleme](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![Çekirdek](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -35,7 +35,7 @@ ağacından GitHub Actions ile derlenir. Her derleme kaynaktan üretilir, `SHA25
 `BUILD_INFO.txt` ile yayınlanır ve güncelleme dizinine yazılır; böylece cihaz kendini
 LuCI'den güncelleyebilir.
 
-İlginç olan başka bir paket listesi değil, döngü: bir commit derlemeyi başlatır, derleme
+İlginç olan başka bir paket listesi değil, döngü: derleme
 imajı ve dizini yayınlar, yönlendirici bir sonraki denetimde yeni sürümü görür.
 
 ## Özellikler
@@ -98,8 +98,7 @@ Yazılımda `luci-app-ota` var:
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-`main` dalına push da derleme başlatır. Sırlar, girdiler, ccache ve her adım
-[docs/BUILD.md](../BUILD.md) içinde.
+Derlemeler elle başlatılır: *Actions → Build ZeroWrt → Run workflow*. `push` tetikleyicisi yok, bu yüzden kod birleştirmek altı saatlik derlemeyi başlatmaz. Sırlar, girdiler, ccache ve her adım [docs/BUILD.md](../BUILD.md) içinde.
 
 ## SSS
 

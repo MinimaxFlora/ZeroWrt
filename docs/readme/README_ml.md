@@ -8,7 +8,7 @@
 
 ### LEDE അടിസ്ഥാനമാക്കിയുള്ള ഇഷ്ടാനുസൃത ഫേംവെയർ, ഒറ്റ ക്ലിക്കിൽ ഓൺലൈൻ അപ്ഡേറ്റ്.
 
-**കമ്മിറ്റ് പുഷ് ചെയ്യൂ, ഫേംവെയർ കിട്ടും. LuCI തുറന്ന് അപ്ഡേറ്റ് അമർത്തുക.**
+**ഒരു കമാൻഡ് ബിൽഡ് ചെയ്യുന്നു, ഒരു ക്ലിക്ക് അപ്ഡേറ്റ് ചെയ്യുന്നു.**
 
 [![ബിൽഡ്](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![കേർണൽ](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -36,7 +36,7 @@ ZeroWrt, OpenWrt കുടുംബത്തിലെ റൂട്ടറുക�
 ഇൻഡക്സിൽ ചേർക്കുകയും ചെയ്യുന്നു, അതിനാൽ ഉപകരണത്തിന് LuCI-ൽ നിന്ന് തന്നെ അപ്ഗ്രേഡ്
 ചെയ്യാം.
 
-പ്രധാനം മറ്റൊരു പാക്കേജ് പട്ടികയല്ല, ഈ ചക്രമാണ്: ഒരു കമ്മിറ്റ് ബിൽഡ് തുടങ്ങുന്നു, ബിൽഡ്
+പ്രധാനം മറ്റൊരു പാക്കേജ് പട്ടികയല്ല, ഈ ചക്രമാണ്: ബിൽഡ്
 ഇമേജും ഇൻഡക്സും പ്രസിദ്ധീകരിക്കുന്നു, അടുത്ത പരിശോധനയിൽ റൂട്ടർ പുതിയ പതിപ്പ് കാണുന്നു.
 
 ## സവിശേഷതകൾ
@@ -101,8 +101,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-`main`-ലേക്ക് പുഷ് ചെയ്താലും ബിൽഡ് തുടങ്ങും. Secrets, ഇൻപുട്ടുകൾ, ccache, ഓരോ ഘട്ടവും
-[docs/BUILD.md](../BUILD.md)-ൽ വിശദീകരിച്ചിട്ടുണ്ട്.
+ബിൽഡുകൾ *Actions → Build ZeroWrt → Run workflow*-ൽ നിന്ന് സ്വമേധയാ തുടങ്ങുന്നു. `push` ട്രിഗർ ഇല്ലാത്തതിനാൽ കോഡ് മെർജ് ചെയ്താൽ ആറു മണിക്കൂർ നീളുന്ന ബിൽഡ് ഓടില്ല. Secrets, ഇൻപുട്ടുകൾ, ccache, ഓരോ ഘട്ടവും [docs/BUILD.md](../BUILD.md)-ൽ ഉണ്ട്.
 
 ## പതിവുചോദ്യങ്ങൾ
 

@@ -8,7 +8,7 @@
 
 ### Власна прошивка на базі LEDE з оновленням в один клік із вебінтерфейсу.
 
-**Зробіть коміт — отримайте прошивку. Відкрийте LuCI і натисніть «Оновити».**
+**Одна команда збирає, один клік оновлює.**
 
 [![Збирання](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![Ядро](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -35,7 +35,7 @@ ZeroWrt — невелика власна прошивка для роутері
 публікується разом із `SHA256SUMS` та `BUILD_INFO.txt` і потрапляє до індексу оновлень,
 тому пристрій може оновити себе просто з LuCI.
 
-Цікавий тут не черговий список пакетів, а цикл: коміт запускає збирання, збирання
+Цікавий тут не черговий список пакетів, а цикл: збирання
 публікує образ та індекс, а роутер під час наступної перевірки бачить нову версію.
 
 ## Можливості
@@ -98,8 +98,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-Пуш у `main` також запускає збирання. Секрети, параметри, ccache і кожен крок описані в
-[docs/BUILD.md](../BUILD.md).
+Збирання запускається вручну: *Actions → Build ZeroWrt → Run workflow*. Тригера `push` немає, тож злиття коду не запускає шестигодинне збирання. Секрети, параметри, ccache і кожен крок описано в [docs/BUILD.md](../BUILD.md).
 
 ## FAQ
 

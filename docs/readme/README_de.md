@@ -8,7 +8,7 @@
 
 ### Eigene Firmware auf LEDE-Basis, mit Online-Update per Klick.
 
-**Commit pushen, Firmware bekommen. LuCI öffnen, Update anklicken.**
+**Ein Befehl baut es, ein Klick aktualisiert es.**
 
 [![Build](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![Kernel](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -35,8 +35,7 @@ privaten LEDE-Baum über GitHub Actions. Jeder Build entsteht aus dem Quellcode,
 `SHA256SUMS` und `BUILD_INFO.txt` veröffentlicht und in einen Update-Index eingetragen,
 sodass das Gerät sich selbst über LuCI aktualisieren kann.
 
-Das Interessante ist nicht eine weitere Paketliste, sondern der Kreislauf: ein Commit
-startet einen Build, der Build veröffentlicht Image und Index, und der Router sieht die
+Das Interessante ist nicht eine weitere Paketliste, sondern der Kreislauf: der Build veröffentlicht Image und Index, und der Router sieht die
 neue Version bei der nächsten Prüfung.
 
 ## Funktionen
@@ -99,8 +98,7 @@ Standardadresse `10.0.0.1`, Benutzer `root`, Passwort `password`. Beim ersten Lo
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-Ein Push auf `main` baut ebenfalls. Secrets, Eingaben, ccache und jeder Schritt stehen in
-[docs/BUILD.md](../BUILD.md).
+Builds werden manuell gestartet: *Actions → Build ZeroWrt → Run workflow*. Es gibt keinen `push`-Trigger, ein Merge startet also keine sechsstündige Kompilierung. Secrets, Eingaben, ccache und jeder Schritt stehen in [docs/BUILD.md](../BUILD.md).
 
 ## FAQ
 

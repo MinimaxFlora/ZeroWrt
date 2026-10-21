@@ -8,7 +8,7 @@
 
 ### LEDE ベースのカスタムファームウェア。LuCI からワンクリック更新。
 
-**コミットすればビルドされ、LuCI を開いて更新を押すだけ。**
+**コマンド一つでビルド、クリック一つで更新。**
 
 [![ビルド](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![カーネル](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -35,7 +35,7 @@ LEDE ツリーから GitHub Actions でビルドしています。すべての�
 `SHA256SUMS` と `BUILD_INFO.txt` を添えて公開され、更新インデックスに登録されるため、
 端末は LuCI から自分でアップグレードできます。
 
-面白いのはパッケージ一覧の長さではなく、このループです。コミットがビルドを起こし、
+面白いのはパッケージ一覧の長さではなく、このループです。
 ビルドがイメージとインデックスを公開し、次回の確認時にルーターが新しい版を見つけます。
 
 ## 特長
@@ -98,8 +98,7 @@ sysupgrade イメージを書き込みます。
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-`main` へのプッシュでもビルドされます。Secrets、入力、ccache、各ステップの内容は
-[docs/BUILD.md](../BUILD.md) にまとめています。
+ビルドは *Actions → Build ZeroWrt → Run workflow* から手動で開始します。`push` トリガーはないので、コードをマージしても 6 時間のコンパイルは走りません。Secrets、入力、ccache、各ステップは [docs/BUILD.md](../BUILD.md) にまとめています。
 
 ## FAQ
 

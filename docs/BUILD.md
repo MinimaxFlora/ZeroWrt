@@ -50,20 +50,15 @@ MyNet-5G
 MyNet-6G
 ```
 
-### 推送到 main
+### 只有手动触发
 
-修改以下路径会自动触发，使用上面的默认值：
+`build.yml` **没有** `push` 触发器：合并代码、改脚本、改素材都不会自动编译。
+要出固件只能到 `Actions → Build ZeroWrt → Run workflow` 手动点，参数用上面的默认值即可。
 
-```yaml
-push:
-  branches: [main]
-  paths:
-    - "scripts/**"
-    - "assets/**"
-    - ".github/workflows/**"
-```
+这样做的原因：一次完整编译要 5~6 小时，改一行文档顺带触发一次编译没有意义；
+而且编排类改动（runner、action 版本、步骤顺序）应该先自己确认，再决定要不要出固件。
 
-不会把手动触发改成唯一入口。
+静态检查（`quality.yml`）仍然在 `scripts/**`、`tests/**` 变更时自动跑，它只要几十秒。
 
 ## 三、工作流做了什么
 

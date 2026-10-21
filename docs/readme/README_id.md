@@ -8,7 +8,7 @@
 
 ### Firmware kustom berbasis LEDE, dengan pembaruan online sekali klik.
 
-**Push commit, dapatkan firmware. Buka LuCI, klik perbarui.**
+**Satu perintah mem-build, satu klik memperbarui.**
 
 [![Build](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![Kernel](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -35,7 +35,7 @@ privat lewat GitHub Actions. Setiap build dihasilkan dari kode sumber, diterbitk
 `SHA256SUMS` dan `BUILD_INFO.txt`, lalu dicatat dalam indeks pembaruan sehingga perangkat
 dapat memperbarui dirinya sendiri dari LuCI.
 
-Yang menarik bukan daftar paket lain, tetapi siklusnya: satu commit memulai build, build
+Yang menarik bukan daftar paket lain, tetapi siklusnya: build
 menerbitkan image dan indeks, dan router melihat versi baru saat pemeriksaan berikutnya.
 
 ## Fitur
@@ -98,8 +98,7 @@ Firmware menyertakan `luci-app-ota`:
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-Push ke `main` juga memicu build. Secret, input, ccache, dan setiap langkah dijelaskan di
-[docs/BUILD.md](../BUILD.md).
+Build dijalankan manual dari *Actions → Build ZeroWrt → Run workflow*. Tidak ada trigger `push`, jadi merge kode tidak memicu build enam jam. Secret, input, ccache, dan setiap langkah ada di [docs/BUILD.md](../BUILD.md).
 
 ## FAQ
 

@@ -8,7 +8,7 @@
 
 ### Firmware personnalisé basé sur LEDE, avec mise à jour en ligne en un clic.
 
-**Poussez un commit, obtenez un firmware. Ouvrez LuCI, cliquez sur mise à jour.**
+**Une commande le construit, un clic le met à jour.**
 
 [![Build](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![Noyau](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -35,8 +35,7 @@ un arbre LEDE privé via GitHub Actions. Chaque build est produit depuis les sou
 publié avec `SHA256SUMS` et `BUILD_INFO.txt`, et inscrit dans un index de mise à jour afin
 que l'appareil puisse se mettre à jour depuis LuCI.
 
-L'intérêt n'est pas une liste de paquets supplémentaire, mais la boucle : un commit
-déclenche un build, le build publie l'image et l'index, et le routeur voit la nouvelle
+L'intérêt n'est pas une liste de paquets supplémentaire, mais la boucle : le build publie l'image et l'index, et le routeur voit la nouvelle
 version au contrôle suivant.
 
 ## Fonctionnalités
@@ -100,8 +99,7 @@ Adresse par défaut `10.0.0.1`, utilisateur `root`, mot de passe `password`. À 
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-Un push sur `main` compile aussi. Secrets, entrées, ccache et chaque étape sont décrits dans
-[docs/BUILD.md](../BUILD.md).
+Les builds se lancent à la main : *Actions → Build ZeroWrt → Run workflow*. Il n'y a pas de déclencheur `push`, fusionner du code ne lance donc pas six heures de compilation. Secrets, entrées, ccache et chaque étape sont décrits dans [docs/BUILD.md](../BUILD.md).
 
 ## FAQ
 

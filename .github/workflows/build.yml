@@ -27,13 +27,6 @@ on:
           - ruijie_rg-x60-new
           - x86_64
 
-  push:
-    branches: [main]
-    paths:
-      - "scripts/**"
-      - "assets/**"
-      - ".github/workflows/**"
-
 permissions:
   contents: write
 

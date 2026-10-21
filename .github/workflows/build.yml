@@ -52,6 +52,8 @@ env:
 jobs:
   build:
     name: Compile ZeroWrt
+    # Pin the image on purpose: ubuntu-latest migrates to Ubuntu 26 in
+    # October 2026 and would swap the toolchain under an unchanged build.
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
@@ -142,7 +144,7 @@ jobs:
           sudo chown -R "$(id -u):$(id -g)" /builder/ccache "$GITHUB_WORKSPACE/.ccache"
 
       - name: Restore ccache
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
         with:
           path: .ccache
           key: zerowrt-ccache-${{ runner.os }}-${{ env.ZEROWRT_DEVICE }}-${{ env.ZEROWRT_REF }}-v2

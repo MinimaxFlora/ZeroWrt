@@ -285,3 +285,18 @@ ota cancel     # 取消下载
 
 仓库的 `Settings → Pages` 需要设为 **Deploy from a branch / `gh-pages` / `/`**（只需设置一次，
 本仓库已配置）。页面本身在插件仓库的 `site/` 目录，改样式或文案时改那里即可。
+
+## 十二、运行环境与 Action 版本
+
+runner 和 action 都**钉死具体版本**，不追 latest：
+
+| 组件 | 版本 | 说明 |
+| --- | --- | --- |
+| runner | `ubuntu-24.04` | `ubuntu-latest` 在 2026 年 10 月切到 Ubuntu 26，同一个 commit 重跑会换掉工具链 |
+| `actions/checkout` | `v7.0.1` | Node 24 运行时 |
+| `actions/cache` | `v6.1.0` | Node 24 运行时 |
+| `actions/upload-artifact` | `v7.0.2` | v4 及更早跑在 Node 20 上，GitHub 已开始弃用 |
+| `actions/setup-python` | `v9.0.0` | Node 24 运行时 |
+
+升级方式：改版本号 → 跑一次工作流确认 → 保留新的精确 tag。不要写 `@v7` 这种浮动主版本，
+否则上游发版会在你没改任何东西的情况下换掉构建环境。

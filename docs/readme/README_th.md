@@ -110,11 +110,11 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## กิตติกรรมประกาศ
 
-- **[OpenWrt](https://github.com/openwrt/openwrt)** — ระบบบิลด์ LuCI และแพ็กเกจพื้นฐานส่วนใหญ่ ทุกอย่างที่นี่ตั้งอยู่บนนั้น
-- **[LEDE](https://github.com/coolsnowwolf/lede)** — ซอร์สทรีและค่าตั้งต้นที่ ZeroWrt สร้างต่อ
-- **[Yuzhii0718](https://github.com/Yuzhii0718)** — การพอร์ต Ruijie RG-X60 New ไปยัง MT7986 (immortalwrt-mt798x)
-
-และผู้เขียนแพ็กเกจต้นทางจำนวนมากที่ไม่ได้ระบุชื่อที่นี่ โค้ดของพวกเขาทำงานในทุกบิลด์
+| [OpenWrt](https://github.com/openwrt) | [coolsnowwolf](https://github.com/coolsnowwolf) | [sbwml](https://github.com/sbwml) |
+| :-: | :-: | :-: |
+| <img width="100" src="https://avatars.githubusercontent.com/u/2528830"/> | <img width="100" src="https://avatars.githubusercontent.com/u/31687149"/> | <img width="100" src="https://avatars.githubusercontent.com/u/16485166"/> |
+| [jerrykuku](https://github.com/jerrykuku) | [Openwrt-Passwall](https://github.com/Openwrt-Passwall) | [vernesong](https://github.com/vernesong) |
+| <img width="100" src="https://avatars.githubusercontent.com/u/9485680"/> | <img width="100" src="https://avatars.githubusercontent.com/u/253070042"/> | <img width="100" src="https://avatars.githubusercontent.com/u/42875168"/> |
 
 ## สัญญาอนุญาต
 

@@ -110,11 +110,11 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## 감사의 말
 
-- **[OpenWrt](https://github.com/openwrt/openwrt)** — 빌드 시스템, LuCI, 그리고 대부분의 기본 패키지. 여기 있는 모든 것이 그 위에 서 있습니다.
-- **[LEDE](https://github.com/coolsnowwolf/lede)** — ZeroWrt가 기반으로 삼는 소스 트리와 기본 설정.
-- **[Yuzhii0718](https://github.com/Yuzhii0718)** — Ruijie RG-X60 New의 MT7986 포팅(immortalwrt-mt798x).
-
-여기 이름을 올리지 못한 수많은 업스트림 패키지 작성자들에게도. 모든 빌드에서 그들의 코드가 돌아갑니다.
+| [OpenWrt](https://github.com/openwrt) | [coolsnowwolf](https://github.com/coolsnowwolf) | [sbwml](https://github.com/sbwml) |
+| :-: | :-: | :-: |
+| <img width="100" src="https://avatars.githubusercontent.com/u/2528830"/> | <img width="100" src="https://avatars.githubusercontent.com/u/31687149"/> | <img width="100" src="https://avatars.githubusercontent.com/u/16485166"/> |
+| [jerrykuku](https://github.com/jerrykuku) | [Openwrt-Passwall](https://github.com/Openwrt-Passwall) | [vernesong](https://github.com/vernesong) |
+| <img width="100" src="https://avatars.githubusercontent.com/u/9485680"/> | <img width="100" src="https://avatars.githubusercontent.com/u/253070042"/> | <img width="100" src="https://avatars.githubusercontent.com/u/42875168"/> |
 
 ## 라이선스
 

@@ -112,11 +112,11 @@ Pushing to `main` also builds. The pipeline is documented in
 
 ## Credits
 
-- **[OpenWrt](https://github.com/openwrt/openwrt)** — the build system, LuCI and the bulk of the base packages — everything here stands on them.
-- **[LEDE](https://github.com/coolsnowwolf/lede)** — the source tree and defaults that ZeroWrt is built from.
-- **[Yuzhii0718](https://github.com/Yuzhii0718)** — the Ruijie RG-X60 New port to MT7986 (immortalwrt-mt798x).
-
-And the many upstream package authors who are not named here — their code runs in every build.
+| [OpenWrt](https://github.com/openwrt) | [coolsnowwolf](https://github.com/coolsnowwolf) | [sbwml](https://github.com/sbwml) |
+| :-: | :-: | :-: |
+| <img width="100" src="https://avatars.githubusercontent.com/u/2528830"/> | <img width="100" src="https://avatars.githubusercontent.com/u/31687149"/> | <img width="100" src="https://avatars.githubusercontent.com/u/16485166"/> |
+| [jerrykuku](https://github.com/jerrykuku) | [Openwrt-Passwall](https://github.com/Openwrt-Passwall) | [vernesong](https://github.com/vernesong) |
+| <img width="100" src="https://avatars.githubusercontent.com/u/9485680"/> | <img width="100" src="https://avatars.githubusercontent.com/u/253070042"/> | <img width="100" src="https://avatars.githubusercontent.com/u/42875168"/> |
 
 ## License
 

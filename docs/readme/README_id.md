@@ -111,11 +111,11 @@ Push ke `main` juga memicu build. Secret, input, ccache, dan setiap langkah dije
 
 ## Ucapan terima kasih
 
-- **[OpenWrt](https://github.com/openwrt/openwrt)** — sistem build, LuCI, dan sebagian besar paket dasar; semua di sini berdiri di atasnya.
-- **[LEDE](https://github.com/coolsnowwolf/lede)** — pohon sumber dan nilai bawaan yang menjadi dasar ZeroWrt.
-- **[Yuzhii0718](https://github.com/Yuzhii0718)** — porting Ruijie RG-X60 New ke MT7986 (immortalwrt-mt798x).
-
-Dan kepada banyak penulis paket hulu yang tidak tercantum di sini — kode mereka berjalan di setiap build.
+| [OpenWrt](https://github.com/openwrt) | [coolsnowwolf](https://github.com/coolsnowwolf) | [sbwml](https://github.com/sbwml) |
+| :-: | :-: | :-: |
+| <img width="100" src="https://avatars.githubusercontent.com/u/2528830"/> | <img width="100" src="https://avatars.githubusercontent.com/u/31687149"/> | <img width="100" src="https://avatars.githubusercontent.com/u/16485166"/> |
+| [jerrykuku](https://github.com/jerrykuku) | [Openwrt-Passwall](https://github.com/Openwrt-Passwall) | [vernesong](https://github.com/vernesong) |
+| <img width="100" src="https://avatars.githubusercontent.com/u/9485680"/> | <img width="100" src="https://avatars.githubusercontent.com/u/253070042"/> | <img width="100" src="https://avatars.githubusercontent.com/u/42875168"/> |
 
 ## Lisensi
 

@@ -111,11 +111,11 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## Teşekkürler
 
-- **[OpenWrt](https://github.com/openwrt/openwrt)** — derleme sistemi, LuCI ve temel paketlerin çoğu; buradaki her şey onların üzerinde duruyor.
-- **[LEDE](https://github.com/coolsnowwolf/lede)** — ZeroWrt'nin üzerine kurulduğu kaynak ağacı ve varsayılanlar.
-- **[Yuzhii0718](https://github.com/Yuzhii0718)** — Ruijie RG-X60 New'in MT7986'ya taşınması (immortalwrt-mt798x).
-
-Bir de burada adı geçmeyen sayısız üst kaynak paket yazarına: her derlemede onların kodu çalışıyor.
+| [OpenWrt](https://github.com/openwrt) | [coolsnowwolf](https://github.com/coolsnowwolf) | [sbwml](https://github.com/sbwml) |
+| :-: | :-: | :-: |
+| <img width="100" src="https://avatars.githubusercontent.com/u/2528830"/> | <img width="100" src="https://avatars.githubusercontent.com/u/31687149"/> | <img width="100" src="https://avatars.githubusercontent.com/u/16485166"/> |
+| [jerrykuku](https://github.com/jerrykuku) | [Openwrt-Passwall](https://github.com/Openwrt-Passwall) | [vernesong](https://github.com/vernesong) |
+| <img width="100" src="https://avatars.githubusercontent.com/u/9485680"/> | <img width="100" src="https://avatars.githubusercontent.com/u/253070042"/> | <img width="100" src="https://avatars.githubusercontent.com/u/42875168"/> |
 
 ## Lisans
 

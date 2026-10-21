@@ -114,11 +114,11 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## കൃതജ്ഞത
 
-- **[OpenWrt](https://github.com/openwrt/openwrt)** — ബിൽഡ് സിസ്റ്റം, LuCI, പ്രധാന പാക്കേജുകളിൽ ഭൂരിഭാഗവും; ഇവിടെയുള്ളതെല്ലാം അവയുടെ മേലാണ്.
-- **[LEDE](https://github.com/coolsnowwolf/lede)** — ZeroWrt നിർമ്മിക്കുന്ന സോഴ്സ് ട്രീയും സ്ഥിരസ്ഥിതികളും.
-- **[Yuzhii0718](https://github.com/Yuzhii0718)** — Ruijie RG-X60 New-ന്റെ MT7986-ലേക്കുള്ള പോർട്ട് (immortalwrt-mt798x).
-
-ഇവിടെ പേരില്ലാത്ത നിരവധി അപ്സ്ട്രീം പാക്കേജ് രചയിതാക്കൾക്കും — അവരുടെ കോഡ് ഓരോ ബിൽഡിലും പ്രവർത്തിക്കുന്നു.
+| [OpenWrt](https://github.com/openwrt) | [coolsnowwolf](https://github.com/coolsnowwolf) | [sbwml](https://github.com/sbwml) |
+| :-: | :-: | :-: |
+| <img width="100" src="https://avatars.githubusercontent.com/u/2528830"/> | <img width="100" src="https://avatars.githubusercontent.com/u/31687149"/> | <img width="100" src="https://avatars.githubusercontent.com/u/16485166"/> |
+| [jerrykuku](https://github.com/jerrykuku) | [Openwrt-Passwall](https://github.com/Openwrt-Passwall) | [vernesong](https://github.com/vernesong) |
+| <img width="100" src="https://avatars.githubusercontent.com/u/9485680"/> | <img width="100" src="https://avatars.githubusercontent.com/u/253070042"/> | <img width="100" src="https://avatars.githubusercontent.com/u/42875168"/> |
 
 ## അനുമതി
 

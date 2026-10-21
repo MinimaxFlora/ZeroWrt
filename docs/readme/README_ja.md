@@ -111,11 +111,11 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## 謝辞
 
-- **[OpenWrt](https://github.com/openwrt/openwrt)** — ビルドシステム、LuCI、そして基盤パッケージの大部分。ここにあるものはすべてその上に成り立っています。
-- **[LEDE](https://github.com/coolsnowwolf/lede)** — ZeroWrt が元にしているソースツリーと既定の設定。
-- **[Yuzhii0718](https://github.com/Yuzhii0718)** — Ruijie RG-X60 New の MT7986 への移植（immortalwrt-mt798x）。
-
-ここに名前を挙げていない数多くの上流パッケージ作者にも。ビルドのたびに彼らのコードが動いています。
+| [OpenWrt](https://github.com/openwrt) | [coolsnowwolf](https://github.com/coolsnowwolf) | [sbwml](https://github.com/sbwml) |
+| :-: | :-: | :-: |
+| <img width="100" src="https://avatars.githubusercontent.com/u/2528830"/> | <img width="100" src="https://avatars.githubusercontent.com/u/31687149"/> | <img width="100" src="https://avatars.githubusercontent.com/u/16485166"/> |
+| [jerrykuku](https://github.com/jerrykuku) | [Openwrt-Passwall](https://github.com/Openwrt-Passwall) | [vernesong](https://github.com/vernesong) |
+| <img width="100" src="https://avatars.githubusercontent.com/u/9485680"/> | <img width="100" src="https://avatars.githubusercontent.com/u/253070042"/> | <img width="100" src="https://avatars.githubusercontent.com/u/42875168"/> |
 
 ## ライセンス
 

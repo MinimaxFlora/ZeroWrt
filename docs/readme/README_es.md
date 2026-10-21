@@ -113,11 +113,11 @@ están en [docs/BUILD.md](../BUILD.md).
 
 ## Agradecimientos
 
-- **[OpenWrt](https://github.com/openwrt/openwrt)** — el sistema de compilación, LuCI y la mayor parte de los paquetes base; todo lo de aquí se apoya en ellos.
-- **[LEDE](https://github.com/coolsnowwolf/lede)** — el árbol de código y los valores por defecto sobre los que se construye ZeroWrt.
-- **[Yuzhii0718](https://github.com/Yuzhii0718)** — el port del Ruijie RG-X60 New a MT7986 (immortalwrt-mt798x).
-
-Y a los muchos autores de paquetes upstream que no aparecen aquí: su código se ejecuta en cada compilación.
+| [OpenWrt](https://github.com/openwrt) | [coolsnowwolf](https://github.com/coolsnowwolf) | [sbwml](https://github.com/sbwml) |
+| :-: | :-: | :-: |
+| <img width="100" src="https://avatars.githubusercontent.com/u/2528830"/> | <img width="100" src="https://avatars.githubusercontent.com/u/31687149"/> | <img width="100" src="https://avatars.githubusercontent.com/u/16485166"/> |
+| [jerrykuku](https://github.com/jerrykuku) | [Openwrt-Passwall](https://github.com/Openwrt-Passwall) | [vernesong](https://github.com/vernesong) |
+| <img width="100" src="https://avatars.githubusercontent.com/u/9485680"/> | <img width="100" src="https://avatars.githubusercontent.com/u/253070042"/> | <img width="100" src="https://avatars.githubusercontent.com/u/42875168"/> |
 
 ## Licencia
 

@@ -111,11 +111,11 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## Ευχαριστίες
 
-- **[OpenWrt](https://github.com/openwrt/openwrt)** — το σύστημα build, το LuCI και το μεγαλύτερο μέρος των βασικών πακέτων· όλα εδώ στηρίζονται σε αυτά.
-- **[LEDE](https://github.com/coolsnowwolf/lede)** — το δέντρο πηγαίου κώδικα και οι προεπιλογές από τις οποίες χτίζεται το ZeroWrt.
-- **[Yuzhii0718](https://github.com/Yuzhii0718)** — η μεταφορά του Ruijie RG-X60 New στο MT7986 (immortalwrt-mt798x).
-
-Και στους πολλούς συγγραφείς πακέτων upstream που δεν αναφέρονται εδώ· ο κώδικάς τους τρέχει σε κάθε build.
+| [OpenWrt](https://github.com/openwrt) | [coolsnowwolf](https://github.com/coolsnowwolf) | [sbwml](https://github.com/sbwml) |
+| :-: | :-: | :-: |
+| <img width="100" src="https://avatars.githubusercontent.com/u/2528830"/> | <img width="100" src="https://avatars.githubusercontent.com/u/31687149"/> | <img width="100" src="https://avatars.githubusercontent.com/u/16485166"/> |
+| [jerrykuku](https://github.com/jerrykuku) | [Openwrt-Passwall](https://github.com/Openwrt-Passwall) | [vernesong](https://github.com/vernesong) |
+| <img width="100" src="https://avatars.githubusercontent.com/u/9485680"/> | <img width="100" src="https://avatars.githubusercontent.com/u/253070042"/> | <img width="100" src="https://avatars.githubusercontent.com/u/42875168"/> |
 
 ## Άδεια
 

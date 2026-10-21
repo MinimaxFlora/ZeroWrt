@@ -108,11 +108,11 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## 鸣谢
 
-- **[OpenWrt](https://github.com/openwrt/openwrt)** — 构建系统、LuCI 和大部分基础包，这里的一切都立在它们上面。
-- **[LEDE](https://github.com/coolsnowwolf/lede)** — ZeroWrt 所用的源码树与默认配置。
-- **[Yuzhii0718](https://github.com/Yuzhii0718)** — 锐捷 RG-X60 New 在 MT7986 上的移植（immortalwrt-mt798x）。
-
-还有那些没被列出的上游包作者——每次构建跑的都是他们的代码。
+| [OpenWrt](https://github.com/openwrt) | [coolsnowwolf](https://github.com/coolsnowwolf) | [sbwml](https://github.com/sbwml) |
+| :-: | :-: | :-: |
+| <img width="100" src="https://avatars.githubusercontent.com/u/2528830"/> | <img width="100" src="https://avatars.githubusercontent.com/u/31687149"/> | <img width="100" src="https://avatars.githubusercontent.com/u/16485166"/> |
+| [jerrykuku](https://github.com/jerrykuku) | [Openwrt-Passwall](https://github.com/Openwrt-Passwall) | [vernesong](https://github.com/vernesong) |
+| <img width="100" src="https://avatars.githubusercontent.com/u/9485680"/> | <img width="100" src="https://avatars.githubusercontent.com/u/253070042"/> | <img width="100" src="https://avatars.githubusercontent.com/u/42875168"/> |
 
 ## 许可证
 

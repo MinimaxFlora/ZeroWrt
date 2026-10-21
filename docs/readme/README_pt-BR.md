@@ -112,11 +112,11 @@ Um push para `main` também compila. Segredos, entradas, ccache e cada etapa est
 
 ## Agradecimentos
 
-- **[OpenWrt](https://github.com/openwrt/openwrt)** — o sistema de build, o LuCI e a maior parte dos pacotes base; tudo aqui se apoia neles.
-- **[LEDE](https://github.com/coolsnowwolf/lede)** — a árvore de código e os padrões dos quais o ZeroWrt deriva.
-- **[Yuzhii0718](https://github.com/Yuzhii0718)** — o porte do Ruijie RG-X60 New para MT7986 (immortalwrt-mt798x).
-
-E aos muitos autores de pacotes upstream que não estão nesta lista: o código deles roda em todo build.
+| [OpenWrt](https://github.com/openwrt) | [coolsnowwolf](https://github.com/coolsnowwolf) | [sbwml](https://github.com/sbwml) |
+| :-: | :-: | :-: |
+| <img width="100" src="https://avatars.githubusercontent.com/u/2528830"/> | <img width="100" src="https://avatars.githubusercontent.com/u/31687149"/> | <img width="100" src="https://avatars.githubusercontent.com/u/16485166"/> |
+| [jerrykuku](https://github.com/jerrykuku) | [Openwrt-Passwall](https://github.com/Openwrt-Passwall) | [vernesong](https://github.com/vernesong) |
+| <img width="100" src="https://avatars.githubusercontent.com/u/9485680"/> | <img width="100" src="https://avatars.githubusercontent.com/u/253070042"/> | <img width="100" src="https://avatars.githubusercontent.com/u/42875168"/> |
 
 ## Licença
 

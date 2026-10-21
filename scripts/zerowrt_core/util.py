@@ -270,7 +270,3 @@ def clone(
     )
     _, sha = run(["git", "-C", str(dest), "rev-parse", "HEAD"], capture=True, quiet=True)
     return sha.strip()
-
-
-def human_gib(num_bytes: int) -> str:
-    return f"{num_bytes / (1024**3):.1f} GiB"

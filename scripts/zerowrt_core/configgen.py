@@ -247,10 +247,3 @@ def generate(tree: Path, device: str) -> dict:
         f"configuration ready: {info['board']}/{info['subtarget']} device={info['device']} version={info['version']}"
     )
     return info
-
-
-def load_info(tree: Path) -> dict:
-    path = Path(tree) / ".zerowrt-info.json"
-    if path.exists():
-        return json.loads(util.read_text(path))
-    return {}

@@ -178,7 +178,7 @@ def _fallback_build_dir(build_dir: Path) -> None:
             util.warn("/mnt could not be bind mounted; building on the root filesystem")
 
 
-def merge_disks(build_dir: Path, *, reserve_gb: int = 2, swap_size_gb: int = 4) -> None:
+def merge_disks(build_dir: Path, *, reserve_gb: int = 2) -> None:
     """Grow the build space by joining the root and /mnt disks with LVM."""
     build_dir = Path(build_dir)
     root_dev = _device("/")
@@ -301,7 +301,7 @@ def free_disk(
         util.log(f"existing {swap_gb:.1f} GiB swap is sufficient")
 
     if mnt_separate:
-        merge_disks(build_dir_path, reserve_gb=reserve_gb, swap_size_gb=swap_size_gb)
+        merge_disks(build_dir_path, reserve_gb=reserve_gb)
     else:
         _prepare_build_dir(build_dir_path)
 
@@ -439,7 +439,7 @@ def install_docker() -> None:
         util.sudo_run(["ln", "-sf", str(docker_init), "/usr/local/bin/docker-init"])
 
 
-def install_deps(*, docker: bool = False, only_missing: bool = False) -> None:
+def install_deps(*, docker: bool = False) -> None:
     util.header("Installing OpenWrt build dependencies")
     util.sudo_run(["apt-get", "update", "-y"], check=False)
     for group in APT_GROUPS:

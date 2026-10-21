@@ -8,7 +8,7 @@
 
 ### 基于 LEDE 的定制固件，内置网页一键在线升级。
 
-**改完推送就自动编译；打开 LuCI 点一下就能升级。**
+**一条命令出固件，点一下完成升级。**
 
 [![构建](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![内核](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -34,7 +34,7 @@ ZeroWrt 是面向 OpenWrt 类路由器的定制固件，由 GitHub Actions 从�
 源码树自动编译。每次构建都从源码产出，连同 `SHA256SUMS` 和 `BUILD_INFO.txt` 一起
 发布，并写进更新索引，设备可以自己从 LuCI 升级。
 
-真正有意思的不是又一份软件包清单，而是这条链路：一次提交触发构建，构建产出镜像和
+真正有意思的不是又一份软件包清单，而是这条链路：构建产出镜像和
 索引，路由器下次检查时就能看到新版本。
 
 ## 特性
@@ -95,8 +95,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-推送到 `main` 也会触发构建。完整流程（Secrets、参数、ccache、每一步在做什么）见
-[docs/BUILD.md](../BUILD.md)。
+构建只能手动触发：*Actions → Build ZeroWrt → Run workflow*，没有 `push` 触发器，合并代码不会顺带跑一次六小时的编译。完整流程（Secrets、参数、ccache、每一步在做什么）见 [docs/BUILD.md](../BUILD.md)。
 
 ## 常见问题
 

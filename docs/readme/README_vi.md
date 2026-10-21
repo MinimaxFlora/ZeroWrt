@@ -8,7 +8,7 @@
 
 ### Firmware tùy biến dựa trên LEDE, cập nhật trực tuyến chỉ bằng một cú nhấp.
 
-**Push commit là có firmware. Mở LuCI, bấm cập nhật.**
+**Một lệnh để build, một cú nhấp để cập nhật.**
 
 [![Build](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![Nhân](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -35,8 +35,7 @@ biên dịch từ một cây LEDE riêng. Mỗi bản build đều sinh ra từ 
 `SHA256SUMS` và `BUILD_INFO.txt`, đồng thời ghi vào chỉ mục cập nhật để thiết bị có thể tự
 nâng cấp ngay trong LuCI.
 
-Điểm đáng nói không phải một danh sách gói khác, mà là vòng lặp: một commit khởi động
-build, build phát hành ảnh và chỉ mục, router thấy phiên bản mới ở lần kiểm tra kế tiếp.
+Điểm đáng nói không phải một danh sách gói khác, mà là vòng lặp: build phát hành ảnh và chỉ mục, router thấy phiên bản mới ở lần kiểm tra kế tiếp.
 
 ## Tính năng
 
@@ -98,8 +97,7 @@ Firmware có sẵn `luci-app-ota`:
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-Push lên `main` cũng kích hoạt build. Secrets, tham số, ccache và từng bước được ghi ở
-[docs/BUILD.md](../BUILD.md).
+Build được khởi chạy thủ công: *Actions → Build ZeroWrt → Run workflow*. Không có trigger `push`, nên merge code không kéo theo sáu giờ biên dịch. Secrets, tham số, ccache và từng bước được ghi ở [docs/BUILD.md](../BUILD.md).
 
 ## FAQ
 

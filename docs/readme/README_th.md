@@ -8,7 +8,7 @@
 
 ### เฟิร์มแวร์กำหนดเองบนฐาน LEDE อัปเดตออนไลน์ได้ในคลิกเดียว
 
-**พุชคอมมิตแล้วได้เฟิร์มแวร์ เปิด LuCI แล้วกดอัปเดต**
+**คำสั่งเดียวบิลด์ คลิกเดียวอัปเดต**
 
 [![บิลด์](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![เคอร์เนล](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -34,7 +34,7 @@ ZeroWrt คือเฟิร์มแวร์กำหนดเองขนา
 ส่วนตัวผ่าน GitHub Actions ทุกบิลด์สร้างจากซอร์สโค้ด เผยแพร่พร้อม `SHA256SUMS` และ
 `BUILD_INFO.txt` และถูกบันทึกในดัชนีอัปเดต อุปกรณ์จึงอัปเกรดตัวเองได้จาก LuCI
 
-จุดที่น่าสนใจไม่ใช่รายการแพ็กเกจอีกชุด แต่เป็นวงจรนี้: คอมมิตเริ่มบิลด์ บิลด์เผยแพร่ image
+จุดที่น่าสนใจไม่ใช่รายการแพ็กเกจอีกชุด แต่เป็นวงจรนี้: บิลด์เผยแพร่ image
 และดัชนี แล้วเราเตอร์เห็นเวอร์ชันใหม่ในการตรวจครั้งถัดไป
 
 ## คุณสมบัติ
@@ -97,8 +97,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-พุชขึ้น `main` ก็บิลด์เช่นกัน Secrets พารามิเตอร์ ccache และทุกขั้นตอนอยู่ใน
-[docs/BUILD.md](../BUILD.md)
+บิลด์เริ่มด้วยมือที่ *Actions → Build ZeroWrt → Run workflow* ไม่มีทริกเกอร์ `push` ดังนั้นการ merge โค้ดจะไม่ไปบิลด์หกชั่วโมง Secrets พารามิเตอร์ ccache และทุกขั้นตอนอยู่ใน [docs/BUILD.md](../BUILD.md)
 
 ## คำถามที่พบบ่อย
 

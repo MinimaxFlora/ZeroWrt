@@ -8,7 +8,7 @@
 
 ### Firmware personalizado basado en LEDE, con actualización en línea de un clic.
 
-**Haz push y sale un firmware. Abre LuCI y pulsa actualizar.**
+**Un comando lo compila, un clic lo actualiza.**
 
 [![Compilación](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![Kernel](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -35,8 +35,7 @@ ZeroWrt es un firmware personalizado para routers de la clase OpenWrt, compilado
 se publica con `SHA256SUMS` y `BUILD_INFO.txt`, y se registra en un índice de
 actualizaciones para que el equipo pueda actualizarse solo desde LuCI.
 
-Lo interesante no es otra lista de paquetes, sino el ciclo: un commit inicia una
-compilación, la compilación publica la imagen y el índice, y el router ve la nueva versión
+Lo interesante no es otra lista de paquetes, sino el ciclo: la compilación publica la imagen y el índice, y el router ve la nueva versión
 en la siguiente comprobación.
 
 ## Características
@@ -100,8 +99,7 @@ El firmware incluye `luci-app-ota`:
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-Un push a `main` también compila. Los secretos, las entradas, la caché ccache y cada paso
-están en [docs/BUILD.md](../BUILD.md).
+Las compilaciones se inician a mano: *Actions → Build ZeroWrt → Run workflow*. No hay disparador `push`, así que fusionar código no lanza seis horas de compilación. Los secretos, entradas, ccache y cada paso están en [docs/BUILD.md](../BUILD.md).
 
 ## FAQ
 

@@ -8,7 +8,7 @@
 
 ### Προσαρμοσμένο firmware βασισμένο στο LEDE, με ενημέρωση online με ένα κλικ.
 
-**Κάνε push, πάρε firmware. Άνοιξε το LuCI και πάτησε ενημέρωση.**
+**Μία εντολή το χτίζει, ένα κλικ το ενημερώνει.**
 
 [![Build](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![Πυρήνας](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -35,7 +35,7 @@
 δημοσιεύεται μαζί με `SHA256SUMS` και `BUILD_INFO.txt` και καταχωρείται σε ευρετήριο
 ενημερώσεων, ώστε η συσκευή να ενημερώνεται μόνη της από το LuCI.
 
-Το ενδιαφέρον δεν είναι άλλη μια λίστα πακέτων, αλλά ο κύκλος: ένα commit ξεκινά build, το
+Το ενδιαφέρον δεν είναι άλλη μια λίστα πακέτων, αλλά ο κύκλος: το
 build δημοσιεύει image και ευρετήριο, και το ρούτερ βλέπει τη νέα έκδοση στον επόμενο έλεγχο.
 
 ## Χαρακτηριστικά
@@ -98,8 +98,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-Και ένα push στο `main` χτίζει. Secrets, είσοδοι, ccache και κάθε βήμα περιγράφονται στο
-[docs/BUILD.md](../BUILD.md).
+Τα builds ξεκινούν χειροκίνητα από *Actions → Build ZeroWrt → Run workflow*. Δεν υπάρχει trigger `push`, οπότε ένα merge δεν ξεκινά εξάωρη μεταγλώττιση. Secrets, είσοδοι, ccache και κάθε βήμα βρίσκονται στο [docs/BUILD.md](../BUILD.md).
 
 ## Συχνές ερωτήσεις
 

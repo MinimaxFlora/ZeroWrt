@@ -8,7 +8,7 @@
 
 ### 基於 LEDE 的客製韌體，內建網頁一鍵線上更新。
 
-**推上去就自動編譯；打開 LuCI 按一下就能升級。**
+**一條命令出韌體，點一下完成升級。**
 
 [![建置](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![核心](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -34,7 +34,7 @@ ZeroWrt 是給 OpenWrt 類路由器的客製韌體，由 GitHub Actions 從一�
 原始碼樹自動編譯。每次建置都從原始碼產出，連同 `SHA256SUMS` 與 `BUILD_INFO.txt`
 一起發布，並寫入更新索引，裝置可以自己從 LuCI 升級。
 
-有意思的不是又一份套件清單，而是這條流程：一次提交觸發建置，建置產出映像與索引，
+有意思的不是又一份套件清單，而是這條流程：建置產出映像與索引，
 路由器下次檢查時就看到新版本。
 
 ## 特色
@@ -95,8 +95,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-推送到 `main` 也會觸發建置。完整流程（Secrets、參數、ccache、每一步在做什麼）見
-[docs/BUILD.md](../BUILD.md)。
+建置只能手動觸發：*Actions → Build ZeroWrt → Run workflow*，沒有 `push` 觸發器，合併程式碼不會順帶跑一次六小時的編譯。完整流程（Secrets、參數、ccache、每一步在做什麼）見 [docs/BUILD.md](../BUILD.md)。
 
 ## 常見問題
 

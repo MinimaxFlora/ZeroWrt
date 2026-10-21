@@ -8,7 +8,7 @@
 
 ### LEDE 기반 커스텀 펌웨어, 웹에서 원클릭 온라인 업데이트.
 
-**커밋을 올리면 빌드되고, LuCI 를 열어 업데이트만 누르면 됩니다.**
+**명령 하나로 빌드, 클릭 하나로 업데이트.**
 
 [![빌드](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![커널](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -34,7 +34,7 @@ ZeroWrt 는 OpenWrt 계열 공유기용 커스텀 펌웨어입니다. 비공개 
 Actions 로 빌드하며, 모든 빌드는 소스에서 생성되어 `SHA256SUMS` 와 `BUILD_INFO.txt`
 와 함께 공개되고 업데이트 인덱스에 등록되므로 기기가 LuCI 에서 직접 업그레이드할 수 있습니다.
 
-핵심은 패키지 목록이 아니라 이 순환입니다. 커밋이 빌드를 시작하고, 빌드가 이미지와
+핵심은 패키지 목록이 아니라 이 순환입니다. 빌드가 이미지와
 인덱스를 공개하며, 다음 확인 때 공유기가 새 버전을 발견합니다.
 
 ## 기능
@@ -97,8 +97,7 @@ sysupgrade 이미지를 기록합니다.
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-`main` 에 푸시해도 빌드됩니다. Secrets, 입력, ccache, 각 단계는
-[docs/BUILD.md](../BUILD.md) 에 정리되어 있습니다.
+빌드는 *Actions → Build ZeroWrt → Run workflow* 에서 직접 시작합니다. `push` 트리거가 없어서 코드를 병합해도 6시간짜리 빌드가 돌지 않습니다. Secrets, 입력, ccache, 각 단계는 [docs/BUILD.md](../BUILD.md) 에 정리되어 있습니다.
 
 ## FAQ
 

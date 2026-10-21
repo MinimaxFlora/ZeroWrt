@@ -8,7 +8,7 @@
 
 ### نظام ثابت (firmware) مخصص مبني على LEDE، مع تحديث عبر الإنترنت بنقرة واحدة.
 
-**ادفع التغيير فيحصل البناء، ثم افتح LuCI واضغط تحديث.**
+**أمر واحد يبنيه، ونقرة واحدة تحدّثه.**
 
 [![البناء](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![النواة](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -34,7 +34,7 @@ ZeroWrt نظام ثابت مخصص صغير لمجموعة راوترات OpenWr
 Actions. كل بناء يُنتج من الكود المصدري، ويُنشر مع `SHA256SUMS` و`BUILD_INFO.txt`،
 ويُسجَّل في فهرس التحديثات كي يستطيع الجهاز تحديث نفسه من LuCI.
 
-المثير ليس قائمة حزم أخرى، بل الحلقة: التغيير يبدأ البناء، والبناء ينشر الصورة والفهرس، ثم
+المثير ليس قائمة حزم أخرى، بل الحلقة: والبناء ينشر الصورة والفهرس، ثم
 يرى الراوتر النسخة الجديدة عند التحقق التالي.
 
 ## الميزات
@@ -96,8 +96,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-الدفع إلى `main` يبني أيضًا. الأسرار والمدخلات وccache وكل خطوة موثّقة في
-[docs/BUILD.md](../BUILD.md).
+يبدأ البناء يدويًا من *Actions → Build ZeroWrt → Run workflow*. لا يوجد مُشغِّل `push`، لذلك لا يبدأ دمج الشيفرة بناءً يستغرق ست ساعات. الأسرار والمدخلات وccache وكل خطوة موثّقة في [docs/BUILD.md](../BUILD.md).
 
 ## الأسئلة الشائعة
 

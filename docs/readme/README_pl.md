@@ -8,7 +8,7 @@
 
 ### Własny firmware oparty na LEDE, z aktualizacją online jednym kliknięciem.
 
-**Zrób commit, dostań firmware. Otwórz LuCI i kliknij aktualizuj.**
+**Jedna komenda buduje, jedno kliknięcie aktualizuje.**
 
 [![Build](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![Jądro](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -35,7 +35,7 @@ drzewa LEDE przez GitHub Actions. Każdy build powstaje ze źródeł, jest publi
 `SHA256SUMS` i `BUILD_INFO.txt` i trafia do indeksu aktualizacji, dzięki czemu urządzenie
 może zaktualizować się samo z LuCI.
 
-Ciekawe nie jest kolejna lista pakietów, tylko pętla: commit uruchamia build, build
+Ciekawe nie jest kolejna lista pakietów, tylko pętla: build
 publikuje obraz i indeks, a router przy następnym sprawdzeniu widzi nową wersję.
 
 ## Funkcje
@@ -98,8 +98,7 @@ Firmware zawiera `luci-app-ota`:
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-Push do `main` też buduje. Sekrety, parametry, ccache i każdy krok opisano w
-[docs/BUILD.md](../BUILD.md).
+Buildy uruchamia się ręcznie: *Actions → Build ZeroWrt → Run workflow*. Nie ma wyzwalacza `push`, więc scalenie kodu nie uruchamia sześciogodzinnej kompilacji. Sekrety, parametry, ccache i każdy krok opisano w [docs/BUILD.md](../BUILD.md).
 
 ## FAQ
 

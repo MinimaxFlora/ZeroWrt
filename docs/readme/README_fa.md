@@ -8,7 +8,7 @@
 
 ### فریمور سفارشی مبتنی بر LEDE، با به‌روزرسانی آنلاین با یک کلیک.
 
-**کامیت را پوش کن، فریمور بگیر. LuCI را باز کن و به‌روزرسانی را بزن.**
+**یک فرمان می‌سازد، یک کلیک به‌روز می‌کند.**
 
 [![ساخت](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
 ![هسته](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
@@ -34,7 +34,7 @@ ZeroWrt یک فریمور سفارشی کوچک برای روترهای خانو
 درخت خصوصی LEDE ساخته می‌شود. هر ساخت از کد منبع تولید، همراه با `SHA256SUMS` و
 `BUILD_INFO.txt` منتشر و در فهرست به‌روزرسانی ثبت می‌شود تا دستگاه خودش را از LuCI به‌روز کند.
 
-نکتهٔ جالب فهرست دیگری از بسته‌ها نیست، بلکه این چرخه است: یک کامیت ساخت را آغاز می‌کند، ساخت
+نکتهٔ جالب فهرست دیگری از بسته‌ها نیست، بلکه این چرخه است: ساخت
 تصویر و فهرست را منتشر می‌کند و روتر در بررسی بعدی نسخهٔ تازه را می‌بیند.
 
 ## ویژگی‌ها
@@ -97,8 +97,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
-پوش به `main` هم ساخت را راه می‌اندازد. اسرار، ورودی‌ها، ccache و هر مرحله در
-[docs/BUILD.md](../BUILD.md) آمده است.
+ساخت به‌صورت دستی از *Actions → Build ZeroWrt → Run workflow* آغاز می‌شود. تریگر `push` وجود ندارد، پس ادغام کد ساخت شش‌ساعته را راه نمی‌اندازد. اسرار، ورودی‌ها، ccache و هر مرحله در [docs/BUILD.md](../BUILD.md) آمده است.
 
 ## پرسش‌های متداول
 

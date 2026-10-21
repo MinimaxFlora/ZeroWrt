@@ -23,6 +23,8 @@ PACKAGES = [
     "CONFIG_PACKAGE_luci-app-openclash",
     "CONFIG_PACKAGE_luci-app-ota",
     "CONFIG_PACKAGE_luci-i18n-ota-zh-cn",
+    "CONFIG_PACKAGE_luci-app-turboacc",
+    "CONFIG_PACKAGE_luci-i18n-turboacc-zh-cn",
 ]
 
 # Targets that are selected by a regular target profile instead of a device.

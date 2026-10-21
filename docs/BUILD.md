@@ -72,7 +72,7 @@ MyNet-6G
 6. **核心定制**：版本、IP、主机名、WiFi 名称/密码
 7. **添加第三方包与主题品牌化**
 8. **生成 `.config`**：设备/profile 选择 + 固定软件包列表
-9. **加载 ccache 缓存**：复用已编译的对象文件，不改动 `staging_dir`/`build_dir` 的 stamp 状态
+9. **恢复工具链缓存**：从 `toolchain` release 下载 tar.zst，解压后 touch `staging_dir`/`tmp`，跳过 40 分钟的工具链编译
 10. **下载、编译、收集产物**：编译使用 `nproc + 1` 个并行任务和 `IGNORE_ERRORS="n m"`
 11. **发布 Release**：tag 和 release 名称都使用设备名（`ruijie_rg-x60-new` / `x86_64`），上传 `dist/*`
 
@@ -187,23 +187,38 @@ Argon `master` 内置设置界面时，脚本会自动从 `.config` 中去掉 `l
 
 `luci-compat`、`lyaml` 等依赖由 OpenWrt 自动解析，不重复声明。
 
-## 八、构建加速（ccache）
+## 八、构建加速（工具链缓存）
 
-之前缓存整个工具链目录（`staging_dir/toolchain-*`、`build_dir/toolchain-*`）会与 make 的 stamp 状态不一致：缓存恢复后 `make` 仍尝试重建 binutils/gdb，最终报 `readelf.c: unknown type name 'off64_t'` 或 gdb `data-directory/python` 缺失。因此已移除工具链目录缓存。
+采用 [sbwml/r4s_build_script](https://github.com/sbwml/r4s_build_script) 的做法：把工具链单独编译好，
+打包成 `tar.zst` 放进 release，固件构建时下载解压，跳过工具链编译。
 
-现在改为安全的 ccache：
+**生成缓存**：`Build Toolchain Cache` workflow（`.github/workflows/toolchain.yml`）
 
-- `.config` 写入 `CONFIG_DEVEL=y`、`CONFIG_CCACHE=y`、`CONFIG_CCACHE_DIR="/builder/ccache"`（`CCACHE` 只有在 `DEVEL` 开启时才不会被 `defconfig` 丢弃）
-- `actions/cache` 只归档 workspace 内的路径，所以先把 `/builder/ccache` bind mount 到 `$GITHUB_WORKSPACE/.ccache`，再缓存 `.ccache`
-- key：`zerowrt-ccache-<os>-<device>-<ref>-v2`
-- 不缓存 `staging_dir`/`build_dir`，不会破坏 make 状态
-- 首次构建仍需完整编译，后续构建复用编译对象
+```bash
+make -j$(nproc) toolchain/compile || make -j$(nproc) toolchain/compile V=s
+tar -I "zstd -19 -T$(nproc --all)" -cf toolchain-cache/toolchain_${LIBC}_${toolchain_arch}_gcc-${gcc_version}.tar.zst ./{build_dir,dl,staging_dir,tmp}
+```
 
-之前缓存只有 295 字节，是因为直接写 `/builder/ccache` 时 `actions/cache` 实际在 workspace 下找路径，归档成了空目录；bind mount 后才是真实内容。
+产物上传到 tag 为 `toolchain`、标题为 `Toolchain_Cache` 的 release，资产名按 sbwml 的规则自动推导
+（`LIBC`/架构/GCC 版本都从 `staging_dir/toolchain-*` 目录名解析，换设备不用改脚本）。
 
-工作流 action 已升级到最新 Node 24 版本：`actions/checkout@v7.0.1`、`actions/cache@v6`、`actions/upload-artifact@v7.0.2`、`actions/setup-python@v7.0.0`。
+**使用缓存**：固件构建在编译前执行
 
-`ccache` 只加速重复编译，不改变工具链逻辑，构建稳定性优先。
+```bash
+gh release download toolchain --pattern "toolchain_*" --output toolchain.tar.zst
+tar -I zstd -xf toolchain.tar.zst
+mkdir -p bin
+find ./staging_dir/ -name '*' -exec touch {} \;
+find ./tmp/ -name '*' -exec touch {} \;
+```
+
+`touch` 是必须的：解压出来的文件时间戳比 make 的 stamp 旧，不刷新就会被判定为过期而重编。
+
+相比之前的 ccache：
+
+- 省掉的是工具链 + 工具这一段（首次构建里最长的固定开销），不是零散的目标文件
+- 不依赖 `actions/cache` 的 10GB 上限和淘汰策略，缓存放在 release 里可以长期保存
+- 缓存内容与构建用的 `.config` 必须一致（同一 target、同一 LIBC、同一 GCC 版本），所以 workflow 与固件构建走同一套配置生成逻辑
 
 ## 九、代码质量（QC）
 

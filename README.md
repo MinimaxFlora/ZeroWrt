@@ -101,7 +101,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 Builds are started by hand: *Actions → Build ZeroWrt → Run workflow*. There is no
 `push` trigger, so merging code never starts a six-hour compile. The pipeline is
-documented in [docs/BUILD.md](docs/BUILD.md): secrets, inputs, ccache and every step.
+documented in [docs/BUILD.md](docs/BUILD.md): secrets, inputs, the toolchain cache and every step.
 
 ## FAQ
 

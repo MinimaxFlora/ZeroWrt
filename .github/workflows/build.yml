@@ -40,7 +40,6 @@ env:
   LEDE_DIR: /builder/lede
   ZEROWRT_DEVICE: ${{ github.event.inputs.device || 'ruijie_rg-x60-new' }}
   OTA_BASE_URL: "https://ota.kejizero.xyz"
-  CCACHE_DIR: /builder/ccache
 
 jobs:
   build:
@@ -130,22 +129,27 @@ jobs:
             --api-url "$OTA_BASE_URL/ota.json" \
             --emit "$GITHUB_WORKSPACE/ota-meta.json"
 
-      - name: Bind ccache directory
+      - name: Restore toolchain cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/.ccache" /builder/ccache
-          sudo mount --bind /builder/ccache "$GITHUB_WORKSPACE/.ccache"
-          sudo chown -R "$(id -u):$(id -g)" /builder/ccache "$GITHUB_WORKSPACE/.ccache"
+          cd "$LEDE_DIR"
+          asset=$(gh release view toolchain --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '.assets[] | select(.name | startswith("toolchain_")) | .name' | head -n1)
+          if [ -z "$asset" ]; then
+            echo "no toolchain cache in the 'toolchain' release"
+            echo "run the 'Build Toolchain Cache' workflow first"
+            exit 1
+          fi
+          echo "restoring $asset"
+          gh release download toolchain --repo "$GITHUB_REPOSITORY" \
+            --pattern "$asset" --output toolchain.tar.zst
+          tar -I zstd -xf toolchain.tar.zst
+          rm -f toolchain.tar.zst
+          mkdir -p bin
+          find ./staging_dir/ -name '*' -exec touch {} \; >/dev/null 2>&1
+          find ./tmp/ -name '*' -exec touch {} \; >/dev/null 2>&1
 
-      - name: Restore ccache
-        uses: actions/cache@v6.1.0
-        with:
-          path: .ccache
-          key: zerowrt-ccache-${{ runner.os }}-${{ env.ZEROWRT_DEVICE }}-${{ env.ZEROWRT_REF }}-v2
-
-      - name: Prepare ccache
-        run: |
-          mkdir -p "$CCACHE_DIR"
-          ccache --max-size=5G
 
       - name: Download source archives
         env:

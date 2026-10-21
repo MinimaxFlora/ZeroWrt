@@ -1,0 +1,140 @@
+name: Build Toolchain Cache
+
+# Compiles the OpenWrt toolchain once and publishes it as a compressed archive
+# in the "toolchain" release. The firmware build restores that archive and skips
+# the toolchain compile entirely.
+#
+# The archive name follows sbwml/r4s_build_script:
+#   toolchain_<libc>_<arch>_gcc-<major>.tar.zst
+# and is derived from the staging_dir/toolchain-* directory name, so a different
+# device only needs a different input, not a different script.
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        description: "Device profile the toolchain is built for"
+        required: true
+        type: choice
+        default: "ruijie_rg-x60-new"
+        options:
+          - ruijie_rg-x60-new
+          - x86_64
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zerowrt-toolchain-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHONUNBUFFERED: "1"
+  BUILD_ROOT: /builder
+  LEDE_DIR: /builder/lede
+  ZEROWRT_DEVICE: ${{ github.event.inputs.device || 'ruijie_rg-x60-new' }}
+
+jobs:
+  toolchain:
+    name: Build and publish the toolchain
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      ZEROWRT_REF: ${{ secrets.LEDE_REF || 'ruijie-rg-x60-new' }}
+
+    steps:
+      - name: Checkout ZeroWrt
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: Prepare build space
+        run: |
+          python3 scripts/zerowrt.py system free-disk \
+            --build-dir "$BUILD_ROOT" \
+            --swap-gb 4 \
+            --reserve-gb 6 \
+            --min-free-gb 50
+
+      - name: Install build dependencies
+        run: python3 scripts/zerowrt.py system install-deps
+
+      - name: Install LLVM
+        run: python3 scripts/zerowrt.py system install-llvm
+
+      - name: Clone private LEDE source
+        env:
+          LEDE_REPO: ${{ secrets.LEDE_REPO }}
+          LEDE_TOKEN: ${{ secrets.LEDE_TOKEN }}
+          REF: ${{ secrets.LEDE_REF }}
+        run: |
+          python3 scripts/zerowrt.py source clone \
+            --dest "$LEDE_DIR" \
+            --ref "${REF:-ruijie-rg-x60-new}"
+
+      - name: Update feeds
+        run: python3 scripts/zerowrt.py source feeds --tree "$LEDE_DIR"
+
+      - name: Apply core customisations
+        env:
+          ZEROWRT_IP: 10.0.0.1
+          ZEROWRT_WIFI_NAME: ZeroWrt
+        run: |
+          python3 scripts/zerowrt.py source customize \
+            --tree "$LEDE_DIR" \
+            --ip "$ZEROWRT_IP" \
+            --wifi-name "$ZEROWRT_WIFI_NAME"
+
+      - name: Add external packages and branding
+        run: |
+          python3 scripts/zerowrt.py packages add \
+            --tree "$LEDE_DIR" \
+            --assets "$GITHUB_WORKSPACE/assets"
+
+      - name: Generate .config
+        run: |
+          python3 scripts/zerowrt.py config generate \
+            --tree "$LEDE_DIR" \
+            --device "$ZEROWRT_DEVICE"
+
+      - name: Build toolchain
+        env:
+          TMPDIR: /builder/tmp
+        run: |
+          mkdir -p "$TMPDIR"
+          cd "$LEDE_DIR"
+          make -j"$(nproc)" toolchain/compile ||
+            make -j"$(nproc)" toolchain/compile V=s
+
+      - name: Package the toolchain
+        run: |
+          cd "$LEDE_DIR"
+          mkdir -p toolchain-cache
+
+          # staging_dir/toolchain-aarch64_generic_gcc-14.3.0_musl
+          dir=$(basename "$(ls -d staging_dir/toolchain-* | head -n1)")
+          arch=$(echo "$dir" | sed -E 's/^toolchain-//; s/_gcc-.*//')
+          gcc=$(echo "$dir" | sed -E 's/.*_gcc-([0-9]+)\..*/\1/')
+          libc=$(echo "$dir" | sed -E 's/.*_gcc-[0-9.]+_//')
+
+          asset="toolchain_${libc}_${arch}_gcc-${gcc}.tar.zst"
+          echo "packaging $asset (from $dir)"
+          tar -I "zstd -19 -T$(nproc --all)" -cf "toolchain-cache/$asset" ./{build_dir,dl,staging_dir,tmp}
+          ls -lh "toolchain-cache/$asset"
+          echo "TOOLCHAIN_ASSET=toolchain-cache/$asset" >> "$GITHUB_ENV"
+
+      - name: Publish the toolchain release
+        uses: softprops/action-gh-release@v3.0.3
+        with:
+          tag_name: toolchain
+          name: Toolchain_Cache
+          body: |
+            Toolchain cache for ZeroWrt (`${{ env.ZEROWRT_DEVICE }}`), built from
+            `${{ github.sha }}`.
+
+            Restored by the firmware build before compilation; regenerate it when
+            the target, the libc or the GCC version changes.
+          files: ${{ env.TOOLCHAIN_ASSET }}
+          draft: false
+          prerelease: false
+          overwrite_files: true

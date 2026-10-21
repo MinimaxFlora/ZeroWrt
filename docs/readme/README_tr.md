@@ -14,6 +14,7 @@
 ![Çekirdek](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Hedef](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
 [İndirme sayfası](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Derleme kayıtları](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
@@ -107,6 +108,20 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 **Neden `factory` imajı yok?** Bu kartlar önyükleyicinin web kurtarma sayfasından yüklenir ve o sayfa sysupgrade imajını doğrudan kabul eder.
 
 **Kendi dizinimi kullanabilir miyim?** Evet — `api_url` değerini uyumlu bir JSON'a yönlendir ve istediğin yerde barındır.
+
+## Teşekkürler
+
+- **[OpenWrt](https://github.com/openwrt/openwrt)** — derleme sistemi, LuCI ve temel paketlerin çoğu; buradaki her şey onların üzerinde duruyor.
+- **[LEDE](https://github.com/coolsnowwolf/lede)** — ZeroWrt'nin üzerine kurulduğu kaynak ağacı ve varsayılanlar.
+- **[Yuzhii0718](https://github.com/Yuzhii0718)** — Ruijie RG-X60 New'in MT7986'ya taşınması (immortalwrt-mt798x).
+
+Bir de burada adı geçmeyen sayısız üst kaynak paket yazarına: her derlemede onların kodu çalışıyor.
+
+## Lisans
+
+Bu depodaki betikler, marka varlıkları ve belgeler **GPL-2.0** ile yayımlanır — bkz. [LICENSE](../../LICENSE).
+
+Yazılımın kendisi OpenWrt, LEDE ve daha birçok üst kaynak bileşeni içerir; her biri kendi lisansına tabidir. Bir imajı yeniden dağıtırken bu lisanslar da geçerlidir; GPL-2.0 özellikle ilgili kaynak kodun sunulmasını şart koşar.
 
 ## Yasal uyarı
 

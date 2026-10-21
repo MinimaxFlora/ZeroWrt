@@ -14,6 +14,7 @@
 ![Ядро](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Платформа](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
 [Страница загрузки](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Журналы сборки](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
@@ -107,6 +108,20 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 **Почему нет образа `factory`?** Эти платы прошиваются со страницы восстановления загрузчика, которая принимает sysupgrade-образ напрямую.
 
 **Можно указать свой индекс?** Да — направьте `api_url` на совместимый JSON и разместите его где угодно.
+
+## Благодарности
+
+- **[OpenWrt](https://github.com/openwrt/openwrt)** — система сборки, LuCI и большая часть базовых пакетов — всё здесь стоит на них.
+- **[LEDE](https://github.com/coolsnowwolf/lede)** — дерево исходников и настройки по умолчанию, из которых собирается ZeroWrt.
+- **[Yuzhii0718](https://github.com/Yuzhii0718)** — портирование Ruijie RG-X60 New на MT7986 (immortalwrt-mt798x).
+
+И авторам множества вышестоящих пакетов, которых здесь нет: их код работает в каждой сборке.
+
+## Лицензия
+
+Скрипты, материалы брендинга и документация в этом репозитории распространяются по **GPL-2.0** — см. [LICENSE](../../LICENSE).
+
+Сама прошивка включает OpenWrt, LEDE и множество вышестоящих компонентов, каждый под своей лицензией. При распространении образа эти лицензии тоже действуют; GPL-2.0, в частности, требует предоставить соответствующий исходный код.
 
 ## Отказ от ответственности
 

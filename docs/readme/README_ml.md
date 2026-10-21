@@ -14,6 +14,7 @@
 ![കേർണൽ](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![പ്ലാറ്റ്ഫോം](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
 [ഡൗൺലോഡ് പേജ്](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [ബിൽഡ് ലോഗുകൾ](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
@@ -110,6 +111,20 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 **`factory` ഇമേജ് എന്തുകൊണ്ട് ഇല്ല?** ഈ ബോർഡുകൾ ബൂട്ട്ലോഡറിന്റെ വെബ് റിക്കവറി പേജിലൂടെയാണ് ഫ്ലാഷ് ചെയ്യുന്നത്, അത് sysupgrade ഇമേജ് നേരിട്ട് സ്വീകരിക്കുന്നു.
 
 **എന്റെ സ്വന്തം ഇൻഡക്സ് ഉപയോഗിക്കാമോ?** ഉപയോഗിക്കാം — `api_url` ഒരു അനുയോജ്യ JSON-ലേക്ക് ചൂണ്ടി എവിടെയെങ്കിലും ഹോസ്റ്റ് ചെയ്യുക.
+
+## കൃതജ്ഞത
+
+- **[OpenWrt](https://github.com/openwrt/openwrt)** — ബിൽഡ് സിസ്റ്റം, LuCI, പ്രധാന പാക്കേജുകളിൽ ഭൂരിഭാഗവും; ഇവിടെയുള്ളതെല്ലാം അവയുടെ മേലാണ്.
+- **[LEDE](https://github.com/coolsnowwolf/lede)** — ZeroWrt നിർമ്മിക്കുന്ന സോഴ്സ് ട്രീയും സ്ഥിരസ്ഥിതികളും.
+- **[Yuzhii0718](https://github.com/Yuzhii0718)** — Ruijie RG-X60 New-ന്റെ MT7986-ലേക്കുള്ള പോർട്ട് (immortalwrt-mt798x).
+
+ഇവിടെ പേരില്ലാത്ത നിരവധി അപ്സ്ട്രീം പാക്കേജ് രചയിതാക്കൾക്കും — അവരുടെ കോഡ് ഓരോ ബിൽഡിലും പ്രവർത്തിക്കുന്നു.
+
+## അനുമതി
+
+ഈ റിപ്പോയിലെ സ്ക്രിപ്റ്റുകൾ, ബ്രാൻഡിംഗ് അസറ്റുകൾ, ഡോക്യുമെന്റേഷൻ എന്നിവ **GPL-2.0**-ൽ പുറത്തിറക്കുന്നു — [LICENSE](../../LICENSE).
+
+ഫേംവെയറിൽ OpenWrt, LEDE, മറ്റു പല അപ്സ്ട്രീം ഘടകങ്ങളും ഉണ്ട്; ഓരോന്നിനും സ്വന്തം അനുമതിയുണ്ട്. ഇമേജ് വീണ്ടും വിതരണം ചെയ്യുമ്പോൾ ആ അനുമതികളും ബാധകമാണ്; GPL-2.0 പ്രത്യേകിച്ച് അനുബന്ധ സോഴ്സ് ലഭ്യമാക്കാൻ ആവശ്യപ്പെടുന്നു.
 
 ## നിരാകരണം
 

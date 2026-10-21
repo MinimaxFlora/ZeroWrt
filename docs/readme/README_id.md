@@ -14,6 +14,7 @@
 ![Kernel](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Target](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
 [Halaman unduhan](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Log build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
@@ -107,6 +108,20 @@ Push ke `main` juga memicu build. Secret, input, ccache, dan setiap langkah dije
 **Mengapa tidak ada image `factory`?** Papan ini di-flash lewat halaman pemulihan bootloader yang menerima image sysupgrade secara langsung.
 
 **Bisakah memakai indeks sendiri?** Bisa — arahkan `api_url` ke JSON yang kompatibel dan hosting di mana saja.
+
+## Ucapan terima kasih
+
+- **[OpenWrt](https://github.com/openwrt/openwrt)** — sistem build, LuCI, dan sebagian besar paket dasar; semua di sini berdiri di atasnya.
+- **[LEDE](https://github.com/coolsnowwolf/lede)** — pohon sumber dan nilai bawaan yang menjadi dasar ZeroWrt.
+- **[Yuzhii0718](https://github.com/Yuzhii0718)** — porting Ruijie RG-X60 New ke MT7986 (immortalwrt-mt798x).
+
+Dan kepada banyak penulis paket hulu yang tidak tercantum di sini — kode mereka berjalan di setiap build.
+
+## Lisensi
+
+Skrip, aset branding, dan dokumentasi di repositori ini dirilis di bawah **GPL-2.0** — lihat [LICENSE](../../LICENSE).
+
+Firmware itu sendiri memuat OpenWrt, LEDE, dan banyak komponen hulu lain, masing-masing dengan lisensinya. Saat mendistribusikan ulang image, lisensi tersebut juga berlaku; GPL-2.0 khususnya mewajibkan penyediaan kode sumber terkait.
 
 ## Penafian
 

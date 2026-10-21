@@ -14,6 +14,7 @@
 ![カーネル](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![ターゲット](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
 [ダウンロードページ](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [ビルドログ](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
@@ -107,6 +108,20 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 **`factory` イメージが無いのはなぜ？** この基板はブートローダーの Web リカバリから書き込む前提で、そこに sysupgrade イメージをそのまま渡せます。
 
 **自分のインデックスは使えますか？** 使えます。`api_url` を互換 JSON に向けて、好きな場所でホストしてください。
+
+## 謝辞
+
+- **[OpenWrt](https://github.com/openwrt/openwrt)** — ビルドシステム、LuCI、そして基盤パッケージの大部分。ここにあるものはすべてその上に成り立っています。
+- **[LEDE](https://github.com/coolsnowwolf/lede)** — ZeroWrt が元にしているソースツリーと既定の設定。
+- **[Yuzhii0718](https://github.com/Yuzhii0718)** — Ruijie RG-X60 New の MT7986 への移植（immortalwrt-mt798x）。
+
+ここに名前を挙げていない数多くの上流パッケージ作者にも。ビルドのたびに彼らのコードが動いています。
+
+## ライセンス
+
+このリポジトリのスクリプト、ブランド素材、ドキュメントは **GPL-2.0** で公開しています（[LICENSE](../../LICENSE)）。
+
+ファームウェア本体は OpenWrt、LEDE、その他多数の上流コンポーネントを含み、それぞれのライセンスに従います。イメージを再配布する場合も同じで、GPL-2.0 では対応するソースの提供が求められます。
 
 ## 免責事項
 

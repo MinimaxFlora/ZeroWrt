@@ -14,6 +14,7 @@
 ![内核](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![平台](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
 [下载页](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [构建日志](https://github.com/MinimaxFlora/ZeroWrt/actions) · [问题反馈](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
@@ -104,6 +105,20 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 **为什么没有 `factory` 镜像？** 这块板子通过引导的网页恢复页刷机，它直接接受 sysupgrade 镜像。
 
 **能换成我自己的索引吗？** 可以，把 `api_url` 指向任何兼容格式的 JSON，自己找地方托管即可。
+
+## 鸣谢
+
+- **[OpenWrt](https://github.com/openwrt/openwrt)** — 构建系统、LuCI 和大部分基础包，这里的一切都立在它们上面。
+- **[LEDE](https://github.com/coolsnowwolf/lede)** — ZeroWrt 所用的源码树与默认配置。
+- **[Yuzhii0718](https://github.com/Yuzhii0718)** — 锐捷 RG-X60 New 在 MT7986 上的移植（immortalwrt-mt798x）。
+
+还有那些没被列出的上游包作者——每次构建跑的都是他们的代码。
+
+## 许可证
+
+本仓库的脚本、品牌素材与文档以 **GPL-2.0** 发布，见 [LICENSE](../../LICENSE)。
+
+固件本身包含 OpenWrt、LEDE 以及大量上游组件，各自遵循原有许可证。分发固件镜像时同样要遵守这些许可证；特别是 GPL-2.0 要求提供对应的源码。
 
 ## 免责声明
 

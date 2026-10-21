@@ -14,6 +14,7 @@
 ![النواة](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![المنصة](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
 [صفحة التنزيل](https://ota.kejizero.xyz/) · [الإصدارات](https://github.com/MinimaxFlora/ZeroWrt/releases) · [سجلات البناء](https://github.com/MinimaxFlora/ZeroWrt/actions) · [المشكلات](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
@@ -105,6 +106,20 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 **لماذا لا توجد صورة `factory`؟** هذه اللوحات تُثبَّت عبر صفحة استعادة المُقلع التي تقبل صورة sysupgrade مباشرة.
 
 **هل أستطيع استخدام فهرس خاص بي؟** نعم، وجّه `api_url` إلى JSON متوافق واستضفه حيث تشاء.
+
+## شكر وتقدير
+
+- **[OpenWrt](https://github.com/openwrt/openwrt)** — نظام البناء وLuCI ومعظم الحزم الأساسية؛ كل ما هنا قائم عليها.
+- **[LEDE](https://github.com/coolsnowwolf/lede)** — شجرة المصدر والإعدادات الافتراضية التي بُني عليها ZeroWrt.
+- **[Yuzhii0718](https://github.com/Yuzhii0718)** — نقل Ruijie RG-X60 New إلى MT7986 (immortalwrt-mt798x).
+
+وإلى كثير من مؤلفي الحزم المنبع الذين لا تُذكر أسماؤهم هنا — كودهم يعمل في كل بناء.
+
+## الترخيص
+
+تُنشر سكربتات هذا المستودع وأصول الهوية والتوثيق بموجب **GPL-2.0** — انظر [LICENSE](../../LICENSE).
+
+النظام الثابت نفسه يضم OpenWrt وLEDE وكثيرًا من المكوّنات المنبع، ولكل منها ترخيصه. وعند إعادة توزيع الصورة تسري تلك التراخيص أيضًا؛ وGPL-2.0 على وجه الخصوص يشترط إتاحة الشيفرة المصدرية المقابلة.
 
 ## إخلاء المسؤولية
 

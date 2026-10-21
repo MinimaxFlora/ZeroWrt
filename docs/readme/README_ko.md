@@ -14,6 +14,7 @@
 ![커널](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![타깃](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
 [다운로드 페이지](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [빌드 로그](https://github.com/MinimaxFlora/ZeroWrt/actions) · [이슈](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
@@ -106,6 +107,20 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 **`factory` 이미지는 왜 없나요?** 이 보드는 부트로더의 웹 복구 페이지로 플래싱하며, sysupgrade 이미지를 그대로 받습니다.
 
 **내 인덱스를 쓸 수 있나요?** 네. `api_url` 을 호환되는 JSON 으로 지정하고 원하는 곳에 호스팅하면 됩니다.
+
+## 감사의 말
+
+- **[OpenWrt](https://github.com/openwrt/openwrt)** — 빌드 시스템, LuCI, 그리고 대부분의 기본 패키지. 여기 있는 모든 것이 그 위에 서 있습니다.
+- **[LEDE](https://github.com/coolsnowwolf/lede)** — ZeroWrt가 기반으로 삼는 소스 트리와 기본 설정.
+- **[Yuzhii0718](https://github.com/Yuzhii0718)** — Ruijie RG-X60 New의 MT7986 포팅(immortalwrt-mt798x).
+
+여기 이름을 올리지 못한 수많은 업스트림 패키지 작성자들에게도. 모든 빌드에서 그들의 코드가 돌아갑니다.
+
+## 라이선스
+
+이 저장소의 스크립트, 브랜딩 자산, 문서는 **GPL-2.0**으로 배포됩니다([LICENSE](../../LICENSE)).
+
+펌웨어 자체에는 OpenWrt, LEDE 및 다수의 업스트림 구성 요소가 포함되며 각자의 라이선스를 따릅니다. 이미지를 재배포할 때도 마찬가지이며, GPL-2.0은 해당 소스 제공을 요구합니다.
 
 ## 면책
 

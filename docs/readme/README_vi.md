@@ -14,6 +14,7 @@
 ![Nhân](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Nền tảng](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
 [Trang tải xuống](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Nhật ký build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
@@ -107,6 +108,20 @@ Push lên `main` cũng kích hoạt build. Secrets, tham số, ccache và từng
 **Vì sao không có ảnh `factory`?** Bo mạch này được nạp qua trang phục hồi của bootloader, trang đó nhận thẳng ảnh sysupgrade.
 
 **Có dùng chỉ mục riêng được không?** Được — trỏ `api_url` tới một JSON tương thích và tự lưu trữ ở đâu cũng được.
+
+## Ghi công
+
+- **[OpenWrt](https://github.com/openwrt/openwrt)** — hệ thống build, LuCI và phần lớn các gói nền tảng; mọi thứ ở đây đứng trên chúng.
+- **[LEDE](https://github.com/coolsnowwolf/lede)** — cây mã nguồn và các giá trị mặc định mà ZeroWrt dựa vào.
+- **[Yuzhii0718](https://github.com/Yuzhii0718)** — phần chuyển Ruijie RG-X60 New sang MT7986 (immortalwrt-mt798x).
+
+Và hàng trăm tác giả gói thượng nguồn không có tên ở đây — mã của họ chạy trong mọi bản build.
+
+## Giấy phép
+
+Script, tài nguyên thương hiệu và tài liệu trong kho này được phát hành theo **GPL-2.0** — xem [LICENSE](../../LICENSE).
+
+Bản thân firmware gồm OpenWrt, LEDE và nhiều thành phần thượng nguồn khác, mỗi phần theo giấy phép riêng. Khi phát hành lại ảnh, các giấy phép đó cũng áp dụng; GPL-2.0 đặc biệt yêu cầu cung cấp mã nguồn tương ứng.
 
 ## Miễn trừ trách nhiệm
 

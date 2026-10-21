@@ -14,6 +14,7 @@
 ![เคอร์เนล](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![แพลตฟอร์ม](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
 [หน้าดาวน์โหลด](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [บันทึกการบิลด์](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
@@ -106,6 +107,20 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 **ทำไมไม่มีอิมเมจ `factory`?** บอร์ดเหล่านี้แฟลชผ่านหน้าผู้ช่วยกู้คืนของ bootloader ซึ่งรับอิมเมจ sysupgrade ได้โดยตรง
 
 **ใช้ดัชนีของตัวเองได้ไหม?** ได้ ตั้ง `api_url` ไปที่ JSON ที่เข้ากันได้ แล้วโฮสต์ที่ไหนก็ได้
+
+## กิตติกรรมประกาศ
+
+- **[OpenWrt](https://github.com/openwrt/openwrt)** — ระบบบิลด์ LuCI และแพ็กเกจพื้นฐานส่วนใหญ่ ทุกอย่างที่นี่ตั้งอยู่บนนั้น
+- **[LEDE](https://github.com/coolsnowwolf/lede)** — ซอร์สทรีและค่าตั้งต้นที่ ZeroWrt สร้างต่อ
+- **[Yuzhii0718](https://github.com/Yuzhii0718)** — การพอร์ต Ruijie RG-X60 New ไปยัง MT7986 (immortalwrt-mt798x)
+
+และผู้เขียนแพ็กเกจต้นทางจำนวนมากที่ไม่ได้ระบุชื่อที่นี่ โค้ดของพวกเขาทำงานในทุกบิลด์
+
+## สัญญาอนุญาต
+
+สคริปต์ วัสดุแบรนด์ และเอกสารในรีโปนี้เผยแพร่ภายใต้ **GPL-2.0** ดู [LICENSE](../../LICENSE)
+
+ตัวเฟิร์มแวร์มี OpenWrt, LEDE และคอมโพเนนต์ต้นทางอื่น ๆ ซึ่งแต่ละตัวมีสัญญาอนุญาตของตัวเอง การเผยแพร่อิมเมจต่อก็ต้องปฏิบัติตามสัญญาเหล่านั้นด้วย และ GPL-2.0 กำหนดให้ต้องเปิดซอร์สที่เกี่ยวข้อง
 
 ## ข้อจำกัดความรับผิด
 

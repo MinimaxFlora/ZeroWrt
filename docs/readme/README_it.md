@@ -14,6 +14,7 @@
 ![Kernel](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Target](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
 [Pagina di download](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Log di build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
@@ -109,6 +110,20 @@ Anche un push su `main` compila. Segreti, input, ccache e ogni passo sono in
 **Perché non c'è un'immagine `factory`?** Queste schede si flashano dalla pagina di recovery del bootloader, che accetta direttamente l'immagine sysupgrade.
 
 **Posso usare il mio indice?** Sì: punta `api_url` a un JSON compatibile e ospitalo dove vuoi.
+
+## Ringraziamenti
+
+- **[OpenWrt](https://github.com/openwrt/openwrt)** — il sistema di build, LuCI e gran parte dei pacchetti di base; tutto qui si appoggia a loro.
+- **[LEDE](https://github.com/coolsnowwolf/lede)** — l'albero dei sorgenti e le impostazioni predefinite da cui nasce ZeroWrt.
+- **[Yuzhii0718](https://github.com/Yuzhii0718)** — il port del Ruijie RG-X60 New su MT7986 (immortalwrt-mt798x).
+
+E ai tanti autori di pacchetti upstream che non compaiono qui: il loro codice gira in ogni build.
+
+## Licenza
+
+Gli script, gli asset di branding e la documentazione di questo repository sono distribuiti con **GPL-2.0** — vedi [LICENSE](../../LICENSE).
+
+Il firmware include OpenWrt, LEDE e molti altri componenti upstream, ciascuno con la propria licenza. Anche redistribuendo un'immagine valgono quelle licenze; la GPL-2.0 richiede in particolare di rendere disponibile il codice sorgente corrispondente.
 
 ## Avvertenza
 

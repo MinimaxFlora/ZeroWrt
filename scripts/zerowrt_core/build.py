@@ -28,14 +28,29 @@ def compile_firmware(tree: Path, jobs: int) -> None:
     # Same as the sbwml builder: one more job than CPUs, and ignore the
     # optional n/m package errors so unrelated failures do not abort the world.
     cores = jobs + 1
+    log = tree / "build.log"
+
     util.header(f'Compiling ZeroWrt (make -j{cores} IGNORE_ERRORS="n m")')
-    util.run(
-        ["make", f"-j{cores}", "IGNORE_ERRORS=n m", "V=s"],
+    code, _ = util.run(
+        ["make", f"-j{cores}", "IGNORE_ERRORS=n m"],
         cwd=tree,
-        log_path=tree / "build.log",
+        log_path=log,
+        check=False,
+    )
+    if code == 0:
+        util.log("firmware compiled")
+        return
+
+    # A parallel build only reports "failed to build"; rebuild serially with
+    # V=s so the log carries the failing command and its output.
+    util.warn(f"make exited with {code}; retrying serially with V=s")
+    util.run(
+        ["make", "-j1", "IGNORE_ERRORS=n m", "V=s"],
+        cwd=tree,
+        log_path=log,
         check=True,
     )
-    util.log("firmware compiled")
+    util.log("firmware compiled after the verbose retry")
 
 
 def _version_from_tree(tree: Path, info: dict) -> str:

@@ -91,6 +91,12 @@ jobs:
             --tree "$LEDE_DIR" \
             --assets "$GITHUB_WORKSPACE/assets"
 
+      - name: Add luci-app-ota
+        run: |
+          git clone --depth 1 https://github.com/MinimaxFlora/luci-app-ota.git \
+            "$LEDE_DIR/package/new/luci-app-ota"
+          test -f "$LEDE_DIR/package/new/luci-app-ota/Makefile"
+
       - name: Generate .config
         run: |
           python3 scripts/zerowrt.py config generate \

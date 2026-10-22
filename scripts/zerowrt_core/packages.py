@@ -85,7 +85,7 @@ def add_external_packages(tree: Path) -> None:
         # Argon 3.x ships the settings app inside the theme. Keep the tree
         # buildable and explain the deviation instead of creating file
         # conflicts with the standalone migration package.
-        util.warn(
+        util.log(
             "Argon master includes the configuration app; the standalone "
             "luci-app-argon-config is skipped to avoid duplicate files"
         )
@@ -422,7 +422,7 @@ def apply_argon_branding(tree: Path, assets_dir: Path) -> None:
         patch_argon_config(app)
     else:
         # Integrated theme: the same config file lives inside the theme.
-        util.warn("standalone luci-app-argon-config not present; patching the theme config")
+        util.log("patching the Argon config bundled with the theme")
         integrated_config = theme / "root" / "etc" / "config" / "argon"
         if integrated_config.exists():
             patch_argon_config(theme)

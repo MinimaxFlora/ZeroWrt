@@ -202,20 +202,48 @@ def remove_ssr_plus(tree: Path) -> None:
         util.warn("luci-app-ssr-plus was not present")
 
 
+def patch_missing_feed_deps(tree: Path) -> None:
+    """kmod-fs-exfat-oot is not packaged in this tree, so luci-app-diskman only
+    produces a build warning about it. Drop the dependency from the feed."""
+    makefile = Path(tree) / "package/feeds/luci/luci-app-diskman/Makefile"
+    if not makefile.exists():
+        return
+
+    text = util.read_text(makefile)
+    updated = re.sub(r"\s*\+kmod-fs-exfat-oot", "", text)
+    if updated != text:
+        util.write_text(makefile, updated)
+        util.log("luci-app-diskman: dropped the kmod-fs-exfat-oot dependency")
+
+
 def patch_version_mk(tree: Path) -> None:
     path = Path(tree) / CORE_FILES["version"]
     if not path.exists():
         raise util.BuildError(f"missing {path}")
 
     util.header("Patching include/version.mk")
+    # Upstream defines the default with OpenWrt or LEDE depending on the tree,
+    # so rewrite whatever the assignment holds instead of matching two literals:
+    # a literal that is not there is not a problem and must not warn.
     for variable in ("VERSION_DIST", "VERSION_MANUFACTURER"):
-        replaced = 0
-        for default in ("OpenWrt", "LEDE"):
-            old = f"{variable}:=$(if $({variable}),$({variable}),{default})"
-            new = f"{variable}:=$(if $({variable}),$({variable}),ZeroWrt)"
-            replaced += util.replace_text(path, old, new, required=False)
-        if replaced == 0 and f"{variable}:=$(if $({variable}),$({variable}),ZeroWrt)" not in util.read_text(path):
-            util.warn(f"{variable} default already customised or format changed")
+        text = util.read_text(path)
+        wanted = f"{variable}:=$(if $({variable}),$({variable}),ZeroWrt)"
+
+        if wanted in text:
+            util.log(f"{variable} already points at ZeroWrt")
+            continue
+
+        updated, count = re.subn(
+            rf"^{variable}:=\$\(if \$\({variable}\),\$\({variable}\),[^)\n]+\)",
+            lambda _m, value=wanted: value,
+            text,
+            flags=re.M,
+        )
+        if count:
+            util.write_text(path, updated)
+            util.log(f"{variable} default -> ZeroWrt")
+        else:
+            util.warn(f"{variable} has an unexpected definition")
 
     version = datetime.now().strftime("%Y%m%d")
     text = util.read_text(path)
@@ -423,6 +451,7 @@ def apply_core_customisations(tree: Path, settings: BuildSettings) -> None:
     patch_default_settings(tree)
     patch_wireless(tree, settings)
     patch_kernel_version(tree)
+    patch_missing_feed_deps(tree)
     remove_ssr_plus(tree)
     patch_turboacc(tree, settings)
     verify_core(tree, settings)

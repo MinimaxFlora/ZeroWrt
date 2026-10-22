@@ -341,7 +341,7 @@ APT_GROUPS = [
         "libtool",
         "cmake",
         "scons",
-        "ccache",
+        "zstd",
         "swig",
         "gperf",
         "gettext",

@@ -61,6 +61,20 @@ KERNEL_BOARDS = ("mediatek", "x86")
 
 SSID_LINE_RE = re.compile(r'^(?P<indent>[ \t]*)\[ -n "\$ssid" \] \|\| ssid=(["\']?)(?:LEDE|OpenWrt)\2[ \t]*$', re.M)
 SSID_FALLBACK_RE = re.compile(r'^(?P<indent>[ \t]*)ssid=(["\']?)(?:LEDE|OpenWrt)\2[ \t]*$', re.M)
+# Fixed channel widths: 40 MHz on 2.4 GHz, 160 MHz on 5 GHz. The stock script
+# derives the width from what the radio reports and often ends up at 20/80.
+HTMODE_TAIL = """\techo \"${prefix}${width}\"
+}
+"""
+HTMODE_TAIL_NEW = """\t# ZeroWrt: fixed channel widths, 40 MHz on 2.4 GHz and 160 MHz on 5 GHz.
+\tcase \"$band\" in
+\t\t2g) echo \"${prefix}40\" ;;
+\t\t5g) echo \"${prefix}160\" ;;
+\t\t*) echo \"${prefix}${width}\" ;;
+\tesac
+}
+"""
+
 KEY_LINE_RE = re.compile(r'^(?P<indent>[ \t]*)key="\$default_key"[ \t]*$', re.M)
 
 
@@ -356,9 +370,19 @@ def patch_wireless(tree: Path, settings: BuildSettings) -> None:
         if key_count == 0:
             raise util.BuildError(f"{path.relative_to(tree)}: WiFi key default not found")
 
+        if HTMODE_TAIL in new_text:
+            new_text = new_text.replace(HTMODE_TAIL, HTMODE_TAIL_NEW, 1)
+            mode_count = 1
+        else:
+            mode_count = 0
+
         util.write_text(path, new_text)
         patched.append(path)
         util.log(f"{path.relative_to(tree)}: SSIDs {settings.ssid('2g')} / {settings.ssid('5g')}")
+        if mode_count:
+            util.log(f"{path.relative_to(tree)}: channel width 40 MHz (2.4G) / 160 MHz (5 GHz)")
+        else:
+            util.warn(f"{path.relative_to(tree)}: htmode block not found, channel width unchanged")
 
     if not patched:
         raise util.BuildError(

@@ -216,20 +216,6 @@ def remove_ssr_plus(tree: Path) -> None:
         util.warn("luci-app-ssr-plus was not present")
 
 
-def patch_missing_feed_deps(tree: Path) -> None:
-    """kmod-fs-exfat-oot is not packaged in this tree, so luci-app-diskman only
-    produces a build warning about it. Drop the dependency from the feed."""
-    makefile = Path(tree) / "package/feeds/luci/luci-app-diskman/Makefile"
-    if not makefile.exists():
-        return
-
-    text = util.read_text(makefile)
-    updated = re.sub(r"\s*\+kmod-fs-exfat-oot", "", text)
-    if updated != text:
-        util.write_text(makefile, updated)
-        util.log("luci-app-diskman: dropped the kmod-fs-exfat-oot dependency")
-
-
 def patch_version_mk(tree: Path) -> None:
     path = Path(tree) / CORE_FILES["version"]
     if not path.exists():
@@ -475,7 +461,6 @@ def apply_core_customisations(tree: Path, settings: BuildSettings) -> None:
     patch_default_settings(tree)
     patch_wireless(tree, settings)
     patch_kernel_version(tree)
-    patch_missing_feed_deps(tree)
     remove_ssr_plus(tree)
     patch_turboacc(tree, settings)
     verify_core(tree, settings)

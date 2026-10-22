@@ -1,20 +1,20 @@
 {
-  "schema": 2,
-  "generator": "luci-app-ota tools/gen_ota_index.py",
-  "generated": 1792637571,
-  "dist": "ZeroWrt",
-  "devices": {
-    "ruijie_rg-x60-new": {
-      "version": "20261022",
-      "build_date": 1792631493,
-      "url": "https://github.com/MinimaxFlora/ZeroWrt/releases/download/ruijie_rg-x60-new/zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin",
-      "sha256": "d574f448c6082694d09a4a13ea28385492dfc23e88399dba2459308235e3edd1",
-      "size": 49152801,
-      "file": "zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin",
-      "target": "mediatek/filogic",
-      "device": "ruijie_rg-x60-new",
-      "changelog": "**ZeroWrt 20261022**\n\nDevice: `ruijie_rg-x60-new`\n\nTarget: `mediatek/filogic`\n\nBuilt: 2026-10-22 02:52:41 UTC\n\n[Workflow run](https://github.com/MinimaxFlora/ZeroWrt/actions/runs/39703685156)",
-      "label": "Ruijie RG-X60 New"
-    }
-  }
+    "schema":  2,
+    "generator":  "luci-app-ota tools/gen_ota_index.py",
+    "generated":  1792641619,
+    "dist":  "ZeroWrt",
+    "devices":  {
+                    "ruijie_rg-x60-new":  {
+                                              "version":  "20261022",
+                                              "build_date":  1792641619,
+                                              "url":  "https://github.com/MinimaxFlora/ZeroWrt/releases/download/ruijie_rg-x60-new/zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin",
+                                              "sha256":  "d574f448c6082694d09a4a13ea28385492dfc23e88399dba2459308235e3edd1",
+                                              "size":  49152801,
+                                              "file":  "zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin",
+                                              "target":  "mediatek/filogic",
+                                              "device":  "ruijie_rg-x60-new",
+                                              "changelog":  "**ZeroWrt 20261022（测试发布）**\n\n设备：`ruijie_rg-x60-new`\n\n目标：`mediatek/filogic`\n\n这是同一份固件的测试发布，仅用于验证在线升级界面。\n\n构建时间：2026-10-22 02:52:41 UTC\n\n[Workflow run](https://github.com/MinimaxFlora/ZeroWrt/actions/runs/39703685156)",
+                                              "label":  "Ruijie RG-X60 New"
+                                          }
+                }
 }

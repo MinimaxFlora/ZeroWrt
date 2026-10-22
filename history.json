@@ -1,8 +1,20 @@
 {
   "schema": 1,
-  "generated": 1792637571,
+  "generated": 1792653236,
   "dist": "ZeroWrt",
   "releases": [
+    {
+      "version": "20261022",
+      "build_date": 1792647370,
+      "url": "https://github.com/MinimaxFlora/ZeroWrt/releases/download/ruijie_rg-x60-new/zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin",
+      "sha256": "17e1227e5821481eca8d67859ad25cc063772b92ef0c5c5b3fefdfa3ae15cf25",
+      "size": 49152801,
+      "file": "zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin",
+      "target": "mediatek/filogic",
+      "device": "ruijie_rg-x60-new",
+      "label": "Ruijie RG-X60 New",
+      "changelog": "**ZeroWrt 20261022**\n\nDevice: `ruijie_rg-x60-new`\n\nTarget: `mediatek/filogic`\n\nBuilt: 2026-10-22 07:13:46 UTC\n\n[Workflow run](https://github.com/MinimaxFlora/ZeroWrt/actions/runs/39728389100)"
+    },
     {
       "version": "20261022",
       "build_date": 1792631493,

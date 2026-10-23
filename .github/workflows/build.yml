@@ -216,6 +216,22 @@ jobs:
             --tag "$ZEROWRT_DEVICE" \
             --branch gh-pages
 
+      # Mirror the published gh-pages content to Cloudflare Pages, which serves
+      # https://ota.tatalvpai.vip with its own certificate.
+      - name: Deploy OTA page to Cloudflare Pages
+        if: success()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          rm -rf /tmp/ota-site
+          git clone --quiet --depth 1 --branch gh-pages \
+            "https://github.com/${GITHUB_REPOSITORY}.git" /tmp/ota-site
+          npx --yes wrangler@4 pages deploy /tmp/ota-site \
+            --project-name=zerowrt-ota \
+            --branch=gh-pages \
+            --commit-dirty=true
+
       - name: Trim build logs
         if: failure()
         run: |

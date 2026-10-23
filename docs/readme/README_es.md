@@ -44,7 +44,7 @@ en la siguiente comprobación.
 - **Comprobación honesta de versión** — decide la fecha de compilación y, si no existe, compara cadenas de versión; una fecha desconocida se muestra como desconocida, no se inventa.
 - **Configuración desde el workflow** — IP de LAN, nombre de host y tres SSID y contraseñas de Wi-Fi son entradas del build, no archivos editados a mano.
 - **Marca Argon 3** — fondo, logo de acceso, favicon y paleta (`#2E9D72` / `#4CAF86`) se sustituyen al compilar.
-- **Stack de proxy incluido** — PassWall (solo Xray) y OpenClash, sincronizados por los scripts de build.
+- **Stack de proxy incluido** — PassWall (solo Sing-Box) y OpenClash, sincronizados por los scripts de build.
 - **Pipeline con control** — `ruff` y 18 pruebas unitarias en cada pull request.
 
 ## Dispositivos compatibles

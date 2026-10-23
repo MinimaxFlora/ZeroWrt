@@ -142,7 +142,7 @@ def _validate_layout(new_dir: Path) -> None:
         "package/new/helloworld/luci-app-passwall/Makefile": (
             new_dir / "helloworld" / "luci-app-passwall" / "Makefile"
         ),
-        "package/new/helloworld/xray-core/Makefile": (new_dir / "helloworld" / "xray-core" / "Makefile"),
+        "package/new/helloworld/sing-box/Makefile": (new_dir / "helloworld" / "sing-box" / "Makefile"),
         "package/new/helloworld/luci-app-openclash/Makefile": (
             new_dir / "helloworld" / "luci-app-openclash" / "Makefile"
         ),

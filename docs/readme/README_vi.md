@@ -43,7 +43,7 @@ nâng cấp ngay trong LuCI.
 - **So sánh phiên bản trung thực** — mốc thời gian build quyết định "mới hơn", nếu không có thì so chuỗi phiên bản; ngày không xác định được hiển thị là không rõ, không bịa ra.
 - **Cấu hình do workflow truyền vào** — IP LAN, tên máy và ba SSID/mật khẩu Wi-Fi là tham số build, không phải sửa tay trong tệp.
 - **Thương hiệu Argon 3** — ảnh nền, logo đăng nhập, favicon và bảng màu (`#2E9D72` / `#4CAF86`) được thay khi build.
-- **Kèm bộ proxy** — PassWall (chỉ Xray) và OpenClash, được script build đồng bộ.
+- **Kèm bộ proxy** — PassWall (chỉ Sing-Box) và OpenClash, được script build đồng bộ.
 - **Quy trình có kiểm soát** — `ruff` và 18 bài kiểm thử đơn vị cho mỗi pull request.
 
 ## Thiết bị hỗ trợ

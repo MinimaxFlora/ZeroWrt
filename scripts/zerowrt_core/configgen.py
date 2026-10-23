@@ -179,10 +179,11 @@ def _render_config(target: dict, packages: list[str]) -> str:
     lines.extend(
         [
             "CONFIG_DEVEL=y",
-            # PassWall: keep Xray only, drop the large sing-box core.
-            "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y",
-            "# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox is not set",
-            "# CONFIG_PACKAGE_sing-box is not set",
+            # PassWall: use the Sing-Box core, drop the large Xray core.
+            "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox=y",
+            "# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray is not set",
+            "CONFIG_PACKAGE_sing-box=y",
+            "# CONFIG_PACKAGE_xray-core is not set",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -212,8 +213,8 @@ def generate(tree: Path, device: str) -> dict:
         profile = f"CONFIG_TARGET_{target['board']}_{target['subtarget']}_DEVICE_{target['name']}=y"
     required = [
         profile,
-        "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y",
-        "CONFIG_PACKAGE_xray-core=y",
+        "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox=y",
+        "CONFIG_PACKAGE_sing-box=y",
         *[f"{package}=y" for package in packages],
     ]
     missing = [item for item in required if item not in resolved]
@@ -226,8 +227,8 @@ def generate(tree: Path, device: str) -> dict:
             + tail
         )
 
-    if "CONFIG_PACKAGE_sing-box=y" in resolved or "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox=y" in resolved:
-        raise util.BuildError("sing-box is still selected; PassWall would include an extra large core")
+    if "CONFIG_PACKAGE_xray-core=y" in resolved or "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y" in resolved:
+        raise util.BuildError("xray-core is still selected; PassWall should use the Sing-Box core")
 
     info = {
         "board": target["board"],

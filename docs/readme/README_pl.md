@@ -44,7 +44,7 @@ publikuje obraz i indeks, a router przy następnym sprawdzeniu widzi nową wersj
 - **Uczciwe porównywanie wersji** — o „nowszy” decyduje znacznik czasu builda, w razie braku porównywane są ciągi wersji; nieznanej daty nie wymyślamy, pokazujemy „nieznana”.
 - **Konfiguracja z workflow** — adres LAN, nazwa hosta oraz trzy SSID i hasła Wi-Fi to parametry builda, a nie ręcznie edytowane pliki.
 - **Branding Argon 3** — tło, logo logowania, favicon i paleta (`#2E9D72` / `#4CAF86`) są podmieniane podczas budowania.
-- **Zestaw proxy w komplecie** — PassWall (tylko Xray) i OpenClash, synchronizowane przez skrypty budujące.
+- **Zestaw proxy w komplecie** — PassWall (tylko Sing-Box) i OpenClash, synchronizowane przez skrypty budujące.
 - **Kontrolowany potok** — `ruff` i 18 testów jednostkowych przy każdym pull requeście.
 
 ## Obsługiwane urządzenia

@@ -44,7 +44,7 @@ version au contrôle suivant.
 - **Comparaison honnête des versions** — l'horodatage de build décide, sinon la chaîne de version ; une date inconnue est affichée comme inconnue, sans invention.
 - **Configuration depuis le workflow** — IP du LAN, nom d'hôte et trois SSID/mots de passe Wi-Fi sont des entrées de build, pas des fichiers édités à la main.
 - **Image de marque Argon 3** — fond, logo de connexion, favicon et palette (`#2E9D72` / `#4CAF86`) remplacés à la compilation.
-- **Pile proxy incluse** — PassWall (Xray uniquement) et OpenClash, synchronisés par les scripts de build.
+- **Pile proxy incluse** — PassWall (Sing-Box uniquement) et OpenClash, synchronisés par les scripts de build.
 - **Pipeline contrôlé** — `ruff` et 18 tests unitaires à chaque pull request.
 
 ## Appareils pris en charge

@@ -44,7 +44,7 @@ neue Version bei der nächsten Prüfung.
 - **Ehrliche Versionsprüfung** — der Build-Zeitstempel entscheidet, sonst die Versionszeichenkette; ein unbekanntes Datum wird als unbekannt angezeigt und nicht erfunden.
 - **Konfiguration aus dem Workflow** — LAN-IP, Hostname sowie drei WLAN-SSIDs und -Passwörter sind Eingaben, keine handgepflegten Dateien.
 - **Argon-3-Branding** — Hintergrund, Login-Logo, Favicon und Palette (`#2E9D72` / `#4CAF86`) werden beim Build ersetzt.
-- **Proxy-Stack enthalten** — PassWall (nur Xray) und OpenClash, vom Build synchron gehalten.
+- **Proxy-Stack enthalten** — PassWall (nur Sing-Box) und OpenClash, vom Build synchron gehalten.
 - **Geprüfte Pipeline** — `ruff` und 18 Unit-Tests laufen bei jedem Pull Request.
 
 ## Unterstützte Geräte

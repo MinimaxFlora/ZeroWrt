@@ -44,7 +44,7 @@ build publica a imagem e o índice, e o roteador vê a nova versão na próxima 
 - **Comparação honesta de versão** — o carimbo de build decide; sem ele, compara strings de versão. Data desconhecida aparece como desconhecida, não é inventada.
 - **Configuração vinda do workflow** — IP da LAN, hostname e três SSIDs/senhas de Wi-Fi são entradas de build, não arquivos editados à mão.
 - **Identidade Argon 3** — plano de fundo, logo de login, favicon e paleta (`#2E9D72` / `#4CAF86`) substituídos na compilação.
-- **Stack de proxy incluído** — PassWall (apenas Xray) e OpenClash, sincronizados pelos scripts de build.
+- **Stack de proxy incluído** — PassWall (apenas Sing-Box) e OpenClash, sincronizados pelos scripts de build.
 - **Pipeline com controle** — `ruff` e 18 testes unitários em todo pull request.
 
 ## Dispositivos suportados

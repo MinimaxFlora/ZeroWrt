@@ -44,7 +44,7 @@ menerbitkan image dan indeks, dan router melihat versi baru saat pemeriksaan ber
 - **Perbandingan versi yang jujur** — stempel waktu build menentukan "lebih baru", jika tidak ada baru membandingkan string versi; tanggal yang tidak diketahui ditampilkan sebagai tidak diketahui, bukan dikarang.
 - **Konfigurasi dari workflow** — IP LAN, hostname, serta tiga SSID dan sandi Wi-Fi adalah input build, bukan berkas yang diedit manual.
 - **Branding Argon 3** — latar, logo login, favicon, dan palet (`#2E9D72` / `#4CAF86`) diganti saat build.
-- **Tumpukan proxy disertakan** — PassWall (hanya Xray) dan OpenClash, disinkronkan oleh skrip build.
+- **Tumpukan proxy disertakan** — PassWall (hanya Sing-Box) dan OpenClash, disinkronkan oleh skrip build.
 - **Pipeline berpenjaga** — `ruff` dan 18 unit test pada setiap pull request.
 
 ## Perangkat yang didukung

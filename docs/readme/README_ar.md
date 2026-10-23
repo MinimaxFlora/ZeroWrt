@@ -16,7 +16,7 @@
 ![المنصة](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[صفحة التنزيل](https://ota.kejizero.xyz/) · [الإصدارات](https://github.com/MinimaxFlora/ZeroWrt/releases) · [سجلات البناء](https://github.com/MinimaxFlora/ZeroWrt/actions) · [المشكلات](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[صفحة التنزيل](https://ota.tatalvpai.vip/) · [الإصدارات](https://github.com/MinimaxFlora/ZeroWrt/releases) · [سجلات البناء](https://github.com/MinimaxFlora/ZeroWrt/actions) · [المشكلات](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>النظام ← التحديث عبر الإنترنت ← التحقق من التحديثات</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **من المصادر الرسمية فقط.** يُنشر النظام الثابت حصريًا في
 > [الإصدارات](https://github.com/MinimaxFlora/ZeroWrt/releases) لهذا المستودع وعلى
-> [ota.kejizero.xyz](https://ota.kejizero.xyz/). اسم مستودع مشابه أو نسخة منقولة من
+> [ota.tatalvpai.vip](https://ota.tatalvpai.vip/). اسم مستودع مشابه أو نسخة منقولة من
 > README لا تجعل البناء رسميًا.
 
 ---
@@ -58,7 +58,7 @@ Actions. كل بناء يُنتج من الكود المصدري، ويُنشر 
 
 ## التنزيل
 
-- **صفحة التنزيل** — <https://ota.kejizero.xyz/> تعرض البناء الحالي وسجل التغييرات وSHA256.
+- **صفحة التنزيل** — <https://ota.tatalvpai.vip/> تعرض البناء الحالي وسجل التغييرات وSHA256.
 - **إصدارات GitHub** — <https://github.com/MinimaxFlora/ZeroWrt/releases> تحفظ الصور و`SHA256SUMS`.
 - **على الجهاز** — *النظام ← التحديث عبر الإنترنت* يفعل الشيء نفسه دون تنزيل من المتصفح.
 
@@ -85,7 +85,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 
 يشمل النظام الثابت `luci-app-ota`:
 
-- الفهرس الافتراضي `https://ota.kejizero.xyz/ota.json` ويمكن تغييره من *النظام ← التحديث عبر الإنترنت ← الإعدادات*؛
+- الفهرس الافتراضي `https://ota.tatalvpai.vip/ota.json` ويمكن تغييره من *النظام ← التحديث عبر الإنترنت ← الإعدادات*؛
 - SHA256 إلزامي: يُرفض أي مدخل بدونه، وعند عدم التطابق يُحذف التنزيل؛
 - يُرفض `http` غير المشفّر ما لم يُفعَّل خيار السماح بالاتصالات غير الآمنة؛
 - يُستنتج مفتاح الجهاز من `/etc/ota/build.json` ثم model في شجرة الأجهزة ثم `board_name` ثم المعمارية، ويُقبل الوجهان `vendor,device` و`vendor_device`.

@@ -39,7 +39,7 @@ env:
   BUILD_ROOT: /builder
   LEDE_DIR: /builder/lede
   ZEROWRT_DEVICE: ${{ github.event.inputs.device || 'ruijie_rg-x60-new' }}
-  OTA_BASE_URL: "https://ota.kejizero.xyz"
+  OTA_BASE_URL: "https://ota.tatalvpai.vip"
 
 jobs:
   build:

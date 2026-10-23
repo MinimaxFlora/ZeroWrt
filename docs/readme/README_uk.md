@@ -16,7 +16,7 @@
 ![Платформа](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[Сторінка завантаження](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Журнали збирання](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[Сторінка завантаження](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Журнали збирання](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>Система → Оновлення мережею → Перевірити оновлення</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **Лише офіційні джерела.** Прошивка публікується виключно в
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) цього репозиторію та
-> на [ota.kejizero.xyz](https://ota.kejizero.xyz/). Схожа назва репозиторію або
+> на [ota.tatalvpai.vip](https://ota.tatalvpai.vip/). Схожа назва репозиторію або
 > скопійований README не роблять збірку офіційною.
 
 ---
@@ -59,7 +59,7 @@ release, тому індекс і сторінка завантаження по
 
 ## Завантаження
 
-- **Сторінка завантаження** — <https://ota.kejizero.xyz/> показує поточну збірку, журнал змін і SHA256.
+- **Сторінка завантаження** — <https://ota.tatalvpai.vip/> показує поточну збірку, журнал змін і SHA256.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> зберігає образи та `SHA256SUMS`.
 - **На пристрої** — *Система → Оновлення мережею* робить те саме без завантаження в браузері.
 
@@ -87,7 +87,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 
 До прошивки входить `luci-app-ota`:
 
-- індекс за замовчуванням — `https://ota.kejizero.xyz/ota.json`, змінюється в *Система → Оновлення мережею → Налаштування*;
+- індекс за замовчуванням — `https://ota.tatalvpai.vip/ota.json`, змінюється в *Система → Оновлення мережею → Налаштування*;
 - SHA256 обов'язковий: запис без нього відхиляється, а при розбіжності завантаження видаляється;
 - відкритий `http` заборонено, доки не ввімкнено «дозволити небезпечні з'єднання»;
 - ключ пристрою визначається з `/etc/ota/build.json`, моделі з device tree, `board_name` та архітектури, і приймаються обидва написання (`vendor,device` і `vendor_device`).

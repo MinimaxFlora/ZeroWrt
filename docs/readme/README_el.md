@@ -16,7 +16,7 @@
 ![Πλατφόρμα](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[Σελίδα λήψης](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Αρχεία build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[Σελίδα λήψης](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Αρχεία build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>Σύστημα → Ενημέρωση online → Έλεγχος για ενημερώσεις</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **Μόνο από επίσημες πηγές.** Το firmware δημοσιεύεται αποκλειστικά στα
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) αυτού του αποθετηρίου και
-> στο [ota.kejizero.xyz](https://ota.kejizero.xyz/). Παρόμοιο όνομα αποθετηρίου ή
+> στο [ota.tatalvpai.vip](https://ota.tatalvpai.vip/). Παρόμοιο όνομα αποθετηρίου ή
 > αντιγραμμένο README δεν κάνει ένα build επίσημο.
 
 ---
@@ -59,7 +59,7 @@ build δημοσιεύει image και ευρετήριο, και το ρούτ
 
 ## Λήψη
 
-- **Σελίδα λήψης** — <https://ota.kejizero.xyz/> δείχνει το τρέχον build, το changelog και το SHA256.
+- **Σελίδα λήψης** — <https://ota.tatalvpai.vip/> δείχνει το τρέχον build, το changelog και το SHA256.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> φιλοξενεί τα images και το `SHA256SUMS`.
 - **Στη συσκευή** — *Σύστημα → Ενημέρωση online* κάνει το ίδιο χωρίς λήψη από τον browser.
 
@@ -87,7 +87,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 
 Το firmware περιλαμβάνει το `luci-app-ota`:
 
-- το ευρετήριο είναι εξ ορισμού `https://ota.kejizero.xyz/ota.json` και αλλάζει από *Σύστημα → Ενημέρωση online → Ρυθμίσεις*·
+- το ευρετήριο είναι εξ ορισμού `https://ota.tatalvpai.vip/ota.json` και αλλάζει από *Σύστημα → Ενημέρωση online → Ρυθμίσεις*·
 - το SHA256 είναι υποχρεωτικό: καταχώρηση χωρίς αυτό απορρίπτεται και, αν δεν ταιριάζει, η λήψη διαγράφεται·
 - το απλό `http` απορρίπτεται εκτός αν ενεργοποιηθεί το *να επιτρέπονται μη ασφαλείς συνδέσεις*·
 - το κλειδί συσκευής προκύπτει από `/etc/ota/build.json`, το model του device tree, το `board_name` και την αρχιτεκτονική, και γίνονται δεκτές και οι δύο γραφές (`vendor,device` και `vendor_device`).

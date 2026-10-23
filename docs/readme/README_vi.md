@@ -16,7 +16,7 @@
 ![Nền tảng](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[Trang tải xuống](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Nhật ký build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[Trang tải xuống](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Nhật ký build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>Hệ thống → Cập nhật trực tuyến → Kiểm tra cập nhật</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **Chỉ tải từ nguồn chính thức.** Firmware chỉ được phát hành trong
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) của kho này và trên
-> [ota.kejizero.xyz](https://ota.kejizero.xyz/). Tên kho tương tự hoặc README bị sao
+> [ota.tatalvpai.vip](https://ota.tatalvpai.vip/). Tên kho tương tự hoặc README bị sao
 > chép không làm cho bản build trở thành chính thức.
 
 ---
@@ -58,7 +58,7 @@ riêng nên chỉ mục và trang tải xuống có thể liệt kê song song.
 
 ## Tải xuống
 
-- **Trang tải xuống** — <https://ota.kejizero.xyz/> hiển thị bản build hiện tại, changelog và SHA256.
+- **Trang tải xuống** — <https://ota.tatalvpai.vip/> hiển thị bản build hiện tại, changelog và SHA256.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> lưu ảnh và `SHA256SUMS`.
 - **Ngay trên thiết bị** — *Hệ thống → Cập nhật trực tuyến* làm điều tương tự, không cần tải bằng trình duyệt.
 
@@ -86,7 +86,7 @@ từ trong đó.
 
 Firmware có sẵn `luci-app-ota`:
 
-- chỉ mục mặc định là `https://ota.kejizero.xyz/ota.json`, đổi được ở *Hệ thống → Cập nhật trực tuyến → Cấu hình*;
+- chỉ mục mặc định là `https://ota.tatalvpai.vip/ota.json`, đổi được ở *Hệ thống → Cập nhật trực tuyến → Cấu hình*;
 - SHA256 là bắt buộc: mục thiếu mã sẽ bị từ chối, sai mã thì tệp tải về bị xóa;
 - `http` không mã hóa bị từ chối trừ khi bật *cho phép kết nối không an toàn*;
 - khóa thiết bị được suy ra từ `/etc/ota/build.json`, model trong device tree, `board_name` và kiến trúc, chấp nhận cả hai cách viết (`vendor,device` và `vendor_device`).

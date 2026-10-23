@@ -16,7 +16,7 @@
 ![പ്ലാറ്റ്ഫോം](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[ഡൗൺലോഡ് പേജ്](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [ബിൽഡ് ലോഗുകൾ](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[ഡൗൺലോഡ് പേജ്](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [ബിൽഡ് ലോഗുകൾ](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>സിസ്റ്റം → ഓൺലൈൻ അപ്ഗ്രേഡ് → അപ്ഡേറ്റുകൾ പരിശോധിക്കുക</code>
 
@@ -24,7 +24,7 @@
 
 > [!IMPORTANT]
 > **ഔദ്യോഗിക ഉറവിടങ്ങളിൽ നിന്ന് മാത്രം.** ഫേംവെയർ ഈ റിപ്പോസിറ്ററിയുടെ
-> [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases), [ota.kejizero.xyz](https://ota.kejizero.xyz/)
+> [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases), [ota.tatalvpai.vip](https://ota.tatalvpai.vip/)
 > എന്നിവയിൽ മാത്രമാണ് പ്രസിദ്ധീകരിക്കുന്നത്. സമാനമായ റിപ്പോ നാമമോ പകർത്തിയ README-യോ
 > ഒരു ബിൽഡിനെ ഔദ്യോഗികമാക്കുന്നില്ല.
 
@@ -60,7 +60,7 @@ Release ടാഗുകൾ ഉപകരണത്തിന്റെ പേരാ�
 
 ## ഡൗൺലോഡ്
 
-- **ഡൗൺലോഡ് പേജ്** — <https://ota.kejizero.xyz/> നിലവിലെ ബിൽഡ്, changelog, SHA256 എന്നിവ കാണിക്കുന്നു.
+- **ഡൗൺലോഡ് പേജ്** — <https://ota.tatalvpai.vip/> നിലവിലെ ബിൽഡ്, changelog, SHA256 എന്നിവ കാണിക്കുന്നു.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> ഇമേജുകളും `SHA256SUMS`-ഉം സൂക്ഷിക്കുന്നു.
 - **ഉപകരണത്തിൽ തന്നെ** — *സിസ്റ്റം → ഓൺലൈൻ അപ്ഗ്രേഡ്* ബ്രൗസർ ഡൗൺലോഡ് ഇല്ലാതെ അതേ കാര്യം ചെയ്യുന്നു.
 
@@ -89,7 +89,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 
 ഫേംവെയറിൽ `luci-app-ota` ഉണ്ട്:
 
-- സ്ഥിരസ്ഥിതി ഇൻഡക്സ് `https://ota.kejizero.xyz/ota.json`, *സിസ്റ്റം → ഓൺലൈൻ അപ്ഗ്രേഡ് → കോൺഫിഗറേഷൻ*-ൽ മാറ്റാം;
+- സ്ഥിരസ്ഥിതി ഇൻഡക്സ് `https://ota.tatalvpai.vip/ota.json`, *സിസ്റ്റം → ഓൺലൈൻ അപ്ഗ്രേഡ് → കോൺഫിഗറേഷൻ*-ൽ മാറ്റാം;
 - SHA256 നിർബന്ധമാണ്: ഇല്ലാത്ത എൻട്രി നിരസിക്കും, പൊരുത്തപ്പെടാത്താൽ ഡൗൺലോഡ് ഇല്ലാതാക്കും;
 - *അസുരക്ഷിത കണക്ഷനുകൾ അനുവദിക്കുക* ഓണാക്കിയില്ലെങ്കിൽ വെറും `http` നിരസിക്കും;
 - ഉപകരണ കീ `/etc/ota/build.json`, device tree model, `board_name`, ആർക്കിടെക്ചർ എന്ന ക്രമത്തിൽ

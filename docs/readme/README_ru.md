@@ -16,7 +16,7 @@
 ![Платформа](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[Страница загрузки](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Журналы сборки](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[Страница загрузки](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Журналы сборки](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>Система → Обновление по сети → Проверить обновления</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **Только официальные источники.** Прошивка публикуется исключительно в
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) этого репозитория и
-> на [ota.kejizero.xyz](https://ota.kejizero.xyz/). Похожее имя репозитория или
+> на [ota.tatalvpai.vip](https://ota.tatalvpai.vip/). Похожее имя репозитория или
 > скопированный README не делают сборку официальной.
 
 ---
@@ -59,7 +59,7 @@ ZeroWrt — небольшая собственная прошивка для р
 
 ## Загрузка
 
-- **Страница загрузки** — <https://ota.kejizero.xyz/> показывает текущую сборку, журнал изменений и SHA256.
+- **Страница загрузки** — <https://ota.tatalvpai.vip/> показывает текущую сборку, журнал изменений и SHA256.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> хранит образы и `SHA256SUMS`.
 - **На устройстве** — *Система → Обновление по сети* делает то же самое без загрузки в браузере.
 
@@ -87,7 +87,7 @@ sysupgrade-образ уже из неё.
 
 В прошивку входит `luci-app-ota`:
 
-- индекс по умолчанию — `https://ota.kejizero.xyz/ota.json`, меняется в *Система → Обновление по сети → Настройки*;
+- индекс по умолчанию — `https://ota.tatalvpai.vip/ota.json`, меняется в *Система → Обновление по сети → Настройки*;
 - SHA256 обязателен: запись без него отклоняется, а при несовпадении загрузка удаляется;
 - открытый `http` запрещён, пока не включено «разрешить небезопасные соединения»;
 - ключ устройства определяется по `/etc/ota/build.json`, модели из device tree, `board_name` и архитектуре, и принимаются оба написания (`vendor,device` и `vendor_device`).

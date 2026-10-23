@@ -16,7 +16,7 @@
 ![Target](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[Pagina di download](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Log di build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[Pagina di download](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Log di build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>Sistema → Aggiornamento online → Verifica aggiornamenti</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **Solo fonti ufficiali.** Il firmware è pubblicato esclusivamente nelle
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) di questo repository e su
-> [ota.kejizero.xyz](https://ota.kejizero.xyz/). Un nome di repository simile o un
+> [ota.tatalvpai.vip](https://ota.tatalvpai.vip/). Un nome di repository simile o un
 > README copiato non rendono ufficiale una build.
 
 ---
@@ -60,7 +60,7 @@ affiancati.
 
 ## Download
 
-- **Pagina di download** — <https://ota.kejizero.xyz/> mostra build corrente, changelog e SHA256.
+- **Pagina di download** — <https://ota.tatalvpai.vip/> mostra build corrente, changelog e SHA256.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> ospita immagini e `SHA256SUMS`.
 - **Sul dispositivo** — *Sistema → Aggiornamento online* fa lo stesso senza scaricare nel browser.
 
@@ -88,7 +88,7 @@ Indirizzo predefinito `10.0.0.1`, utente `root`, password `password`. Cambiali a
 
 Il firmware include `luci-app-ota`:
 
-- l'indice predefinito è `https://ota.kejizero.xyz/ota.json` e si cambia in *Sistema → Aggiornamento online → Configurazione*;
+- l'indice predefinito è `https://ota.tatalvpai.vip/ota.json` e si cambia in *Sistema → Aggiornamento online → Configurazione*;
 - lo SHA256 è obbligatorio: una voce senza hash viene rifiutata e una mancata corrispondenza cancella il download;
 - l'`http` in chiaro è rifiutato finché non abiliti *consenti connessioni non sicure*;
 - la chiave del dispositivo viene ricavata da `/etc/ota/build.json`, dal model del device tree, da `board_name` e dall'architettura, accettando entrambe le grafie (`vendor,device` e `vendor_device`).

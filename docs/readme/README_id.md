@@ -16,7 +16,7 @@
 ![Target](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[Halaman unduhan](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Log build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[Halaman unduhan](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Log build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>Sistem → Pembaruan online → Periksa pembaruan</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **Hanya sumber resmi.** Firmware hanya diterbitkan di
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) repositori ini dan di
-> [ota.kejizero.xyz](https://ota.kejizero.xyz/). Nama repositori yang mirip atau
+> [ota.tatalvpai.vip](https://ota.tatalvpai.vip/). Nama repositori yang mirip atau
 > README hasil salinan tidak membuat sebuah build menjadi resmi.
 
 ---
@@ -59,7 +59,7 @@ release sendiri, jadi indeks dan halaman unduhan dapat menampilkannya berdamping
 
 ## Unduhan
 
-- **Halaman unduhan** — <https://ota.kejizero.xyz/> menampilkan build terkini, changelog, dan SHA256.
+- **Halaman unduhan** — <https://ota.tatalvpai.vip/> menampilkan build terkini, changelog, dan SHA256.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> menyimpan image dan `SHA256SUMS`.
 - **Di perangkat** — *Sistem → Pembaruan online* melakukan hal yang sama tanpa unduh di browser.
 
@@ -87,7 +87,7 @@ Alamat bawaan `10.0.0.1`, pengguna `root`, sandi `password`. Ganti saat login pe
 
 Firmware menyertakan `luci-app-ota`:
 
-- indeks bawaan `https://ota.kejizero.xyz/ota.json` dan dapat diubah di *Sistem → Pembaruan online → Konfigurasi*;
+- indeks bawaan `https://ota.tatalvpai.vip/ota.json` dan dapat diubah di *Sistem → Pembaruan online → Konfigurasi*;
 - SHA256 wajib: entri tanpanya ditolak, dan bila tidak cocok unduhannya dihapus;
 - `http` polos ditolak kecuali *izinkan koneksi tidak aman* diaktifkan;
 - kunci perangkat diambil dari `/etc/ota/build.json`, model device tree, `board_name`, dan arsitektur, serta menerima kedua penulisan (`vendor,device` dan `vendor_device`).

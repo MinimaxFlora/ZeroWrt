@@ -16,7 +16,7 @@
 ![Target](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[Download page](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Build logs](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[Download page](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Build logs](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>System → Online upgrade → Check for updates</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **Official sources only.** Firmware is published in this repository's
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) and on
-> [ota.kejizero.xyz](https://ota.kejizero.xyz/). A similar repository name or a
+> [ota.tatalvpai.vip](https://ota.tatalvpai.vip/). A similar repository name or a
 > copied README does not make a build official.
 
 ---
@@ -60,7 +60,7 @@ keeps its own release, so the index and the download page can list them side by 
 
 ## Download
 
-- **Download page** — <https://ota.kejizero.xyz/> shows the current build, the changelog and the SHA256.
+- **Download page** — <https://ota.tatalvpai.vip/> shows the current build, the changelog and the SHA256.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> holds the images and `SHA256SUMS`.
 - **On the device** — *System → Online upgrade* does the same thing without a browser download.
 
@@ -88,7 +88,7 @@ Default address `10.0.0.1`, user `root`, password `password`. Change it on first
 
 The firmware ships with `luci-app-ota`:
 
-- the index defaults to `https://ota.kejizero.xyz/ota.json` and can be changed under *System → Online upgrade → Configuration*;
+- the index defaults to `https://ota.tatalvpai.vip/ota.json` and can be changed under *System → Online upgrade → Configuration*;
 - the SHA256 is mandatory: an entry without one is rejected, and a mismatch deletes the download;
 - plain `http` is refused unless *allow insecure connections* is enabled;
 - the device key is resolved from `/etc/ota/build.json`, the device tree model, `board_name` and the architecture, in that order, and both spellings of a board name (`vendor,device` and `vendor_device`) are accepted.

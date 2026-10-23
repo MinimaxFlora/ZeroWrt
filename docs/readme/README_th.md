@@ -16,7 +16,7 @@
 ![แพลตฟอร์ม](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[หน้าดาวน์โหลด](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [บันทึกการบิลด์](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[หน้าดาวน์โหลด](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [บันทึกการบิลด์](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>ระบบ → อัปเกรดออนไลน์ → ตรวจหาการอัปเดต</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **ดาวน์โหลดจากแหล่งทางการเท่านั้น** เฟิร์มแวร์เผยแพร่เฉพาะใน
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) ของรีโปนี้ และที่
-> [ota.kejizero.xyz](https://ota.kejizero.xyz/) ชื่อรีโปที่คล้ายกันหรือ README ที่ถูกคัดลอก
+> [ota.tatalvpai.vip](https://ota.tatalvpai.vip/) ชื่อรีโปที่คล้ายกันหรือ README ที่ถูกคัดลอก
 > ไม่ได้ทำให้บิลด์นั้นเป็นทางการ
 
 ---
@@ -58,7 +58,7 @@ ZeroWrt คือเฟิร์มแวร์กำหนดเองขนา
 
 ## ดาวน์โหลด
 
-- **หน้าดาวน์โหลด** — <https://ota.kejizero.xyz/> แสดงบิลด์ปัจจุบัน changelog และ SHA256
+- **หน้าดาวน์โหลด** — <https://ota.tatalvpai.vip/> แสดงบิลด์ปัจจุบัน changelog และ SHA256
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> เก็บอิมเมจและ `SHA256SUMS`
 - **บนตัวเครื่อง** — *ระบบ → อัปเกรดออนไลน์* ทำแบบเดียวกันโดยไม่ต้องดาวน์โหลดในเบราว์เซอร์
 
@@ -86,7 +86,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 
 เฟิร์มแวร์มี `luci-app-ota` มาด้วย:
 
-- ดัชนีเริ่มต้นคือ `https://ota.kejizero.xyz/ota.json` เปลี่ยนได้ที่ *ระบบ → อัปเกรดออนไลน์ → ตั้งค่า*
+- ดัชนีเริ่มต้นคือ `https://ota.tatalvpai.vip/ota.json` เปลี่ยนได้ที่ *ระบบ → อัปเกรดออนไลน์ → ตั้งค่า*
 - SHA256 จำเป็น: รายการที่ไม่มีจะถูกปฏิเสธ และถ้าไม่ตรงจะลบไฟล์ที่ดาวน์โหลด
 - `http` แบบไม่เข้ารหัสจะถูกปฏิเสธ เว้นแต่เปิด *อนุญาตการเชื่อมต่อที่ไม่ปลอดภัย*
 - คีย์อุปกรณ์หาได้จาก `/etc/ota/build.json`, model ใน device tree, `board_name` และสถาปัตยกรรม ตามลำดับ และรับทั้ง `vendor,device` กับ `vendor_device`

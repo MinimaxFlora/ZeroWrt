@@ -16,7 +16,7 @@
 ![타깃](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[다운로드 페이지](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [빌드 로그](https://github.com/MinimaxFlora/ZeroWrt/actions) · [이슈](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[다운로드 페이지](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [빌드 로그](https://github.com/MinimaxFlora/ZeroWrt/actions) · [이슈](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>시스템 → 온라인 업그레이드 → 업데이트 확인</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **공식 배포처에서만 받으세요.** 펌웨어는 이 저장소의
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) 와
-> [ota.kejizero.xyz](https://ota.kejizero.xyz/) 에서만 공개됩니다.
+> [ota.tatalvpai.vip](https://ota.tatalvpai.vip/) 에서만 공개됩니다.
 > 비슷한 저장소 이름이나 복사된 README 는 공식 빌드라는 증거가 아닙니다.
 
 ---
@@ -58,7 +58,7 @@ Release 태그는 기기 이름입니다(`ruijie_rg-x60-new`, `x86_64`). 기기�
 
 ## 다운로드
 
-- **다운로드 페이지** — <https://ota.kejizero.xyz/> 에 현재 빌드, 변경 기록, SHA256 이 있습니다.
+- **다운로드 페이지** — <https://ota.tatalvpai.vip/> 에 현재 빌드, 변경 기록, SHA256 이 있습니다.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> 에 이미지와 `SHA256SUMS` 가 있습니다.
 - **기기에서** — *시스템 → 온라인 업그레이드* 로 브라우저 다운로드 없이 업그레이드합니다.
 
@@ -86,7 +86,7 @@ sysupgrade 이미지를 기록합니다.
 
 `luci-app-ota` 가 포함되어 있습니다.
 
-- 인덱스 기본값은 `https://ota.kejizero.xyz/ota.json` 이며 *시스템 → 온라인 업그레이드 → 설정* 에서 바꿀 수 있습니다.
+- 인덱스 기본값은 `https://ota.tatalvpai.vip/ota.json` 이며 *시스템 → 온라인 업그레이드 → 설정* 에서 바꿀 수 있습니다.
 - SHA256 은 필수입니다. 없으면 거부하고, 불일치하면 다운로드를 삭제합니다.
 - "안전하지 않은 연결 허용"을 켜지 않으면 평문 `http` 는 거부합니다.
 - 기기 키는 `/etc/ota/build.json`, 디바이스 트리 model, `board_name`, 아키텍처 순으로 찾으며 `vendor,device` 와 `vendor_device` 두 표기를 모두 받아들입니다.

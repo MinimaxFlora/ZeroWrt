@@ -16,7 +16,7 @@
 ![Objetivo](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[Página de descarga](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Registros de build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[Página de descarga](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Registros de build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>Sistema → Actualización en línea → Buscar actualizaciones</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **Solo fuentes oficiales.** El firmware se publica únicamente en los
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) de este repositorio
-> y en [ota.kejizero.xyz](https://ota.kejizero.xyz/). Un nombre de repositorio
+> y en [ota.tatalvpai.vip](https://ota.tatalvpai.vip/). Un nombre de repositorio
 > parecido o un README copiado no convierten una compilación en oficial.
 
 ---
@@ -60,7 +60,7 @@ listarlos juntos.
 
 ## Descarga
 
-- **Página de descarga** — <https://ota.kejizero.xyz/> muestra la compilación actual, el changelog y el SHA256.
+- **Página de descarga** — <https://ota.tatalvpai.vip/> muestra la compilación actual, el changelog y el SHA256.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> aloja las imágenes y `SHA256SUMS`.
 - **En el equipo** — *Sistema → Actualización en línea* hace lo mismo sin descargar en el navegador.
 
@@ -88,7 +88,7 @@ Dirección predeterminada `10.0.0.1`, usuario `root`, contraseña `password`. C�
 
 El firmware incluye `luci-app-ota`:
 
-- el índice es `https://ota.kejizero.xyz/ota.json` por defecto y se cambia en *Sistema → Actualización en línea → Configuración*;
+- el índice es `https://ota.tatalvpai.vip/ota.json` por defecto y se cambia en *Sistema → Actualización en línea → Configuración*;
 - el SHA256 es obligatorio: una entrada sin él se rechaza y, si no coincide, se borra la descarga;
 - se rechaza `http` sin cifrar salvo que se active *permitir conexiones inseguras*;
 - la clave del dispositivo se resuelve desde `/etc/ota/build.json`, el modelo del árbol de dispositivos, `board_name` y la arquitectura, en ese orden, y se aceptan ambas grafías (`vendor,device` y `vendor_device`).

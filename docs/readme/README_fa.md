@@ -16,7 +16,7 @@
 ![پلتفرم](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[صفحه دانلود](https://ota.kejizero.xyz/) · [انتشارها](https://github.com/MinimaxFlora/ZeroWrt/releases) · [گزارش ساخت](https://github.com/MinimaxFlora/ZeroWrt/actions) · [مسائل](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[صفحه دانلود](https://ota.tatalvpai.vip/) · [انتشارها](https://github.com/MinimaxFlora/ZeroWrt/releases) · [گزارش ساخت](https://github.com/MinimaxFlora/ZeroWrt/actions) · [مسائل](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>سیستم ← به‌روزرسانی آنلاین ← بررسی به‌روزرسانی‌ها</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **فقط از منابع رسمی.** فریمور تنها در
 > [انتشارهای](https://github.com/MinimaxFlora/ZeroWrt/releases) همین مخزن و روی
-> [ota.kejizero.xyz](https://ota.kejizero.xyz/) منتشر می‌شود. نام مخزن مشابه یا README
+> [ota.tatalvpai.vip](https://ota.tatalvpai.vip/) منتشر می‌شود. نام مخزن مشابه یا README
 > کپی‌شده یک ساخت را رسمی نمی‌کند.
 
 ---
@@ -58,7 +58,7 @@ ZeroWrt یک فریمور سفارشی کوچک برای روترهای خانو
 
 ## دانلود
 
-- **صفحهٔ دانلود** — <https://ota.kejizero.xyz/> ساخت جاری، تغییرات و SHA256 را نشان می‌دهد.
+- **صفحهٔ دانلود** — <https://ota.tatalvpai.vip/> ساخت جاری، تغییرات و SHA256 را نشان می‌دهد.
 - **انتشارهای GitHub** — <https://github.com/MinimaxFlora/ZeroWrt/releases> تصاویر و `SHA256SUMS` را نگه می‌دارد.
 - **روی خود دستگاه** — *سیستم ← به‌روزرسانی آنلاین* همین کار را بدون دانلود در مرورگر انجام می‌دهد.
 
@@ -86,7 +86,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 
 فریمور شامل `luci-app-ota` است:
 
-- فهرست پیش‌فرض `https://ota.kejizero.xyz/ota.json` است و از *سیستم ← به‌روزرسانی آنلاین ← پیکربندی* تغییر می‌کند؛
+- فهرست پیش‌فرض `https://ota.tatalvpai.vip/ota.json` است و از *سیستم ← به‌روزرسانی آنلاین ← پیکربندی* تغییر می‌کند؛
 - SHA256 اجباری است: مدخل بدون آن رد می‌شود و در صورت ناسازگاری، فایل دانلودشده حذف می‌شود؛
 - `http` بدون رمزنگاری رد می‌شود مگر آنکه گزینهٔ اجازهٔ اتصال ناامن را روشن کنی؛
 - کلید دستگاه به‌ترتیب از `/etc/ota/build.json`، model درخت دستگاه، `board_name` و معماری استخراج می‌شود و هر دو نوشتار (`vendor,device` و `vendor_device`) پذیرفته می‌شود.

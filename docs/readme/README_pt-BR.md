@@ -16,7 +16,7 @@
 ![Alvo](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[Página de download](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Logs de build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[Página de download](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Logs de build](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>Sistema → Atualização online → Verificar atualizações</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **Somente fontes oficiais.** O firmware é publicado apenas nas
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) deste repositório e
-> em [ota.kejizero.xyz](https://ota.kejizero.xyz/). Um nome de repositório
+> em [ota.tatalvpai.vip](https://ota.tatalvpai.vip/). Um nome de repositório
 > parecido ou um README copiado não torna um build oficial.
 
 ---
@@ -60,7 +60,7 @@ lado a lado.
 
 ## Download
 
-- **Página de download** — <https://ota.kejizero.xyz/> mostra o build atual, o changelog e o SHA256.
+- **Página de download** — <https://ota.tatalvpai.vip/> mostra o build atual, o changelog e o SHA256.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> guarda as imagens e o `SHA256SUMS`.
 - **No dispositivo** — *Sistema → Atualização online* faz o mesmo sem baixar no navegador.
 
@@ -88,7 +88,7 @@ Endereço padrão `10.0.0.1`, usuário `root`, senha `password`. Troque no prime
 
 O firmware inclui o `luci-app-ota`:
 
-- o índice padrão é `https://ota.kejizero.xyz/ota.json` e pode ser alterado em *Sistema → Atualização online → Configuração*;
+- o índice padrão é `https://ota.tatalvpai.vip/ota.json` e pode ser alterado em *Sistema → Atualização online → Configuração*;
 - o SHA256 é obrigatório: entrada sem ele é recusada e, se não conferir, o download é apagado;
 - `http` sem TLS é recusado, a menos que *permitir conexões inseguras* esteja ativo;
 - a chave do dispositivo é obtida de `/etc/ota/build.json`, do modelo da árvore de dispositivos, do `board_name` e da arquitetura, nessa ordem, aceitando as duas grafias (`vendor,device` e `vendor_device`).

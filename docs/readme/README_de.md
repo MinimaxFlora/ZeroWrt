@@ -16,7 +16,7 @@
 ![Ziel](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[Downloadseite](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Build-Logs](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[Downloadseite](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Build-Logs](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>System → Online-Aktualisierung → Nach Updates suchen</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **Nur aus offiziellen Quellen.** Die Firmware erscheint ausschließlich in den
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) dieses Repositories
-> und auf [ota.kejizero.xyz](https://ota.kejizero.xyz/). Ein ähnlicher
+> und auf [ota.tatalvpai.vip](https://ota.tatalvpai.vip/). Ein ähnlicher
 > Repository-Name oder eine kopierte README macht einen Build nicht offiziell.
 
 ---
@@ -59,7 +59,7 @@ sein eigenes Release, daher können Index und Downloadseite beide nebeneinander 
 
 ## Download
 
-- **Downloadseite** — <https://ota.kejizero.xyz/> zeigt aktuellen Build, Changelog und SHA256.
+- **Downloadseite** — <https://ota.tatalvpai.vip/> zeigt aktuellen Build, Changelog und SHA256.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> enthält Images und `SHA256SUMS`.
 - **Auf dem Gerät** — *System → Online-Aktualisierung* erledigt dasselbe ohne Browser-Download.
 
@@ -87,7 +87,7 @@ Standardadresse `10.0.0.1`, Benutzer `root`, Passwort `password`. Beim ersten Lo
 
 `luci-app-ota` ist enthalten:
 
-- der Index steht standardmäßig auf `https://ota.kejizero.xyz/ota.json` und lässt sich unter *System → Online-Aktualisierung → Konfiguration* ändern;
+- der Index steht standardmäßig auf `https://ota.tatalvpai.vip/ota.json` und lässt sich unter *System → Online-Aktualisierung → Konfiguration* ändern;
 - SHA256 ist Pflicht: Einträge ohne Prüfsumme werden abgelehnt, bei Abweichung wird der Download gelöscht;
 - reines `http` wird abgelehnt, solange nicht *unsichere Verbindungen erlauben* aktiv ist;
 - der Geräteschlüssel wird aus `/etc/ota/build.json`, dem Device-Tree-Model, `board_name` und der Architektur ermittelt; beide Schreibweisen (`vendor,device` und `vendor_device`) werden akzeptiert.

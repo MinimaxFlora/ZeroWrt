@@ -16,7 +16,7 @@
 ![Hedef](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[İndirme sayfası](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Derleme kayıtları](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[İndirme sayfası](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Derleme kayıtları](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>Sistem → Çevrimiçi güncelleme → Güncellemeleri denetle</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **Yalnızca resmî kaynaklar.** Yazılım sadece bu deponun
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) bölümünde ve
-> [ota.kejizero.xyz](https://ota.kejizero.xyz/) adresinde yayınlanır. Benzer bir depo
+> [ota.tatalvpai.vip](https://ota.tatalvpai.vip/) adresinde yayınlanır. Benzer bir depo
 > adı veya kopyalanmış README, bir derlemeyi resmî yapmaz.
 
 ---
@@ -59,7 +59,7 @@ korur; dizin ve indirme sayfası ikisini yan yana listeleyebilir.
 
 ## İndirme
 
-- **İndirme sayfası** — <https://ota.kejizero.xyz/> güncel derlemeyi, değişiklik günlüğünü ve SHA256'yı gösterir.
+- **İndirme sayfası** — <https://ota.tatalvpai.vip/> güncel derlemeyi, değişiklik günlüğünü ve SHA256'yı gösterir.
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> imajları ve `SHA256SUMS` dosyasını barındırır.
 - **Cihaz üzerinde** — *Sistem → Çevrimiçi güncelleme* tarayıcıdan indirmeden aynısını yapar.
 
@@ -87,7 +87,7 @@ Varsayılan adres `10.0.0.1`, kullanıcı `root`, parola `password`. İlk giriş
 
 Yazılımda `luci-app-ota` var:
 
-- dizin varsayılan olarak `https://ota.kejizero.xyz/ota.json` ve *Sistem → Çevrimiçi güncelleme → Yapılandırma* altında değiştirilir;
+- dizin varsayılan olarak `https://ota.tatalvpai.vip/ota.json` ve *Sistem → Çevrimiçi güncelleme → Yapılandırma* altında değiştirilir;
 - SHA256 zorunludur: olmayan kayıt reddedilir, uyuşmazsa indirme silinir;
 - *güvenli olmayan bağlantılara izin ver* açık değilse düz `http` reddedilir;
 - cihaz anahtarı `/etc/ota/build.json`, cihaz ağacı modeli, `board_name` ve mimari sırasıyla bulunur; `vendor,device` ve `vendor_device` yazımlarının ikisi de kabul edilir.

@@ -16,7 +16,7 @@
 ![ターゲット](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[ダウンロードページ](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [ビルドログ](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[ダウンロードページ](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [ビルドログ](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>システム → オンラインアップグレード → 更新を確認</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **公式の配布元からのみ入手してください。** ファームウェアはこのリポジトリの
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) と
-> [ota.kejizero.xyz](https://ota.kejizero.xyz/) でのみ公開しています。
+> [ota.tatalvpai.vip](https://ota.tatalvpai.vip/) でのみ公開しています。
 > よく似たリポジトリ名や README のコピーは、公式ビルドであることの証明になりません。
 
 ---
@@ -59,7 +59,7 @@ release を分けているので、インデックスとダウンロードペー
 
 ## ダウンロード
 
-- **ダウンロードページ** — <https://ota.kejizero.xyz/> に現在のビルド、変更履歴、SHA256 があります。
+- **ダウンロードページ** — <https://ota.tatalvpai.vip/> に現在のビルド、変更履歴、SHA256 があります。
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> にイメージと `SHA256SUMS` があります。
 - **端末上で** — *システム → オンラインアップグレード* から、ブラウザでダウンロードせずに更新できます。
 
@@ -87,7 +87,7 @@ sysupgrade イメージを書き込みます。
 
 `luci-app-ota` を同梱しています。
 
-- インデックスの既定値は `https://ota.kejizero.xyz/ota.json`。*システム → オンラインアップグレード → 設定* で変更できます。
+- インデックスの既定値は `https://ota.tatalvpai.vip/ota.json`。*システム → オンラインアップグレード → 設定* で変更できます。
 - SHA256 は必須です。無い項目は拒否し、不一致ならダウンロードを削除します。
 - 平文 `http` は「安全でない接続を許可」を有効にしない限り拒否します。
 - デバイスキーは `/etc/ota/build.json`、デバイスツリーの model、`board_name`、アーキテクチャの順に解決し、`vendor,device` と `vendor_device` の両方の表記を受け付けます。

@@ -16,7 +16,7 @@
 ![平台](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
 
-[下載頁](https://ota.kejizero.xyz/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [建置記錄](https://github.com/MinimaxFlora/ZeroWrt/actions) · [問題回報](https://github.com/MinimaxFlora/ZeroWrt/issues)
+[下載頁](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [建置記錄](https://github.com/MinimaxFlora/ZeroWrt/actions) · [問題回報](https://github.com/MinimaxFlora/ZeroWrt/issues)
 
 <code>系統 → 線上更新 → 檢查更新</code>
 
@@ -25,7 +25,7 @@
 > [!IMPORTANT]
 > **只從官方來源下載。** 韌體只發布在本倉庫的
 > [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) 與
-> [ota.kejizero.xyz](https://ota.kejizero.xyz/)。相似的倉庫名稱或被複製的 README
+> [ota.tatalvpai.vip](https://ota.tatalvpai.vip/)。相似的倉庫名稱或被複製的 README
 > 都不能證明那份韌體來自這裡。
 
 ---
@@ -58,7 +58,7 @@ release，索引與下載頁可以並排列出。
 
 ## 下載
 
-- **下載頁** — <https://ota.kejizero.xyz/> 顯示目前版本、更新日誌與 SHA256。
+- **下載頁** — <https://ota.tatalvpai.vip/> 顯示目前版本、更新日誌與 SHA256。
 - **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> 存放映像與 `SHA256SUMS`。
 - **在裝置上** — *系統 → 線上更新* 可直接升級，不必先在電腦下載。
 
@@ -84,7 +84,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 
 韌體內建 `luci-app-ota`：
 
-- 索引預設為 `https://ota.kejizero.xyz/ota.json`，可在 *系統 → 線上更新 → 設定* 變更；
+- 索引預設為 `https://ota.tatalvpai.vip/ota.json`，可在 *系統 → 線上更新 → 設定* 變更；
 - SHA256 為必填，沒有就拒絕下載，驗證失敗直接刪除；
 - 預設拒絕明文 `http`，除非開啟「允許不安全的連線」；
 - 裝置識別依序從 `/etc/ota/build.json`、裝置樹 model、`board_name` 與架構推導，並同時接受 `vendor,device` 與 `vendor_device` 兩種寫法。

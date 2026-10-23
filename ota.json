@@ -1,19 +1,19 @@
 {
   "schema": 2,
   "generator": "luci-app-ota tools/gen_ota_index.py",
-  "generated": 1792653236,
+  "generated": 1792747941,
   "dist": "ZeroWrt",
   "devices": {
     "ruijie_rg-x60-new": {
-      "version": "20261022",
-      "build_date": 1792647370,
+      "version": "20261023",
+      "build_date": 1792741973,
       "url": "https://github.com/MinimaxFlora/ZeroWrt/releases/download/ruijie_rg-x60-new/zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin",
-      "sha256": "17e1227e5821481eca8d67859ad25cc063772b92ef0c5c5b3fefdfa3ae15cf25",
+      "sha256": "683912e17e4ba15cc1839426d33854763b5f9091bac8a9d4c3af451d9aa09420",
       "size": 49152801,
       "file": "zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin",
       "target": "mediatek/filogic",
       "device": "ruijie_rg-x60-new",
-      "changelog": "**ZeroWrt 20261022**\n\nDevice: `ruijie_rg-x60-new`\n\nTarget: `mediatek/filogic`\n\nBuilt: 2026-10-22 07:13:46 UTC\n\n[Workflow run](https://github.com/MinimaxFlora/ZeroWrt/actions/runs/39728389100)",
+      "changelog": "**ZeroWrt 20261023**\n\nDevice: `ruijie_rg-x60-new`\n\nTarget: `mediatek/filogic`\n\nBuilt: 2026-10-23 09:32:10 UTC\n\n[Workflow run](https://github.com/MinimaxFlora/ZeroWrt/actions/runs/39920060500)",
       "label": "Ruijie RG-X60 New"
     }
   }

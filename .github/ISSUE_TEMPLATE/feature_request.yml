@@ -1,0 +1,80 @@
+name: 功能建议
+description: 想加插件、改流水线、换素材
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ZeroWrt 只支持 `ruijie_rg-x60-new` 和 x86_64 两台设备，资源有限，
+        因此不是所有请求都会被采纳。写清楚"要解决什么问题"，比写"要什么"更容易被接受。
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 请求类型
+      options:
+        - 新增 / 移除插件
+        - 流水线改进（构建脚本、CI）
+        - 品牌素材（Logo、背景、横幅）
+        - 文档 / 说明
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 想解决什么问题
+      description: 描述你现在的处境，而不是直接写方案
+      placeholder: "我每次xxx的时候都要xxx，因为xxx"
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 希望怎么做
+    validations:
+      required: true
+
+  - type: input
+    id: upstream
+    attributes:
+      label: 相关上游仓库或链接
+      description: |
+        如果是请求插件，请给出 GitHub 仓库地址 —— 我们会检查它能否在 `package/new` 下构建、
+        依赖是否齐全，以及是否会与 feeds 里的同名包冲突。
+      placeholder: "https://github.com/owner/repo"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: device_scope
+    attributes:
+      label: 影响哪台设备
+      options:
+        - 两台都要
+        - 只要 x86_64
+        - 只要 ruijie_rg-x60-new
+        - 不确定
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 考虑过的替代方案
+      description: 比如"用另一个插件""自己编译""改配置绕过去"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: 参与意愿
+      options:
+        - label: 我愿意提 PR 实现它（请先读 [CONTRIBUTING.md](https://github.com/MinimaxFlora/ZeroWrt/blob/main/CONTRIBUTING.md)）
+          required: false
+        - label: 我已经确认这不是安全漏洞
+          required: true

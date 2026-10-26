@@ -4,6 +4,12 @@ version = "0.1.0"
 description = "ZeroWrt firmware build automation"
 requires-python = ">=3.11"
 
+# Development tooling only: nothing here is needed to *run* the pipeline on a
+# build machine, it is what the quality workflow installs and what a
+# contributor needs locally. Dependabot tracks this table.
+[project.optional-dependencies]
+dev = ["ruff", "pillow"]
+
 [tool.ruff]
 line-length = 120
 target-version = "py311"

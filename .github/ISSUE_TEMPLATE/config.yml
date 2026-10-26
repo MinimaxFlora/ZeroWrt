@@ -1,0 +1,18 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 报告安全漏洞
+    url: https://github.com/MinimaxFlora/ZeroWrt/security/advisories/new
+    about: |
+      请不要开公开 Issue 报告安全问题。走这里可以创建只有维护者可见的私密报告，详见 SECURITY.md。
+  - name: 下载固件
+    url: https://ota.tatalvpai.vip/
+    about: 下载页面、SHA256 与更新日志。官方来源只有本仓库 Releases 和这里。
+  - name: 构建日志
+    url: https://github.com/MinimaxFlora/ZeroWrt/actions
+    about: 查看 Actions 运行记录；构建失败时会上传 *-tail.log 产物。
+  - name: 维护者文档
+    url: https://github.com/MinimaxFlora/ZeroWrt/blob/main/docs/BUILD.md
+    about: 流水线细节、Secrets 配置、toolchain 缓存。想自己编译先看这个。
+  - name: 贡献与开发规范
+    url: https://github.com/MinimaxFlora/ZeroWrt/blob/main/CONTRIBUTING.md
+    about: 本地环境、代码规范、怎么加测试、package/new 的目录约定。

@@ -1,0 +1,103 @@
+name: 固件 Bug 反馈
+description: 刷了 ZeroWrt 之后功能不正常
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请先确认：
+
+        - 固件来自本仓库的 [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) 或 <https://ota.tatalvpai.vip/>
+        - 问题在**最新**构建上依然存在（旧构建不会被回修，请升级后重试）
+        - 如果涉及安全漏洞，请**不要**在这里提交，改用 [安全公告](https://github.com/MinimaxFlora/ZeroWrt/security/advisories/new)
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: 设备
+      description: 你刷的是哪一台
+      options:
+        - ruijie_rg-x60-new
+        - x86_64
+        - 其他（请在描述里说明）
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 固件版本 / 构建日期
+      description: 见 `BUILD_INFO.txt`（或从 Releases 页面复制），形如 `20261027`
+      placeholder: "20261027"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 问题出在哪一块
+      options:
+        - 刷写 / 启动
+        - 在线升级（luci-app-ota）
+        - 网络（有线 / LAN / 拨号）
+        - 无线（Wi-Fi）
+        - PassWall / OpenClash
+        - mosdns
+        - LuCI 界面 / Argon 主题
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 从刷完固件开始，一步一步写
+      placeholder: |
+        1. 从 xxx 刷入 xxx-squashfs-sysupgrade.bin
+        2. 保留 / 不保留配置
+        3. 打开 xxx 页面
+        4. 出现 xxx
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望的行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际的行为
+      description: 贴上确切的报错文字，而不是"报错了"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志
+      description: |
+        在设备上执行 `logread` 或 `dmesg` 的输出。
+        如果是在线升级失败，请一并附上 *System → Online upgrade* 页面显示的错误。
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 确认事项
+      options:
+        - label: 我用的是官方来源的固件
+          required: true
+        - label: 我改过默认密码之外的配置（LAN IP / SSID / 插件设置等），并已在上面说明
+          required: false
+        - label: 我已经用最新构建复现过
+          required: true
+        - label: 这不是安全漏洞
+          required: true

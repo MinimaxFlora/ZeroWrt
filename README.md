@@ -44,9 +44,9 @@ time it checks.
 - **One-click updates** — LuCI reads the index, downloads with resume and progress, verifies SHA256 and the image with `sysupgrade -T`, then flashes and reboots.
 - **Honest version checks** — the build timestamp decides "newer", with a version-string fallback; a date that cannot be determined is shown as unknown instead of being invented.
 - **Configuration from the workflow** — LAN IP, hostname and the three Wi-Fi SSIDs and passwords are inputs, not hand-edited files.
-- **Argon 3 branding** — background, login logo, favicon and palette (`#2E9D72` / `#4CAF86`) are replaced at build time.
+- **Argon 3 branding** — background, login logo, favicon and palette (`#2E9D72` / `#4CAF86`) are replaced at build time, together with the login banner in `assets/banner`.
 - **Proxy stack included** — PassWall (Xray core) and OpenClash, vendored from [openwrt_helloworld](https://github.com/MinimaxFlora/openwrt_helloworld) so the build depends on one checkout instead of four upstream repositories.
-- **Gated pipeline** — `ruff` and 18 unit tests run on every pull request.
+- **Gated pipeline** — `ruff` and 29 unit tests run on every pull request.
 
 ## Supported devices
 
@@ -133,4 +133,4 @@ is provided as is, without warranty.
 
 ---
 
-Maintainer notes: [docs/BUILD.md](docs/BUILD.md) · Other languages: [docs/readme](docs/readme)
+Maintainer notes: [docs/BUILD.md](docs/BUILD.md) · Other languages: [docs/readme](docs/readme) · [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Changelog](CHANGELOG.md)

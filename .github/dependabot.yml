@@ -1,0 +1,40 @@
+version: 2
+updates:
+  # GitHub Actions: every action in .github/workflows is pinned to a full tag
+  # (e.g. actions/checkout@v7.0.1). Dependabot keeps those pins fresh, which
+  # matters because the workflows hold write permissions and secrets.
+  # Note: it cannot bump action versions referenced as commit SHAs — this repo
+  # deliberately uses tags, so everything is visible to it.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels:
+      - dependencies
+      - ci
+    commit-message:
+      prefix: "ci"
+    # One grouped PR for all actions: they move together and a separate PR per
+    # action would just be noise on a repo with four workflows.
+    groups:
+      actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+
+  # Python: tracks the dev tooling declared in pyproject.toml
+  # ([project.optional-dependencies].dev -> ruff, pillow).
+  # These are used by the quality workflow, so a new major version can change
+  # lint results — hence the weekly PR rather than something merged blind.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels:
+      - dependencies
+      - python
+    commit-message:
+      prefix: "build"
+    open-pull-requests-limit: 5

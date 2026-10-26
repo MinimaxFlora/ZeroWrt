@@ -83,7 +83,8 @@ jobs:
           python3 scripts/zerowrt.py source customize \
             --tree "$LEDE_DIR" \
             --ip "$ZEROWRT_IP" \
-            --wifi-name "$ZEROWRT_WIFI_NAME"
+            --wifi-name "$ZEROWRT_WIFI_NAME" \
+            --assets "$GITHUB_WORKSPACE/assets"
 
       - name: Add external packages and branding
         run: |

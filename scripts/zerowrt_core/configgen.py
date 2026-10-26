@@ -27,20 +27,33 @@ PACKAGES = [
     "CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn",
     "CONFIG_PACKAGE_luci-app-turboacc",
     "CONFIG_PACKAGE_luci-i18n-turboacc-zh-cn",
+    "CONFIG_PACKAGE_luci-app-ramfree",
 ]
 
-# Targets that are selected by a regular target profile instead of a device.
-PROFILE_TARGETS = {
-    "x86_64": {
-        "board": "x86",
-        "subtarget": "64",
-        "name": "Generic",
-        "kind": "profile",
-        "model": "x86/64",
-        "vendor": "Generic",
-        "source": "built-in",
-    },
+# Selected only for the devices listed here. Dependencies (mosdns itself,
+# uclient-fetch, geo2txt, ...) are resolved by OpenWrt.
+DEVICE_PACKAGES = {
+    "x86_64": [
+        "CONFIG_PACKAGE_luci-app-mosdns",
+    ],
 }
+
+# Workflow device names that do not match a Device/ definition one to one:
+# x86 has no per-board profile, so both points at "Device/generic" inside a
+# different subtarget. The Device name is resolved from the source tree, and
+# these entries only pin the board/subtarget it lives in ("generic" exists in
+# target/linux/x86/image/{64,generic}.mk alike).
+DEVICE_ALIASES = {
+    "x86_64": {"board": "x86", "subtarget": "64", "device": "generic"},
+    "x86_generic": {"board": "x86", "subtarget": "generic", "device": "generic"},
+}
+
+
+def profile_symbol(target: dict) -> str:
+    """Kconfig symbol that selects this target's device or profile."""
+    if target.get("kind") == "profile":
+        return f"CONFIG_TARGET_{target['board']}_{target['subtarget']}_{target['name']}"
+    return f"CONFIG_TARGET_{target['board']}_{target['subtarget']}_DEVICE_{target['name']}"
 
 
 def build_date() -> str:
@@ -50,10 +63,21 @@ def build_date() -> str:
 
 def resolve_target(tree: Path, name: str) -> dict:
     """Resolve a workflow device selection to target information."""
-    built_in = PROFILE_TARGETS.get(name)
-    if built_in:
-        return dict(built_in)
-    return find_device(tree, name)
+    alias = DEVICE_ALIASES.get(name)
+    if alias is None:
+        return find_device(tree, name)
+
+    # Resolve the real Device/ name from the tree: an alias such as "x86_64"
+    # cannot be looked up directly, and a name that is guessed instead of
+    # read from the tree silently disappears from defconfig when upstream
+    # renames the device.
+    board_dir = Path(tree) / "target" / "linux" / alias["board"]
+    if not board_dir.exists():
+        raise util.BuildError(
+            f"target {name!r} is built from {board_dir}, which does not exist.\n"
+            f"Check that {tree} is the LEDE source tree and that 'source clone' succeeded."
+        )
+    return find_device(tree, alias["device"], board=alias["board"], subtarget=alias["subtarget"])
 
 
 def _board_subtargets(board_dir: Path) -> list[str]:
@@ -106,17 +130,30 @@ def _resolve_subtarget(board_dir: Path, image_mk: Path, subtargets: list[str]) -
     return owner.name if owner.name in subtargets else None
 
 
-def _all_devices(tree: Path) -> list[str]:
+def _all_devices(tree: Path, board_filter: str | None = None) -> list[str]:
     names: list[str] = []
     linux = Path(tree) / "target" / "linux"
     for board_dir in sorted(path for path in linux.iterdir() if path.is_dir()):
+        if board_filter and board_dir.name != board_filter:
+            continue
         for image_mk in _image_makefiles(board_dir):
             names.extend(device["name"] for device in _device_blocks(image_mk))
     return sorted(set(names))
 
 
-def find_device(tree: Path, name: str) -> dict:
-    """Return target information for a device profile name."""
+def find_device(
+    tree: Path,
+    name: str,
+    *,
+    board: str | None = None,
+    subtarget: str | None = None,
+) -> dict:
+    """Return target information for a device profile name.
+
+    Passing *board*/*subtarget* narrows the search, which matters for target
+    families where several subtargets declare a device with the same name
+    (x86 declares "generic" for both "64" and "generic").
+    """
     tree = Path(tree)
     linux = tree / "target" / "linux"
     if not linux.exists():
@@ -124,33 +161,37 @@ def find_device(tree: Path, name: str) -> dict:
 
     normalized = name.replace("-", "_").lower()
     for board_dir in sorted(path for path in linux.iterdir() if path.is_dir()):
+        if board and board_dir.name != board:
+            continue
         subtargets = _board_subtargets(board_dir)
         for image_mk in _image_makefiles(board_dir):
-            subtarget = _resolve_subtarget(board_dir, image_mk, subtargets)
-            if not subtarget:
+            found_subtarget = _resolve_subtarget(board_dir, image_mk, subtargets)
+            if not found_subtarget or (subtarget and found_subtarget != subtarget):
                 continue
             for device in _device_blocks(image_mk):
                 if device["name"].replace("-", "_").lower() != normalized:
                     continue
                 return {
                     "board": board_dir.name,
-                    "subtarget": subtarget,
+                    "subtarget": found_subtarget,
                     "name": device["name"],
                     "model": device["model"],
                     "vendor": device["vendor"],
                     "source": str(image_mk.relative_to(tree)),
                 }
 
-    candidates = [item for item in _all_devices(tree) if "rg-x60" in item.lower()]
+    candidates = [item for item in _all_devices(tree, board) if "rg-x60" in item.lower()]
     if not candidates:
-        candidates = _all_devices(tree)[:40]
+        candidates = _all_devices(tree, board)[:40]
+    scope = f" ({board}/{subtarget})" if board else ""
     raise util.BuildError(
-        f"device profile {name!r} was not found in {tree}/target/linux.\nAvailable devices: " + ", ".join(candidates)
+        f"device profile {name!r} was not found in {tree}/target/linux{scope}.\nAvailable devices: "
+        + ", ".join(candidates)
     )
 
 
-def _packages(tree: Path) -> list[str]:
-    """Return the package list for this checkout.
+def _packages(tree: Path, device: str | None = None) -> list[str]:
+    """Return the package list for this checkout and device.
 
     Argon master integrates the config app into the theme package, so the
     standalone luci-app-argon-config is only selected when it was cloned
@@ -159,20 +200,17 @@ def _packages(tree: Path) -> list[str]:
     packages = list(PACKAGES)
     if not (Path(tree) / "package" / "new" / "luci-app-argon-config").exists():
         packages.remove("CONFIG_PACKAGE_luci-app-argon-config")
-    return packages
+    packages.extend(DEVICE_PACKAGES.get(device or "", []))
+    return sorted(packages)
 
 
 def _render_config(target: dict, packages: list[str]) -> str:
     lines = ["# Generated by ZeroWrt - do not edit"]
-    if target.get("kind") == "profile":
-        profile = f"CONFIG_TARGET_{target['board']}_{target['subtarget']}_{target['name']}"
-    else:
-        profile = f"CONFIG_TARGET_{target['board']}_{target['subtarget']}_DEVICE_{target['name']}"
     lines.extend(
         [
             f"CONFIG_TARGET_{target['board']}=y",
             f"CONFIG_TARGET_{target['board']}_{target['subtarget']}=y",
-            f"{profile}=y",
+            f"{profile_symbol(target)}=y",
         ]
     )
     lines.extend(f"{package}=y" for package in sorted(packages))
@@ -196,7 +234,7 @@ def _render_config(target: dict, packages: list[str]) -> str:
 def generate(tree: Path, device: str) -> dict:
     tree = Path(tree)
     target = resolve_target(tree, device)
-    packages = _packages(tree)
+    packages = _packages(tree, device)
     version = build_date()
     util.log(
         f"device {target['name']} ({target['vendor']} {target['model']}) on {target['board']}/{target['subtarget']}"
@@ -211,12 +249,8 @@ def generate(tree: Path, device: str) -> dict:
     util.run(["make", "defconfig"], cwd=tree, log_path=log_path, check=True)
 
     resolved = util.read_text(config_path)
-    if target.get("kind") == "profile":
-        profile = f"CONFIG_TARGET_{target['board']}_{target['subtarget']}_{target['name']}=y"
-    else:
-        profile = f"CONFIG_TARGET_{target['board']}_{target['subtarget']}_DEVICE_{target['name']}=y"
     required = [
-        profile,
+        f"{profile_symbol(target)}=y",
         "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y",
         "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_V2ray_Geodata=y",
         "CONFIG_PACKAGE_xray-core=y",

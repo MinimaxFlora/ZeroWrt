@@ -69,7 +69,7 @@ def cmd_source_customize(args: argparse.Namespace) -> None:
         f"LAN IP {build_settings.ip}, WiFi {build_settings.ssid('2g')} / "
         f"{build_settings.ssid('5g')}, device {build_settings.device}"
     )
-    source.apply_core_customisations(Path(args.tree), build_settings)
+    source.apply_core_customisations(Path(args.tree), build_settings, Path(args.assets))
 
 
 def cmd_packages_add(args: argparse.Namespace) -> None:
@@ -145,6 +145,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="WiFi password, 8-63 characters (default: ZEROWRT_WIFI_PASSWORD)",
     )
+    customize.add_argument("--assets", default=str(DEFAULT_ASSETS), help="branding assets (banner, logo, ...)")
     customize.set_defaults(func=cmd_source_customize)
 
     pkg = sub.add_parser("packages", help="add external packages and theme branding")

@@ -10,46 +10,23 @@ import shlex
 from datetime import datetime
 from pathlib import Path
 
-from . import util
+from . import packages, util
 from .settings import BuildSettings
 
 DEFAULT_REF = "ruijie-rg-x60-new"
-
-# Feed packages that must disappear so that the ZeroWrt copies win.
-# - the argon theme/plugin are cloned from jerrykuku's repositories instead
-# - PassWall ships its own cores, which would otherwise clash with the feed
-FEED_CONFLICTS = {
-    "luci-theme-argon",
-    "luci-app-argon-config",
-    "luci-app-passwall",
-    "luci-app-openclash",
-    "luci-app-ssr-plus",
-    # PassWall core libraries (see Openwrt-Passwall/openwrt-passwall README)
-    "xray-core",
-    "v2ray-geodata",
-    "sing-box",
-    "chinadns-ng",
-    "dns2socks",
-    "hysteria",
-    "ipt2socks",
-    "microsocks",
-    "naiveproxy",
-    "shadowsocks-rust",
-    "shadowsocksr-libev",
-    "simple-obfs",
-    "tcping",
-    "v2ray-plugin",
-    "xray-plugin",
-    "geoview",
-    "shadow-tls",
-}
 
 CORE_FILES = {
     "version": Path("include/version.mk"),
     "config_generate": Path("package/base-files/files/bin/config_generate"),
     "config_generate_luci": Path("package/base-files/luci/bin/config_generate"),
     "default_settings": Path("package/lean/default-settings/files/zzz-default-settings"),
+    "banner": Path("package/base-files/files/etc/banner"),
 }
+
+# The ZeroWrt login banner, kept with the other branding assets so that it can
+# be edited without touching the build code.
+BANNER_FILE = Path("assets") / "banner"
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 WIFI_SCRIPTS = (
     Path("package/kernel/mac80211/files/lib/wifi/mac80211.sh"),
@@ -126,13 +103,26 @@ def clone_lede(tree: Path, *, repo: str | None = None, ref: str | None = None, t
 
 
 def _prune_packages(base: Path, names: set[str], *, removed: list[Path]) -> None:
+    """Delete every directory that provides one of ``names``.
+
+    A package directory counts when its *name* matches or when its Makefile
+    registers one of the names with ``BuildPackage``. The second test matters
+    because the feeds do not use our directory names: helloworld's
+    ``v2ray-geodata`` builds ``v2ray-geoip`` and ``v2ray-geosite``, both of
+    which also come out of ``feeds/packages/net/v2ray-geodata``.
+    A directory only counts as a package when it owns a Makefile: a LuCI app
+    ships static assets under paths such as ``htdocs/.../mosdns``, which we
+    must leave alone.
+    """
     if not base.exists():
         return
     for root, dirs, _files in os.walk(base, topdown=True, followlinks=False):
         keep = []
         for name in dirs:
             candidate = Path(root) / name
-            if name in names:
+            if (candidate / "Makefile").is_file() and (
+                candidate.name in names or packages.declared_package_names(candidate) & names
+            ):
                 if util.remove_path(candidate):
                     removed.append(candidate)
                 continue
@@ -141,11 +131,17 @@ def _prune_packages(base: Path, names: set[str], *, removed: list[Path]) -> None
 
 
 def prune_feed_conflicts(tree: Path) -> list[Path]:
-    """Remove conflicting packages from feeds/ and from package/feeds/."""
+    """Remove conflicting packages from feeds/ and from package/feeds/.
+
+    Anything that is cloned into ``package/new`` has to disappear here: two
+    sources for one package name make the buildroot report a duplicate, and
+    the feed version usually wins silently because it was scanned first.
+    """
     tree = Path(tree)
+    names = packages.new_package_names(tree) | {"luci-app-ssr-plus"}
     removed: list[Path] = []
-    _prune_packages(tree / "feeds", FEED_CONFLICTS, removed=removed)
-    _prune_packages(tree / "package" / "feeds", FEED_CONFLICTS, removed=removed)
+    _prune_packages(tree / "feeds", names, removed=removed)
+    _prune_packages(tree / "package" / "feeds", names, removed=removed)
     for path in removed:
         util.log(f"removed feed package {path.relative_to(tree)}")
     return removed
@@ -270,6 +266,38 @@ def patch_version_mk(tree: Path) -> None:
             util.log(f"VERSION_NUMBER default set to {version}")
         else:
             util.warn("VERSION_NUMBER default was not found")
+
+
+def read_banner(assets_dir: Path | str | None = None) -> str | None:
+    """Read the ZeroWrt banner art, or None when the asset is unavailable."""
+    candidates = [REPO_ROOT / BANNER_FILE]
+    if assets_dir:
+        candidates.insert(0, Path(assets_dir) / BANNER_FILE)
+    for path in candidates:
+        if path.is_file():
+            return path.read_text(encoding="utf-8")
+    return None
+
+
+def patch_banner(tree: Path, assets_dir: Path | str | None = None) -> bool:
+    """Replace the login banner shipped by base-files with the ZeroWrt art."""
+    tree = Path(tree)
+    banner = read_banner(assets_dir)
+    if banner is None:
+        util.warn(f"{BANNER_FILE} not found; keeping the upstream banner")
+        return False
+
+    path = tree / CORE_FILES["banner"]
+    if not path.exists():
+        util.warn(f"missing {CORE_FILES['banner']}; skipping the banner")
+        return False
+    if util.read_text(path) == banner:
+        util.log("login banner already up to date")
+        return True
+
+    util.write_text(path, banner)
+    util.log(f"patched {CORE_FILES['banner']}")
+    return True
 
 
 def patch_config_generate(tree: Path, ip: str) -> None:
@@ -464,19 +492,20 @@ def patch_turboacc(tree: Path, settings: BuildSettings) -> None:
     util.log(f"wrote {path.relative_to(tree)} for {settings.device}")
 
 
-def apply_core_customisations(tree: Path, settings: BuildSettings) -> None:
+def apply_core_customisations(tree: Path, settings: BuildSettings, assets_dir: Path | str | None = None) -> None:
     tree = Path(tree)
     patch_version_mk(tree)
     patch_config_generate(tree, settings.ip)
     patch_default_settings(tree)
+    patch_banner(tree, assets_dir)
     patch_wireless(tree, settings)
     patch_kernel_version(tree)
     remove_ssr_plus(tree)
     patch_turboacc(tree, settings)
-    verify_core(tree, settings)
+    verify_core(tree, settings, assets_dir)
 
 
-def verify_core(tree: Path, settings: BuildSettings) -> None:
+def verify_core(tree: Path, settings: BuildSettings, assets_dir: Path | str | None = None) -> None:
     tree = Path(tree)
     util.header("Verifying core customisations")
     problems: list[str] = []
@@ -507,6 +536,14 @@ def verify_core(tree: Path, settings: BuildSettings) -> None:
         path = tree / "target" / "linux" / board / "Makefile"
         if path.exists() and f"KERNEL_PATCHVER:={KERNEL_VERSION}" not in util.read_text(path):
             problems.append(f"target/linux/{board}/Makefile does not use kernel {KERNEL_VERSION}")
+
+    banner = read_banner(assets_dir)
+    if banner is not None:
+        banner_path = tree / CORE_FILES["banner"]
+        if not banner_path.exists():
+            problems.append(f"{CORE_FILES['banner']} is missing")
+        elif util.read_text(banner_path) != banner:
+            problems.append(f"{CORE_FILES['banner']} does not match {BANNER_FILE}")
 
     if problems:
         raise util.BuildError("core customisation failed:\n  - " + "\n  - ".join(problems))

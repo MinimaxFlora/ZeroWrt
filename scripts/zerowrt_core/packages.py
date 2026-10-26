@@ -26,13 +26,104 @@ ARGON_CONFIG_REF = "master"
 # be fixed in one place.
 HELLOWORLD_REPO = "MinimaxFlora/openwrt_helloworld"
 HELLOWORLD_REF = "main"
+# Same idea as helloworld: one repository carries mosdns itself, its LuCI
+# front end and geo2txt, so nothing has to come from the feeds.
+MOSDNS_REPO = "sbwml/luci-app-mosdns"
+MOSDNS_REF = "v5"
+RAMFREE_REPO = "sbwml/luci-app-ramfree"
+RAMFREE_REF = "main"
 
 PACKAGE_DIR_NAMES = {
+    # Argon theme and the standalone settings app.
     "luci-theme-argon",
     "luci-app-argon-config",
+    # helloworld: the two LuCI front ends and the cores they pull in.
     "luci-app-passwall",
+    "luci-app-passwall2",
     "luci-app-openclash",
+    "xray-core",
+    "xray-plugin",
+    "v2ray-plugin",
+    # helloworld/v2ray-geodata builds these two; the feeds ship the same names
+    # from a directory called net/v2ray-geodata, so all three are listed.
+    "v2ray-geodata",
+    "v2ray-geoip",
+    "v2ray-geosite",
+    "sing-box",
+    "chinadns-ng",
+    "dns2socks",
+    "geoview",
+    "hysteria",
+    "ipt2socks",
+    "microsocks",
+    "naiveproxy",
+    "shadow-tls",
+    "shadowsocks-rust",
+    "shadowsocksr-libev",
+    "simple-obfs",
+    "simple-obfs-client",
+    "simple-obfs-server",
+    "tcping",
+    # sbwml/luci-app-mosdns carries the daemon, the LuCI app and geo2txt.
+    "mosdns",
+    "luci-app-mosdns",
+    "geo2txt",
+    "luci-app-ramfree",
 }
+
+BUILD_PACKAGE_RE = re.compile(r"call BuildPackage,([^)\n]+)\)")
+PKG_NAME_RE = re.compile(r"^PKG_NAME\s*:?=\s*(\S+)", re.M)
+
+
+def declared_package_names(directory: Path) -> set[str]:
+    """Names a package directory registers with the buildroot.
+
+    OpenWrt normally takes the package name from the directory, but a single
+    Makefile can build several packages: helloworld's ``v2ray-geodata``
+    directory registers ``v2ray-geoip`` and ``v2ray-geosite``, while the feeds
+    ship the very same names from a directory called ``net/v2ray-geodata``.
+    LuCI apps go the other way and write ``BuildPackage,$(PKG_NAME)``, which
+    only resolves after reading ``PKG_NAME`` from the same Makefile.
+    Comparing directory names alone therefore misses real conflicts.
+    """
+    makefile = Path(directory) / "Makefile"
+    if not makefile.is_file():
+        return set()
+
+    text = util.read_text(makefile)
+    match = PKG_NAME_RE.search(text)
+    pkg_name = match.group(1) if match else ""
+
+    names: set[str] = set()
+    for raw in BUILD_PACKAGE_RE.findall(text):
+        name = raw.replace("$(PKG_NAME)", pkg_name).strip()
+        if not name or "$" in name:
+            # Generated names such as shadowsocks-rust-$(component): the
+            # directory name already covers those packages.
+            continue
+        names.add(name)
+    if pkg_name:
+        names.add(pkg_name)
+    return names
+
+
+def new_package_names(tree: Path) -> set[str]:
+    """Every package name owned by package/new.
+
+    The static list covers what is cloned; when package/new already exists the
+    checkouts are scanned too, so adding a repository without updating this
+    file cannot silently leave a duplicate in the feeds.
+    """
+    names = set(PACKAGE_DIR_NAMES)
+    new_dir = Path(tree) / "package" / "new"
+    if not new_dir.is_dir():
+        return names
+
+    for root, dirs, _files in os.walk(new_dir, topdown=True, followlinks=False):
+        for name in dirs:
+            candidate = Path(root) / name
+            names |= declared_package_names(candidate)
+    return names
 
 
 def _env(name: str, default: str) -> str:
@@ -42,14 +133,20 @@ def _env(name: str, default: str) -> str:
 def remove_existing_package_dirs(tree: Path) -> None:
     """Drop any copy of the packages we replace (feeds, package/lean, ...)."""
     tree = Path(tree)
+    owned = new_package_names(tree)
     package_root = tree / "package"
     if not package_root.exists():
         return
     for root, dirs, _files in os.walk(package_root, topdown=True, followlinks=False):
+        if Path(root).is_relative_to(tree / "package" / "new"):
+            dirs[:] = []
+            continue
         keep = []
         for name in dirs:
             candidate = Path(root) / name
-            if name in PACKAGE_DIR_NAMES:
+            if (candidate / "Makefile").is_file() and (
+                candidate.name in owned or declared_package_names(candidate) & owned
+            ):
                 if util.remove_path(candidate):
                     util.log(f"removed existing package {candidate.relative_to(tree)}")
                 continue
@@ -107,6 +204,16 @@ def add_external_packages(tree: Path) -> None:
     )
     _fix_openclash(helloworld_dir)
 
+    # These two sit next to helloworld: one repository per checkout directly
+    # under package/new, so the layout is the same everywhere.
+    ramfree_dir = new_dir / "luci-app-ramfree"
+    _clone(_env("RAMFREE_REPO", RAMFREE_REPO), _env("RAMFREE_REF", RAMFREE_REF), ramfree_dir)
+    if not (ramfree_dir / "Makefile").exists():
+        raise util.BuildError(f"ramfree checkout is missing a Makefile: {ramfree_dir}")
+
+    mosdns_dir = new_dir / "luci-app-mosdns"
+    _clone(_env("MOSDNS_REPO", MOSDNS_REPO), _env("MOSDNS_REF", MOSDNS_REF), mosdns_dir)
+
     _validate_layout(new_dir)
 
 
@@ -147,6 +254,11 @@ def _validate_layout(new_dir: Path) -> None:
         "package/new/helloworld/v2ray-geodata/Makefile": (new_dir / "helloworld" / "v2ray-geodata" / "Makefile"),
         "package/new/helloworld/luci-app-openclash/Makefile": (
             new_dir / "helloworld" / "luci-app-openclash" / "Makefile"
+        ),
+        "package/new/luci-app-ramfree/Makefile": (new_dir / "luci-app-ramfree" / "Makefile"),
+        "package/new/luci-app-mosdns/mosdns/Makefile": (new_dir / "luci-app-mosdns" / "mosdns" / "Makefile"),
+        "package/new/luci-app-mosdns/luci-app-mosdns/Makefile": (
+            new_dir / "luci-app-mosdns" / "luci-app-mosdns" / "Makefile"
         ),
     }
     missing = [name for name, path in checks.items() if not path.exists()]

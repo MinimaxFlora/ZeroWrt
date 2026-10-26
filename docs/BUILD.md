@@ -100,7 +100,21 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 | 网站图标 | `package/new/luci-theme-argon/.../icon/*`、`package/base-files/files/www/favicon.ico` | 主题 favicon + `/favicon.ico` 都使用 ZeroWrt Logo；`branding.js` 指向新的 `favicon-zerowrt.png`，模板链接加 `?v=zerowrt` 避免浏览器缓存 |
 | 移除 SSR Plus+ | `include/target.mk`、`feeds/helloworld` | 删除默认 SSR Plus+ 插件及默认包引用 |
 | 代理插件 | `package/new/helloworld/*` | 来自 [openwrt_helloworld](https://github.com/MinimaxFlora/openwrt_helloworld)：PassWall（Xray 核心，不含 Sing-Box）、passwall2、OpenClash 与它们的内核软件包，版本更新和插件同步都在那个仓库里由 workflow 完成 |
-| 软件包列表 | `scripts/zerowrt_core/configgen.py` | 统一在 `PACKAGES` 中维护 |
+| 释放内存 | `package/new/luci-app-ramfree` | 来自 [sbwml/luci-app-ramfree](https://github.com/sbwml/luci-app-ramfree)，两种设备都装 |
+| mosdns（仅 x86_64） | `package/new/luci-app-mosdns/{mosdns,luci-app-mosdns,geo2txt}` | 来自 [sbwml/luci-app-mosdns](https://github.com/sbwml/luci-app-mosdns)（`v5`），一个仓库带三个包，跟 helloworld 同样的做法 |
+
+`package/new/` 下每个仓库一个目录，和 helloworld 平级：
+
+```
+package/new/helloworld/            # 代理插件
+package/new/luci-app-ramfree/      # 释放内存
+package/new/luci-app-mosdns/       # mosdns + LuCI + geo2txt
+package/new/luci-theme-argon/      # 主题
+```
+
+凡是 `package/new/` 里有的包，feed 里的同名目录都会被删掉，由 `scripts/zerowrt_core/packages.py` 的 `PACKAGE_DIR_NAMES` 统一维护。
+除了目录名，还会读每个 Makefile 实际 `BuildPackage` 出来的包名：`helloworld/v2ray-geodata` 生成 `v2ray-geoip` 和 `v2ray-geosite`，而 feed 从 `net/v2ray-geodata` 生成同样两个名字，只看目录名会漏掉这种重复。
+| 软件包列表 | `scripts/zerowrt_core/configgen.py` | 在 `PACKAGES` 中统一维护；只给某一台设备的包放在 `DEVICE_PACKAGES`，按 workflow 的 `device` 取值 |
 
 替换品牌素材：覆盖 `assets/background.jpg`、`assets/logo.png` 后重新运行。
 
@@ -131,26 +145,35 @@ option online_wallpaper 'none'
 
 同时替换登录 Logo、主题 `favicon.ico`、`icon/*.png` 以及根路径 `/www/favicon.ico`，浏览器标签页和 “Argon 主题设置” 里的图标都会显示 `assets/logo.png`。
 
+登录 banner 来自 `assets/banner`（含 ANSI 颜色转义），构建时会整体覆盖源码树的
+`package/base-files/files/etc/banner`；改这个文件即可，不必改代码。校验步骤会比对两侧内容，
+不一致就判定失败。
+
 ## 五、设备
 
 设备由 Actions 的 `device` 参数选择：
 
 - `ruijie_rg-x60-new`：在 `target/linux/mediatek/image/filogic.mk` 中按 `define Device/ruijie_rg-x60-new` 查找，自动得到 `mediatek/filogic`
-- `x86_64`：固定使用 `x86/64` 的 `Generic` profile，生成 `CONFIG_TARGET_x86_64_Generic=y`
+- `x86_64`：映射到 `x86/64` 的 `define Device/generic`（`target/linux/x86/image/64.mk`），生成 `CONFIG_TARGET_x86_64_DEVICE_generic=y`
+
+`x86/64` 没有独立 profile，设备名就是 upstream 里的小写 `generic`；符号必须带 `_DEVICE_` 前缀，
+写成 profile 形式（`CONFIG_TARGET_x86_64_Generic`）会被 `defconfig` 静默丢弃。因此设备名统一从源码树解析，
+不再硬编码。
 
 当前支持：
 
 ```
-ruijie_rg-x60-new   (mediatek/filogic, 设备 profile)
-x86_64              (x86/64, Generic profile)
+ruijie_rg-x60-new   (mediatek/filogic, Device/ruijie_rg-x60-new)
+x86_64              (x86/64, Device/generic)
 ```
 
-以后新增设备时：
+新增设备时：
 
 1. 源码树里必须有对应的 `define Device/<name>` 定义
 2. 在 [build.yml](.github/workflows/build.yml) 的 `device.options` 增加选项
+3. 如果这个选项名和 `define Device/<name>` 不一致（例如 `x86_64`），在 `configgen.DEVICE_ALIASES` 里登记它对应的 board/subtarget/device
 
-如果名称写错，工作流会失败并列出源码树里包含 `rg-x60` 的设备名，便于排查。
+如果名称写错，工作流会失败并列出源码树里可选的设备名，便于排查。
 
 ## 六、固件版本与登录页
 
@@ -241,7 +264,7 @@ find ./tmp/ -name '*' -exec touch {} \;
 ## 九、代码质量（QC）
 
 - Ruff 配置：`pyproject.toml`（行宽 120，`E/F/W/I/UP/B/SIM`）
-- 单元测试：`tests/test_zerowrt.py`（设置校验、IP/SSID/密码补丁、设备查找、`.config` 生成、Argon 品牌化、产物收集）
+- 单元测试：`tests/test_zerowrt.py`（设置校验、IP/SSID/密码补丁、登录 banner、设备查找、`.config` 生成、Argon 品牌化、产物收集）
 - 质量工作流：[.github/workflows/quality.yml](.github/workflows/quality.yml)，在 push / PR 时运行：
 
 ```bash
@@ -261,7 +284,7 @@ python3 -m unittest discover -s tests -v
 ```
 .github/workflows/build.yml      # 编译工作流
 .github/workflows/quality.yml    # Ruff + 单元测试
-assets/                          # 登录背景、Logo
+assets/                          # 登录背景、Logo、登录 banner
 scripts/zerowrt.py               # CLI 入口
 scripts/zerowrt_core/
   settings.py                    # 参数校验（IP、WiFi、设备）

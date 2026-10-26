@@ -8,6 +8,7 @@ from __future__ import annotations
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -103,6 +104,11 @@ sed -i -e '/OPENWRT_RELEASE/d' /usr/lib/os-release
 echo 'OPENWRT_RELEASE="LEDE R@BUILD_DATE@"' >> /usr/lib/os-release
 """
 
+    UPSTREAM_BANNER = """\
+  _______                     ________        __
+ |       |.-----.-----.-----.|  |  |  |.----.|  |_
+"""
+
     WIFI_SCRIPT = """\
 mac80211_emit_detect() {
 \tlocal band="$3"
@@ -129,6 +135,7 @@ mac80211_emit_detect() {
         self.write("package/base-files/files/bin/config_generate", self.CONFIG_GENERATE)
         self.write("package/base-files/luci/bin/config_generate", self.CONFIG_GENERATE)
         self.write("package/lean/default-settings/files/zzz-default-settings", self.DEFAULT_SETTINGS)
+        self.write("package/base-files/files/etc/banner", self.UPSTREAM_BANNER)
         self.write("package/kernel/mac80211/files/lib/wifi/mac80211.sh", self.WIFI_SCRIPT)
         self.write(
             "target/linux/mediatek/Makefile",
@@ -172,6 +179,16 @@ mac80211_emit_detect() {
         self.assertIn('encryption="psk2"', wifi)
         self.assertIn('encryption="sae"', wifi)
         self.assertNotIn('ssid="LEDE"', wifi)
+
+        expected_banner = (REPO_ROOT / "assets" / "banner").read_text(encoding="utf-8")
+        self.assertEqual(util.read_text(tree / source.CORE_FILES["banner"]), expected_banner)
+
+    def test_missing_banner_asset_is_not_fatal(self) -> None:
+        tree = self.prepare()
+        build_settings = settings.BuildSettings().validated()
+        with unittest.mock.patch.object(source, "read_banner", return_value=None):
+            source.apply_core_customisations(tree, build_settings)
+        self.assertEqual(util.read_text(tree / source.CORE_FILES["banner"]), self.UPSTREAM_BANNER)
 
     def test_ssr_plus_removed(self) -> None:
         tree = self.prepare()
@@ -230,6 +247,48 @@ TARGET_DEVICES += ruijie_rg-x60-pro
         with self.assertRaises(util.BuildError):
             configgen.find_device(self.root, "missing_device")
 
+    def prepare_x86(self) -> Path:
+        self.write("target/linux/x86/Makefile", "SUBTARGETS:=64 generic geode legacy\nKERNEL_PATCHVER:=6.18\n")
+        for subtarget in ("64", "generic", "geode", "legacy"):
+            self.write(f"target/linux/x86/{subtarget}/target.mk", f"BOARDNAME:={subtarget}\n")
+        self.write(
+            "target/linux/x86/image/64.mk",
+            "define Device/generic\n  DEVICE_VENDOR := Generic\n  DEVICE_MODEL := x86/64\nendef\n"
+            "TARGET_DEVICES += generic\n",
+        )
+        self.write(
+            "target/linux/x86/image/generic.mk",
+            "define Device/generic\n  DEVICE_VENDOR := Generic\n  DEVICE_MODEL := x86\nendef\n"
+            "TARGET_DEVICES += generic\n",
+        )
+        return self.root
+
+    def test_x86_64_target(self) -> None:
+        # Upstream declares "Device/generic" (lowercase) in
+        # target/linux/x86/image/64.mk, so the symbol carries _DEVICE_.
+        tree = self.prepare_x86()
+        target = configgen.resolve_target(tree, "x86_64")
+        self.assertEqual(target["board"], "x86")
+        self.assertEqual(target["subtarget"], "64")
+        self.assertEqual(target["name"], "generic")
+
+        text = configgen._render_config(target, configgen.PACKAGES)
+        self.assertIn("CONFIG_TARGET_x86=y", text)
+        self.assertIn("CONFIG_TARGET_x86_64=y", text)
+        self.assertIn("CONFIG_TARGET_x86_64_DEVICE_generic=y", text)
+
+    def test_x86_generic_subtarget(self) -> None:
+        # Both x86 subtargets declare "Device/generic": the subtarget of the
+        # alias must decide which one wins.
+        tree = self.prepare_x86()
+        target = configgen.resolve_target(tree, "x86_generic")
+        self.assertEqual(target["subtarget"], "generic")
+        self.assertIn("CONFIG_TARGET_x86_generic_DEVICE_generic=y", configgen._render_config(target, []))
+
+    def test_alias_without_source_tree_raises(self) -> None:
+        with self.assertRaises(util.BuildError):
+            configgen.resolve_target(self.root, "x86_64")
+
 
 class ConfigRenderTest(unittest.TestCase):
     def test_target_and_packages(self) -> None:
@@ -257,14 +316,6 @@ class ConfigRenderTest(unittest.TestCase):
         self.assertIn("# CONFIG_PACKAGE_sing-box is not set", text)
         self.assertNotIn("CONFIG_PACKAGE_sing-box=y", text)
 
-    def test_x86_64_profile(self) -> None:
-        target = configgen.resolve_target(Path("."), "x86_64")
-        text = configgen._render_config(target, configgen.PACKAGES)
-        self.assertIn("CONFIG_TARGET_x86=y", text)
-        self.assertIn("CONFIG_TARGET_x86_64=y", text)
-        self.assertIn("CONFIG_TARGET_x86_64_Generic=y", text)
-        self.assertNotIn("_DEVICE_", text)
-
 
 class PackageSelectionTest(TempTreeTest):
     def test_argon_app_only_when_cloned(self) -> None:
@@ -272,6 +323,85 @@ class PackageSelectionTest(TempTreeTest):
         self.assertNotIn(package, configgen._packages(self.root))
         (self.root / "package/new/luci-app-argon-config").mkdir(parents=True)
         self.assertIn(package, configgen._packages(self.root))
+
+    def test_ramfree_goes_into_every_device(self) -> None:
+        for device in (None, "ruijie_rg-x60-new", "x86_64"):
+            with self.subTest(device=device):
+                self.assertIn("CONFIG_PACKAGE_luci-app-ramfree", configgen._packages(self.root, device))
+
+    def test_mosdns_is_x86_only(self) -> None:
+        self.assertNotIn("CONFIG_PACKAGE_luci-app-mosdns", configgen._packages(self.root))
+        self.assertNotIn("CONFIG_PACKAGE_luci-app-mosdns", configgen._packages(self.root, "ruijie_rg-x60-new"))
+        self.assertIn("CONFIG_PACKAGE_luci-app-mosdns", configgen._packages(self.root, "x86_64"))
+
+    def test_device_packages_land_in_the_config(self) -> None:
+        target = configgen.resolve_target(self._x86_tree(), "x86_64")
+        text = configgen._render_config(target, configgen._packages(self.root, "x86_64"))
+        self.assertIn("CONFIG_PACKAGE_luci-app-mosdns=y", text)
+        self.assertIn("CONFIG_PACKAGE_luci-app-ramfree=y", text)
+
+    def _x86_tree(self) -> Path:
+        self.write("target/linux/x86/Makefile", "SUBTARGETS:=64 generic geode legacy\n")
+        self.write("target/linux/x86/64/target.mk", "BOARDNAME:=x86_64\n")
+        self.write(
+            "target/linux/x86/image/64.mk",
+            "define Device/generic\n  DEVICE_VENDOR := Generic\n  DEVICE_MODEL := x86/64\nendef\n"
+            "TARGET_DEVICES += generic\n",
+        )
+        return self.root
+
+
+class FeedConflictTest(TempTreeTest):
+    """Feeds must not ship anything that package/new already provides."""
+
+    def feed(self, relative: str, pkg_name: str, buildpackages: str) -> None:
+        self.write(f"{relative}/Makefile", f"PKG_NAME:={pkg_name}\ninclude $(TOPDIR)/rules.mk\n{buildpackages}\n")
+
+    def test_geoip_and_geosite_come_from_the_new_tree(self) -> None:
+        # helloworld's v2ray-geodata directory builds these two, and the feed
+        # ships the same names from a directory called net/v2ray-geodata, so a
+        # directory-name match alone would leave the duplicate behind.
+        self.feed(
+            "feeds/packages/net/v2ray-geodata",
+            "v2ray-geodata",
+            "$(eval $(call BuildPackage,v2ray-geoip))\n$(eval $(call BuildPackage,v2ray-geosite))",
+        )
+        source.prune_feed_conflicts(self.root)
+        self.assertFalse((self.root / "feeds/packages/net/v2ray-geodata").exists())
+
+    def test_mosdns_and_ramfree_feed_copies_are_dropped(self) -> None:
+        self.feed("feeds/packages/net/mosdns", "mosdns", "$(eval $(call BuildPackage,mosdns))")
+        self.feed(
+            "feeds/luci/applications/luci-app-mosdns",
+            "luci-app-mosdns",
+            "$(eval $(call BuildPackage,$(PKG_NAME)))",
+        )
+        self.feed(
+            "feeds/luci/applications/luci-app-ramfree",
+            "luci-app-ramfree",
+            "$(eval $(call BuildPackage,$(PKG_NAME)))",
+        )
+        source.prune_feed_conflicts(self.root)
+        self.assertFalse((self.root / "feeds/packages/net/mosdns").exists())
+        self.assertFalse((self.root / "feeds/luci/applications/luci-app-mosdns").exists())
+        self.assertFalse((self.root / "feeds/luci/applications/luci-app-ramfree").exists())
+
+    def test_installed_feed_links_are_pruned_too(self) -> None:
+        self.feed("package/feeds/packages/mosdns", "mosdns", "$(eval $(call BuildPackage,mosdns))")
+        source.prune_feed_conflicts(self.root)
+        self.assertFalse((self.root / "package/feeds/packages/mosdns").exists())
+
+    def test_unrelated_feed_package_survives(self) -> None:
+        self.feed("feeds/packages/net/curl", "curl", "$(eval $(call BuildPackage,curl))")
+        source.prune_feed_conflicts(self.root)
+        self.assertTrue((self.root / "feeds/packages/net/curl").exists())
+
+    def test_asset_directory_with_a_package_name_survives(self) -> None:
+        # A LuCI app ships static assets under a path that can end in a package
+        # name; those directories have no Makefile and must not be touched.
+        self.write("feeds/luci/applications/luci-app-example/htdocs/mosdns/index.html", "hi")
+        source.prune_feed_conflicts(self.root)
+        self.assertTrue((self.root / "feeds/luci/applications/luci-app-example/htdocs/mosdns").exists())
 
 
 class ImageTest(unittest.TestCase):

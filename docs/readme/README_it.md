@@ -44,7 +44,7 @@ successivo.
 - **Confronto versioni onesto** — decide il timestamp di build, altrimenti la stringa di versione; una data sconosciuta resta sconosciuta, non viene inventata.
 - **Configurazione dal workflow** — IP LAN, hostname e tre SSID e password Wi-Fi sono input di build, non file modificati a mano.
 - **Branding Argon 3** — sfondo, logo di accesso, favicon e palette (`#2E9D72` / `#4CAF86`) sostituiti in fase di build.
-- **Stack proxy incluso** — PassWall (solo Sing-Box) e OpenClash, sincronizzati dagli script di build.
+- **Stack proxy incluso** — PassWall (solo Xray) e OpenClash, sincronizzati dagli script di build.
 - **Pipeline controllata** — `ruff` e 18 test unitari su ogni pull request.
 
 ## Dispositivi supportati

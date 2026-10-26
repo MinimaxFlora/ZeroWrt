@@ -250,10 +250,12 @@ class ConfigRenderTest(unittest.TestCase):
         self.assertNotIn("luci-compat", text)
         self.assertNotIn("CONFIG_VERSION_DIST", text)
         self.assertIn("CONFIG_DEVEL=y", text)
-        self.assertIn("CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox=y", text)
-        self.assertIn("# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray is not set", text)
-        self.assertIn("CONFIG_PACKAGE_sing-box=y", text)
-        self.assertIn("# CONFIG_PACKAGE_xray-core is not set", text)
+        self.assertIn("CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y", text)
+        self.assertIn("# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox is not set", text)
+        self.assertIn("CONFIG_PACKAGE_luci-app-passwall_INCLUDE_V2ray_Geodata=y", text)
+        self.assertIn("CONFIG_PACKAGE_xray-core=y", text)
+        self.assertIn("# CONFIG_PACKAGE_sing-box is not set", text)
+        self.assertNotIn("CONFIG_PACKAGE_sing-box=y", text)
 
     def test_x86_64_profile(self) -> None:
         target = configgen.resolve_target(Path("."), "x86_64")

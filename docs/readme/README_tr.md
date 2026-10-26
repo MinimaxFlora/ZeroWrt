@@ -44,7 +44,7 @@ imajı ve dizini yayınlar, yönlendirici bir sonraki denetimde yeni sürümü g
 - **Dürüst sürüm karşılaştırması** — "daha yeni" kararını derleme zaman damgası verir, yoksa sürüm dizesi karşılaştırılır; bilinmeyen tarih uydurulmaz, bilinmiyor olarak gösterilir.
 - **Yapılandırma workflow'dan** — LAN IP'si, ana makine adı ve üç Wi-Fi SSID/parolası derleme girdisidir, elle düzenlenen dosyalar değildir.
 - **Argon 3 markası** — arka plan, giriş logosu, favicon ve palet (`#2E9D72` / `#4CAF86`) derleme sırasında değiştirilir.
-- **Proxy yığını dahil** — PassWall (yalnızca Sing-Box) ve OpenClash, derleme betikleriyle eşitlenir.
+- **Proxy yığını dahil** — PassWall (yalnızca Xray) ve OpenClash, derleme betikleriyle eşitlenir.
 - **Kontrollü hat** — her pull request'te `ruff` ve 18 birim testi çalışır.
 
 ## Desteklenen cihazlar

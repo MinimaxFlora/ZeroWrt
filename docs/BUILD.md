@@ -99,7 +99,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 | Argon 外观 | 主题包内 `root/etc/config/argon` | 亮色模式、主色 `#2E9D72`、暗色主色 `#4CAF86`、在线壁纸 `none` |
 | 网站图标 | `package/new/luci-theme-argon/.../icon/*`、`package/base-files/files/www/favicon.ico` | 主题 favicon + `/favicon.ico` 都使用 ZeroWrt Logo；`branding.js` 指向新的 `favicon-zerowrt.png`，模板链接加 `?v=zerowrt` 避免浏览器缓存 |
 | 移除 SSR Plus+ | `include/target.mk`、`feeds/helloworld` | 删除默认 SSR Plus+ 插件及默认包引用 |
-| 代理插件 | `package/new/helloworld/*` | 来自 [openwrt_helloworld](https://github.com/MinimaxFlora/openwrt_helloworld)：PassWall（Sing-Box 核心，不含 Xray）、passwall2、OpenClash 与它们的内核软件包，版本更新和插件同步都在那个仓库里由 workflow 完成 |
+| 代理插件 | `package/new/helloworld/*` | 来自 [openwrt_helloworld](https://github.com/MinimaxFlora/openwrt_helloworld)：PassWall（Xray 核心，不含 Sing-Box）、passwall2、OpenClash 与它们的内核软件包，版本更新和插件同步都在那个仓库里由 workflow 完成 |
 | 软件包列表 | `scripts/zerowrt_core/configgen.py` | 统一在 `PACKAGES` 中维护 |
 
 替换品牌素材：覆盖 `assets/background.jpg`、`assets/logo.png` 后重新运行。
@@ -184,14 +184,22 @@ PACKAGES = [
 
 ShadowSocksR Plus+ 已从 `include/target.mk` 默认包、`feeds/helloworld` 和最终 `.config` 中移除。
 
-PassWall 使用 Sing-Box 核心，显式关闭 Xray，避免同时带两个大内核：
+PassWall 使用 Xray 核心，显式关闭 Sing-Box，避免同时带两个大内核：
 
 ```ini
-CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox=y
-# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray is not set
-CONFIG_PACKAGE_sing-box=y
-# CONFIG_PACKAGE_xray-core is not set
+CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y
+# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox is not set
+CONFIG_PACKAGE_luci-app-passwall_INCLUDE_V2ray_Geodata=y
+CONFIG_PACKAGE_xray-core=y
+# CONFIG_PACKAGE_sing-box is not set
 ```
+
+`INCLUDE_V2ray_Geodata` 带进 `v2ray-geoip` / `v2ray-geosite`，安装到 `/usr/share/v2ray/`，
+Xray 的 `geoip:` / `geosite:` 分流规则以及 PassWall 的 TCP 分流节点都依赖这两个文件；
+缺了它们 PassWall 会为每个分流节点记一条“缺少 Geo 规则文件”的错误，分流不生效。
+
+生成 `.config` 后会校验：`xray-core` 必须在，`sing-box` 和 `INCLUDE_SingBox` 必须不在，
+任何一个不满足就直接失败，避免镜像里混进两个内核。
 
 Argon `master` 内置设置界面时，脚本会自动从 `.config` 中去掉 `luci-app-argon-config`，避免安装不存在的独立包。
 

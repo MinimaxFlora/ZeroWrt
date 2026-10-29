@@ -46,7 +46,7 @@ time it checks.
 - **Configuration from the workflow** — LAN IP, hostname and the three Wi-Fi SSIDs and passwords are inputs, not hand-edited files.
 - **Argon 3 branding** — background, login logo, favicon and palette (`#2E9D72` / `#4CAF86`) are replaced at build time, together with the login banner in `assets/banner`.
 - **Proxy stack included** — PassWall (Xray core) and OpenClash, vendored from [openwrt_helloworld](https://github.com/MinimaxFlora/openwrt_helloworld) so the build depends on one checkout instead of four upstream repositories.
-- **Gated pipeline** — `ruff` and 29 unit tests run on every pull request.
+- **Gated pipeline** — `ruff` and 30 unit tests run on every pull request.
 
 ## Supported devices
 

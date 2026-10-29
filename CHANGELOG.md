@@ -37,7 +37,15 @@
   mosdns 仓库的落点由 `package/new/mosdns` 调整为 `package/new/luci-app-mosdns`。
 - "我们拥有哪些包"的清单收敛到 `scripts/zerowrt_core/packages.py` 的 `PACKAGE_DIR_NAMES`，
   feeds 清理与 `package/` 清理共用这一份，不再各自维护导致漂移。
-- 单元测试增至 29 个，新增 `FeedConflictTest` 覆盖上述重复包场景。
+- 单元测试增至 30 个，新增 `FeedConflictTest` 覆盖上述重复包场景。
+
+### Removed
+
+- **TurboACC 插件与默认值** —— 上游 `coolsnowwolf/luci` 已删除 `luci-app-turboacc`
+  （“luci-app-turboacc: remove obsolete acceleration interface”），`.config` 不再选择该包，
+  `source.py` 也不再写入 `/etc/uci-defaults/zz-zerowrt-turboacc`（BBR、硬件 NAT、WED）。
+  LEDE 的 `include/target.mk` 里残留的 `DEFAULT_PACKAGES` 引用同样会被清掉，否则镜像阶段会尝试安装
+  一个 feeds 里不存在的包。
 
 ## [0.1.0] — 初始版本
 

@@ -206,6 +206,19 @@ mac80211_emit_detect() {
             util.read_text(tree / "target/linux/mediatek/filogic/target.mk"),
         )
 
+    def test_turboacc_removed(self) -> None:
+        """Upstream luci dropped luci-app-turboacc, so ZeroWrt must not ship it."""
+        tree = self.prepare()
+        self.write("include/target.mk", "DEFAULT_PACKAGES.router += luci-app-turboacc luci-app-wol\n")
+        self.write("package/lean/luci-app-turboacc/Makefile", "include $(TOPDIR)/rules.mk\n")
+
+        source.apply_core_customisations(tree, settings.BuildSettings().validated())
+
+        self.assertFalse((tree / "package/lean/luci-app-turboacc").exists())
+        self.assertNotIn("luci-app-turboacc", util.read_text(tree / "include/target.mk"))
+        self.assertFalse((tree / "files/etc/uci-defaults/zz-zerowrt-turboacc").exists())
+        self.assertFalse([package for package in configgen.PACKAGES if "turboacc" in package])
+
 
 class DeviceLookupTest(TempTreeTest):
     def prepare(self) -> Path:

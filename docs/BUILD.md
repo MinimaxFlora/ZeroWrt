@@ -197,8 +197,6 @@ PACKAGES = [
     "CONFIG_PACKAGE_luci-i18n-ota-zh-cn",
     "CONFIG_PACKAGE_luci-app-ttyd",          # 终端：x86_64 与 RG-X60 都带
     "CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn",
-    "CONFIG_PACKAGE_luci-app-turboacc",
-    "CONFIG_PACKAGE_luci-i18n-turboacc-zh-cn",
 ]
 ```
 
@@ -206,6 +204,12 @@ PACKAGES = [
 `coolsnowwolf/packages` 的 `utils/ttyd`）会同时进入 x86_64 和 `ruijie_rg-x60-new` 的固件。
 
 ShadowSocksR Plus+ 已从 `include/target.mk` 默认包、`feeds/helloworld` 和最终 `.config` 中移除。
+
+上游 `coolsnowwolf/luci` 已删除 `luci-app-turboacc`（提交 “luci-app-turboacc: remove obsolete acceleration interface”），
+因此 ZeroWrt 不再选择该包，也不再写入 `/etc/uci-defaults/zz-zerowrt-turboacc` 里的 BBR、硬件 NAT 和 WED 默认值。
+LEDE 的 `include/target.mk` 默认包里仍留着这条引用，脚本会像处理 `luci-app-ssr-plus` 一样把它从
+`DEFAULT_PACKAGES` 中删掉，避免镜像阶段去安装一个 feeds 里已经不存在的包。
+如果仍需要 BBR，可在设备启动后用 `sysctl net.ipv4.tcp_congestion_control=bbr` 自行开启。
 
 PassWall 使用 Xray 核心，显式关闭 Sing-Box，避免同时带两个大内核：
 

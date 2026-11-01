@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generated": 1793426461,
+  "generated": 1793518994,
   "dist": "ZeroWrt",
   "releases": [
     {
@@ -29,19 +29,6 @@
     },
     {
       "version": "20261028",
-      "build_date": 1793165439,
-      "url": "https://github.com/MinimaxFlora/ZeroWrt/releases/download/x86_64/zerowrt-x86-64-generic-squashfs-combined-efi.img.gz",
-      "sha256": "c1e2e1f7df8c4cf6709cff643b09745cbed17c5f3ce7f4ec293a4e644bf50e65",
-      "size": 126127112,
-      "file": "zerowrt-x86-64-generic-squashfs-combined-efi.img.gz",
-      "target": "x86/64",
-      "device": "generic",
-      "label": "x86/64",
-      "variant": "efi",
-      "changelog": "**ZeroWrt 20261028**\n\nDevice: `generic`\n\nTarget: `x86/64`\n\nBuilt: 2026-10-28 06:45:13 UTC\n\n[Workflow run](https://github.com/MinimaxFlora/ZeroWrt/actions/runs/40637984443)"
-    },
-    {
-      "version": "20261028",
       "build_date": 1793156106,
       "url": "https://github.com/MinimaxFlora/ZeroWrt/releases/download/ruijie_rg-x60-new/zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin",
       "sha256": "cc0dadacd43000e6e521bddcbd2aea003253993111e0c82b27102b50f8775bd9",
@@ -63,19 +50,6 @@
       "device": "ruijie_rg-x60-new",
       "label": "Ruijie RG-X60 New",
       "changelog": "**ZeroWrt 20261027**\n\nDevice: `ruijie_rg-x60-new`\n\nTarget: `mediatek/filogic`\n\nBuilt: 2026-10-27 14:59:24 UTC\n\n[Workflow run](https://github.com/MinimaxFlora/ZeroWrt/actions/runs/40515351741)"
-    },
-    {
-      "version": "20261027",
-      "build_date": 1793061982,
-      "url": "https://github.com/MinimaxFlora/ZeroWrt/releases/download/x86_64/zerowrt-x86-64-generic-squashfs-combined-efi.img.gz",
-      "sha256": "1f5b3fe3c429edcbdc16dcc9cdfe53d2f4092eb4718536ae6307c00420f475eb",
-      "size": 126140127,
-      "file": "zerowrt-x86-64-generic-squashfs-combined-efi.img.gz",
-      "target": "x86/64",
-      "device": "generic",
-      "label": "x86/64",
-      "variant": "efi",
-      "changelog": "**ZeroWrt 20261027**\n\nDevice: `generic`\n\nTarget: `x86/64`\n\nBuilt: 2026-10-27 02:10:07 UTC\n\n[Workflow run](https://github.com/MinimaxFlora/ZeroWrt/actions/runs/40428044773)"
     },
     {
       "version": "20261026",

@@ -1,16 +1,11 @@
-"""Source tree handling: clone the upstream tree for a device, update feeds and
-apply the core ZeroWrt customisations that have to happen inside it.
-
-Two trees are in play (see :mod:`zerowrt_core.profiles`): ImmortalWrt for the
-MT7986 board and LEDE for x86_64. Both are public, so cloning needs no token;
-the differences that matter are expressed as the ``base`` name.
+"""Source tree handling: clone the ImmortalWrt tree, update feeds and apply the
+core ZeroWrt customisations that have to happen inside it.
 """
 
 from __future__ import annotations
 
 import os
 import re
-import shlex
 from datetime import datetime
 from pathlib import Path
 
@@ -20,12 +15,10 @@ from .settings import BuildSettings
 CORE_FILES = {
     "version": Path("include/version.mk"),
     "config_generate": Path("package/base-files/files/bin/config_generate"),
-    "config_generate_luci": Path("package/base-files/luci/bin/config_generate"),
     "openwrt_release": Path("package/base-files/files/etc/openwrt_release"),
     "os_release": Path("package/base-files/files/usr/lib/os-release"),
-    "default_settings": Path("package/lean/default-settings/files/zzz-default-settings"),
     "banner": Path("package/base-files/files/etc/banner"),
-    # ImmortalWrt's MTK wireless stack generates /etc/config/wireless here.
+    # The MTK wireless stack generates /etc/config/wireless here.
     "mtwifi": Path("package/mtk/applications/mtwifi-cfg/files/mtwifi.sh"),
 }
 
@@ -39,34 +32,6 @@ TREE_OVERLAY = Path("files")
 BANNER_FILE = Path("assets") / "banner"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-WIFI_SCRIPTS = (
-    Path("package/kernel/mac80211/files/lib/wifi/mac80211.sh"),
-    Path("package/network/config/wifi-scripts/files/lib/wifi/mac80211.sh"),
-)
-
-# Only the LEDE tree gets its kernel pinned. The MT798x fork is a 6.6 tree with
-# its own MTK patch set, and forcing a newer patch level there breaks it.
-KERNEL_VERSION = "6.18"
-KERNEL_BOARDS = {"lede": ("x86",)}
-
-SSID_LINE_RE = re.compile(r'^(?P<indent>[ \t]*)\[ -n "\$ssid" \] \|\| ssid=(["\']?)(?:LEDE|OpenWrt)\2[ \t]*$', re.M)
-SSID_FALLBACK_RE = re.compile(r'^(?P<indent>[ \t]*)ssid=(["\']?)(?:LEDE|OpenWrt)\2[ \t]*$', re.M)
-# Fixed channel widths: 40 MHz on 2.4 GHz, 160 MHz on 5 GHz. The stock script
-# derives the width from what the radio reports and often ends up at 20/80.
-HTMODE_TAIL = """\techo \"${prefix}${width}\"
-}
-"""
-HTMODE_TAIL_NEW = """\t# ZeroWrt: fixed channel widths, 40 MHz on 2.4 GHz and 160 MHz on 5 GHz.
-\tcase \"$band\" in
-\t\t2g) echo \"${prefix}40\" ;;
-\t\t5g) echo \"${prefix}160\" ;;
-\t\t*) echo \"${prefix}${width}\" ;;
-\tesac
-}
-"""
-
-KEY_LINE_RE = re.compile(r'^(?P<indent>[ \t]*)key="\$default_key"[ \t]*$', re.M)
-
 # mtwifi.sh ships one default SSID per radio band and leaves the network open.
 MTWIFI_SSID_RE = re.compile(r'ssid="(?:ImmortalWrt|LEDE|OpenWrt)-(2\.4G|5G|6G)"')
 MTWIFI_OPEN_RE = re.compile(r"(?P<indent>[ \t]*)set wireless\.default_\$\{dev\}\.encryption=none\n")
@@ -74,27 +39,6 @@ MTWIFI_BANDS = {"2.4G": "2g", "5G": "5g", "6G": "6g"}
 
 IPAD_RE = re.compile(r'ipad=\$\{ipaddr:-"[^"]*"\}')
 HOSTNAME_RE = re.compile(r"(hostname=')(?:LEDE|OpenWrt|ImmortalWrt)(')")
-
-
-def _ssid_block(indent: str, settings: BuildSettings) -> str:
-    lines = [f'{indent}case "$band" in']
-    for band in ("2g", "5g", "6g"):
-        lines.append(f"{indent}\t{band}) ssid={shlex.quote(settings.ssid(band))} ;;")
-    lines.append(f"{indent}\t*) ssid={shlex.quote(settings.wifi_name)} ;;")
-    lines.append(f"{indent}esac")
-    return "\n".join(lines)
-
-
-def _wifi_key_block(indent: str, settings: BuildSettings) -> str:
-    key = shlex.quote(settings.wifi_password)
-    lines = [
-        f"{indent}key={key}",
-        f'{indent}case "$band" in',
-        f'{indent}\t6g) encryption="sae" ;;',
-        f'{indent}\t*) encryption="psk2" ;;',
-        f"{indent}esac",
-    ]
-    return "\n".join(lines)
 
 
 def clone_source(
@@ -160,7 +104,7 @@ def prune_feed_conflicts(tree: Path) -> list[Path]:
     the feed version usually wins silently because it was scanned first.
     """
     tree = Path(tree)
-    names = packages.new_package_names(tree) | {"luci-app-ssr-plus"}
+    names = packages.new_package_names(tree)
     removed: list[Path] = []
     _prune_packages(tree / "feeds", names, removed=removed)
     _prune_packages(tree / "package" / "feeds", names, removed=removed)
@@ -203,57 +147,6 @@ def update_feeds(tree: Path) -> None:
         )
 
 
-def _remove_default_package(tree: Path, package: str) -> list[Path]:
-    """Delete a package and its references from the default package lists.
-
-    A stale ``DEFAULT_PACKAGES`` entry outlives the package itself, and the
-    image step then tries to install something no feed provides.
-    """
-    removed: list[Path] = []
-    for base in (tree / "package", tree / "feeds"):
-        _prune_packages(base, {package}, removed=removed)
-    for path in removed:
-        util.log(f"removed {path.relative_to(tree)}")
-
-    token_re = re.compile(rf"(?<![\w./-]){re.escape(package)}(?![\w./-])[ \t]*")
-    patched: list[Path] = []
-    candidates = [tree / "include" / "target.mk"]
-    linux_dir = tree / "target" / "linux"
-    if linux_dir.exists():
-        candidates.extend(linux_dir.rglob("*.mk"))
-    for path in candidates:
-        if not path.exists():
-            continue
-        text = util.read_text(path)
-        if package not in text:
-            continue
-        util.write_text(path, token_re.sub(" ", text))
-        patched.append(path)
-        util.log(f"{path.relative_to(tree)}: removed {package}")
-    return removed + patched
-
-
-def remove_ssr_plus(tree: Path) -> None:
-    """Drop ShadowSocksR Plus+ from the tree and the default packages."""
-    tree = Path(tree)
-    util.header("Removing ShadowSocksR Plus+")
-    if not _remove_default_package(tree, "luci-app-ssr-plus"):
-        util.log("luci-app-ssr-plus was not present")
-
-
-def remove_turboacc(tree: Path) -> None:
-    """Drop the TurboACC package and its stale default-package entries.
-
-    coolsnowwolf/luci deleted luci-app-turboacc while LEDE still lists it in
-    DEFAULT_PACKAGES, so the reference has to go or the image step fails on a
-    package that no feed provides.
-    """
-    tree = Path(tree)
-    util.header("Removing TurboACC")
-    if not _remove_default_package(tree, "luci-app-turboacc"):
-        util.log("luci-app-turboacc was not present")
-
-
 def strip_tree_overlay(tree: Path) -> None:
     """Delete the tree level ``files/`` overlay.
 
@@ -278,9 +171,9 @@ def patch_version_mk(tree: Path) -> None:
         raise util.BuildError(f"missing {path}")
 
     util.header("Patching include/version.mk")
-    # Upstream defines the default with OpenWrt, LEDE or ImmortalWrt depending
-    # on the tree, so rewrite whatever the assignment holds instead of matching
-    # three literals: a literal that is not there is not a problem.
+    # Upstream names the distribution ImmortalWrt (OpenWrt or LEDE in other
+    # trees), so rewrite whatever the assignment holds instead of matching a
+    # literal: a literal that is not there is not a problem.
     for variable in ("VERSION_DIST", "VERSION_MANUFACTURER"):
         text = util.read_text(path)
         wanted = f"{variable}:=$(if $({variable}),$({variable}),ZeroWrt)"
@@ -331,11 +224,8 @@ def patch_version_mk(tree: Path) -> None:
 def patch_release_files(tree: Path) -> None:
     """Write the ZeroWrt release strings the way the old ``sed`` commands did.
 
-    Both trees ship *templates* here (``%D``/``%V``/``%C``), so the strings are
-    written as literals instead of relying on substitution. LEDE additionally
-    rewrites ``/etc/openwrt_release`` and ``/usr/lib/os-release`` from
-    ``package/lean/default-settings`` on first boot, which would bring the
-    upstream name back; that script is patched to the same values.
+    The tree ships *templates* here (``%D``/``%V``/``%C``), so the strings are
+    written as literals instead of relying on substitution.
     """
     tree = Path(tree)
     date = datetime.now().strftime("%Y%m%d")
@@ -377,29 +267,6 @@ def patch_release_files(tree: Path) -> None:
     else:
         util.warn(f"missing {CORE_FILES['os_release']}")
 
-    defaults = tree / CORE_FILES["default_settings"]
-    if not defaults.exists():
-        return
-
-    # LEDE (not ImmortalWrt) rewrites the release files from this script.
-    text = util.read_text(defaults)
-    patched = False
-    for old, new in (
-        ("DISTRIB_DESCRIPTION='LEDE '", f"DISTRIB_DESCRIPTION='{description}'"),
-        ("DISTRIB_DESCRIPTION='OpenWrt '", f"DISTRIB_DESCRIPTION='{description}'"),
-        ("DISTRIB_REVISION='R@BUILD_DATE@'", f"DISTRIB_REVISION='{revision}'"),
-        ('OPENWRT_RELEASE="LEDE R@BUILD_DATE@"', release_line),
-        ('OPENWRT_RELEASE="OpenWrt R@BUILD_DATE@"', release_line),
-    ):
-        if old in text:
-            text = text.replace(old, new)
-            patched = True
-    if patched:
-        util.write_text(defaults, text)
-        util.log(f"patched {CORE_FILES['default_settings']}")
-    else:
-        util.warn(f"{CORE_FILES['default_settings']}: no upstream release lines were found")
-
 
 def read_banner(assets_dir: Path | str | None = None) -> str | None:
     """Read the ZeroWrt banner art, or None when the asset is unavailable."""
@@ -434,97 +301,34 @@ def patch_banner(tree: Path, assets_dir: Path | str | None = None) -> bool:
 
 
 def patch_config_generate(tree: Path, ip: str) -> None:
+    path = Path(tree) / CORE_FILES["config_generate"]
+    if not path.exists():
+        raise util.BuildError(f"missing {path}")
+
     util.header("Patching config_generate (LAN IP / hostname)")
-    for relative in (CORE_FILES["config_generate"], CORE_FILES["config_generate_luci"]):
-        path = Path(tree) / relative
-        if not path.exists():
-            util.warn(f"missing {relative}; skipping")
-            continue
+    text = util.read_text(path)
+    original = text
+    # Default LAN address of the generated /etc/config/network. ImmortalWrt has
+    # a per-board branch ("ruijie,rg-x60*") that defaults to 192.168.110.1, so
+    # every "ipad=${ipaddr:-...}" default is rewritten.
+    text = IPAD_RE.sub(f'ipad=${{ipaddr:-"{ip}"}}', text)
+    # Default hostname of the generated /etc/config/system.
+    text = HOSTNAME_RE.sub(r"\g<1>ZeroWrt\g<2>", text)
 
-        text = util.read_text(path)
-        original = text
-        # Default LAN address of the generated /etc/config/network. ImmortalWrt
-        # has a per-board branch ("ruijie,rg-x60*"), LEDE a plain 192.168.1.1,
-        # so every "ipad=${ipaddr:-...}" default is rewritten.
-        text = IPAD_RE.sub(f'ipad=${{ipaddr:-"{ip}"}}', text)
-        text = text.replace('"192.168.1.1"', f'"{ip}"')
-        # Default hostname of the generated /etc/config/system.
-        text = HOSTNAME_RE.sub(r"\g<1>ZeroWrt\g<2>", text)
+    if text != original:
+        util.write_text(path, text)
+        util.log(f"patched {CORE_FILES['config_generate']}")
+    else:
+        util.warn(f"{CORE_FILES['config_generate']}: no known defaults matched")
 
-        if text != original:
-            util.write_text(path, text)
-            util.log(f"patched {relative}")
-        else:
-            util.warn(f"{relative}: no known defaults matched")
-
-        final = util.read_text(path)
-        if ip not in final:
-            raise util.BuildError(f"{relative}: LAN address was not changed to {ip}")
-        if "hostname='ZeroWrt'" not in final:
-            util.warn(f"{relative}: hostname default was not changed")
+    final = util.read_text(path)
+    if ip not in final:
+        raise util.BuildError(f"{CORE_FILES['config_generate']}: LAN address was not changed to {ip}")
+    if "hostname='ZeroWrt'" not in final:
+        util.warn(f"{CORE_FILES['config_generate']}: hostname default was not changed")
 
 
-def patch_wireless(tree: Path, settings: BuildSettings, *, required: bool = True) -> None:
-    """Apply the configured SSID and password to the LEDE WiFi generator."""
-    tree = Path(tree)
-    util.header("Patching default WiFi configuration")
-
-    candidates = [tree / relative for relative in WIFI_SCRIPTS]
-    if not any(path.exists() for path in candidates):
-        candidates = [
-            path
-            for path in (tree / "package").rglob("mac80211.sh")
-            if re.search(r'ssid=(["\']?)(?:LEDE|OpenWrt)\1', util.read_text(path))
-        ]
-
-    patched: list[Path] = []
-    for path in candidates:
-        if not path.exists():
-            continue
-        text = util.read_text(path)
-        new_text, count = SSID_LINE_RE.subn(lambda match: _ssid_block(match.group("indent"), settings), text)
-        if count == 0:
-            new_text, count = SSID_FALLBACK_RE.subn(lambda match: _ssid_block(match.group("indent"), settings), text)
-        if count == 0:
-            continue
-
-        new_text, key_count = KEY_LINE_RE.subn(lambda match: _wifi_key_block(match.group("indent"), settings), new_text)
-        if key_count == 0:
-            raise util.BuildError(f"{path.relative_to(tree)}: WiFi key default not found")
-
-        if HTMODE_TAIL in new_text:
-            new_text = new_text.replace(HTMODE_TAIL, HTMODE_TAIL_NEW, 1)
-            mode_count = 1
-        else:
-            mode_count = 0
-
-        util.write_text(path, new_text)
-        patched.append(path)
-        util.log(f"{path.relative_to(tree)}: SSIDs {settings.ssid('2g')} / {settings.ssid('5g')}")
-        if mode_count:
-            util.log(f"{path.relative_to(tree)}: channel width 40 MHz (2.4G) / 160 MHz (5 GHz)")
-        else:
-            util.warn(f"{path.relative_to(tree)}: htmode block not found, channel width unchanged")
-
-    if not patched:
-        if not required:
-            util.log("no wireless generator in this tree; skipping the WiFi defaults")
-            return
-        raise util.BuildError(
-            "no default SSID assignment was found in the wireless scripts; cannot apply the WiFi settings"
-        )
-
-    for path in patched:
-        text = util.read_text(path)
-        missing = [settings.ssid(band) for band in ("2g", "5g") if shlex.quote(settings.ssid(band)) not in text]
-        if missing:
-            raise util.BuildError(f"{path.relative_to(tree)}: missing SSIDs {', '.join(missing)}")
-        expected_encryption = 'encryption="psk2"'
-        if expected_encryption not in text:
-            raise util.BuildError(f"{path.relative_to(tree)}: expected {expected_encryption} was not applied")
-
-
-def patch_mtwifi(tree: Path, settings: BuildSettings) -> None:
+def patch_wifi(tree: Path, settings: BuildSettings) -> None:
     """Apply the SSID and password to ImmortalWrt's MTK wireless generator.
 
     ``mtwifi.sh`` probes the closed-source MTK driver and writes one
@@ -575,66 +379,19 @@ def patch_mtwifi(tree: Path, settings: BuildSettings) -> None:
             raise util.BuildError(f"{CORE_FILES['mtwifi']}: expected {expected} was not applied")
 
 
-def patch_wifi(tree: Path, settings: BuildSettings, base: str) -> None:
-    """Apply the WiFi defaults with the generator the tree actually uses."""
-    if base == "immortalwrt":
-        patch_mtwifi(tree, settings)
-        return
-    profile = profiles.find(settings.device)
-    patch_wireless(tree, settings, required=profile.has_wifi if profile else True)
-
-
-def patch_kernel_version(tree: Path, base: str) -> None:
-    """Pin the kernel of the LEDE tree; other trees keep their own version."""
-    boards = KERNEL_BOARDS.get(base, ())
-    if not boards:
-        util.log(f"{base} keeps its own kernel version")
-        return
-
-    tree = Path(tree)
-    util.header(f"Switching kernel to {KERNEL_VERSION}")
-    patched: list[Path] = []
-    for board in boards:
-        path = tree / "target" / "linux" / board / "Makefile"
-        if not path.exists():
-            continue
-        text = util.read_text(path)
-        new_text, count = re.subn(
-            r"^KERNEL_PATCHVER\s*:?=\s*.*$", f"KERNEL_PATCHVER:={KERNEL_VERSION}", text, flags=re.M
-        )
-        new_text, count2 = re.subn(
-            r"^KERNEL_TESTING_PATCHVER\s*:?=\s*.*$",
-            f"KERNEL_TESTING_PATCHVER:={KERNEL_VERSION}",
-            new_text,
-            flags=re.M,
-        )
-        if count or count2:
-            util.write_text(path, new_text)
-            patched.append(path)
-            util.log(f"{path.relative_to(tree)}: kernel {KERNEL_VERSION}")
-
-    if not patched:
-        raise util.BuildError("no target Makefile with KERNEL_PATCHVER was found; cannot switch the kernel")
-
-
 def apply_core_customisations(tree: Path, settings: BuildSettings, assets_dir: Path | str | None = None) -> None:
     tree = Path(tree)
-    base = profiles.base_for(settings.device)
     strip_tree_overlay(tree)
     patch_version_mk(tree)
     patch_release_files(tree)
     patch_config_generate(tree, settings.ip)
     patch_banner(tree, assets_dir)
-    patch_wifi(tree, settings, base)
-    patch_kernel_version(tree, base)
-    remove_ssr_plus(tree)
-    remove_turboacc(tree)
+    patch_wifi(tree, settings)
     verify_core(tree, settings, assets_dir)
 
 
 def verify_core(tree: Path, settings: BuildSettings, assets_dir: Path | str | None = None) -> None:
     tree = Path(tree)
-    base = profiles.base_for(settings.device)
     util.header("Verifying core customisations")
     problems: list[str] = []
 
@@ -658,41 +415,24 @@ def verify_core(tree: Path, settings: BuildSettings, assets_dir: Path | str | No
         if not re.search(r'^OPENWRT_RELEASE="ZeroWrt 标准版 @R\d{8} BY MinimaxFlora"$', text, re.M):
             problems.append("OPENWRT_RELEASE is not the ZeroWrt release string")
 
-    for relative in (CORE_FILES["config_generate"], CORE_FILES["config_generate_luci"]):
-        path = tree / relative
-        if path.exists() and settings.ip not in util.read_text(path):
-            problems.append(f"{relative} does not default to {settings.ip}")
+    config_generate = tree / CORE_FILES["config_generate"]
+    if config_generate.exists():
+        text = util.read_text(config_generate)
+        # Every board branch has its own default (the ruijie,rg-x60* branch
+        # ships 192.168.110.1); the LAN address must not depend on the board.
+        defaults = set(re.findall(r'ipad=\$\{ipaddr:-"([^"]*)"\}', text))
+        wrong = sorted(value for value in defaults if value != settings.ip)
+        if wrong:
+            problems.append(f"{CORE_FILES['config_generate']} still defaults to {', '.join(wrong)}")
 
-    if base == "immortalwrt":
-        mtwifi = tree / CORE_FILES["mtwifi"]
-        if mtwifi.exists():
-            text = util.read_text(mtwifi)
-            missing = [settings.ssid(band) for band in ("2g", "5g") if f'ssid="{settings.ssid(band)}"' not in text]
-            if missing:
-                problems.append(f"{CORE_FILES['mtwifi']} does not set {', '.join(missing)}")
-        else:
-            problems.append(f"{CORE_FILES['mtwifi']} is missing")
+    mtwifi = tree / CORE_FILES["mtwifi"]
+    if mtwifi.exists():
+        text = util.read_text(mtwifi)
+        missing = [settings.ssid(band) for band in ("2g", "5g") if f'ssid="{settings.ssid(band)}"' not in text]
+        if missing:
+            problems.append(f"{CORE_FILES['mtwifi']} does not set {', '.join(missing)}")
     else:
-        for relative in WIFI_SCRIPTS:
-            path = tree / relative
-            if path.exists():
-                text = util.read_text(path)
-                if shlex.quote(settings.ssid("2g")) not in text or shlex.quote(settings.ssid("5g")) not in text:
-                    problems.append(f"{relative} does not set {settings.ssid('2g')} / {settings.ssid('5g')}")
-
-    if base in KERNEL_BOARDS:
-        target_mk = tree / "include" / "target.mk"
-        if target_mk.exists():
-            target_text = util.read_text(target_mk)
-            if "luci-app-ssr-plus" in target_text:
-                problems.append("include/target.mk still references luci-app-ssr-plus")
-            if "luci-app-turboacc" in target_text:
-                problems.append("include/target.mk still references luci-app-turboacc")
-
-        for board in KERNEL_BOARDS[base]:
-            path = tree / "target" / "linux" / board / "Makefile"
-            if path.exists() and f"KERNEL_PATCHVER:={KERNEL_VERSION}" not in util.read_text(path):
-                problems.append(f"target/linux/{board}/Makefile does not use kernel {KERNEL_VERSION}")
+        problems.append(f"{CORE_FILES['mtwifi']} is missing")
 
     if (tree / TREE_OVERLAY).exists():
         problems.append(f"{TREE_OVERLAY}/ overlay is still present")

@@ -6,7 +6,7 @@
 
 # ZeroWrt
 
-### 基於 ImmortalWrt / LEDE 的客製韌體，內建網頁一鍵線上更新。
+### 基於 ImmortalWrt 的客製韌體，內建網頁一鍵線上更新。
 
 **一條命令出韌體，點一下完成升級。**
 
@@ -30,11 +30,10 @@
 
 ---
 
-ZeroWrt 是給 OpenWrt 類路由器的客製韌體，由 GitHub Actions 從兩份公開原始碼樹編譯：銳捷
-RG-X60 New 使用 [ImmortalWrt
-24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)，x86_64 使用
-[LEDE](https://github.com/coolsnowwolf/lede)。每次建置都從原始碼產出，連同 `SHA256SUMS` 與
-`BUILD_INFO.txt` 一起發布，並寫入更新索引，裝置可以自己從 LuCI 升級。
+ZeroWrt 是給銳捷 RG-X60 New（MT7986）的客製韌體，由 GitHub Actions 從
+[ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) 編譯。
+每次建置都從原始碼產出，連同 `SHA256SUMS` 與 `BUILD_INFO.txt` 一起發布，並寫入更新索引，
+裝置可以自己從 LuCI 升級。
 
 有意思的不是又一份套件清單，而是這條流程：建置產出映像與索引，
 路由器下次檢查時就看到新版本。
@@ -46,19 +45,18 @@ RG-X60 New 使用 [ImmortalWrt
 - **設定由工作流程注入** — 管理 IP、主機名稱與三組 Wi-Fi 名稱/密碼都是建置參數，不是手改檔案。
 - **Argon 3 品牌化** — 登入背景、登入 Logo、網站圖示與配色（`#2E9D72` / `#4CAF86`）在建置時替換。
 - **內建代理套件** — PassWall（sing-box 核心，不含 Xray、不含 SmartDNS）與 OpenClash，由建置腳本自動同步。
-- **有門檻的流程** — 每個 PR 都要通過 `ruff` 與 44 個單元測試。
+- **有門檻的流程** — 每個 PR 都要通過 `ruff` 與 38 個單元測試。
 
 ## 支援的裝置
 
 | 裝置 | 原始碼 | 配置 | 映像 |
 | --- | --- | --- | --- |
 | 銳捷 RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
-| x86_64 | LEDE (`master`) | EFI 與傳統 BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
 
 > **從 LEDE 版本遷移：** RG-X60 New 從原廠分割區改成 **ubootmod**。
 > 請從 U-Boot 救援頁刷入，且不要保留設定；舊映像與這個不能互刷。
 
-Release 的 tag 就是裝置名稱（`ruijie_rg-x60-new`、`x86_64`）。每台裝置保留自己的
+Release 的 tag 就是裝置名稱（`ruijie_rg-x60-new`）。每台裝置保留自己的
 release，索引與下載頁可以並排列出。
 
 ## 下載
@@ -104,7 +102,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## 常見問題
 
-**原始碼在哪？** RG-X60 New 使用 [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)，x86_64 使用 [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede)。本倉庫放的是流程、品牌素材與測試。
+**原始碼在哪？** RG-X60 New 使用 [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)。本倉庫放的是流程、品牌素材與測試。
 
 **為什麼沒有 `factory` 映像？** 這塊板子透過引導的網頁救援頁刷機，它直接接受 sysupgrade 映像。
 
@@ -122,7 +120,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 本倉庫的腳本、品牌素材與文件以 **GPL-2.0** 發布，見 [LICENSE](../../LICENSE)。
 
-韌體本身包含 OpenWrt、LEDE 以及大量上游元件，各自遵循原有授權。散布韌體映像時同樣要遵守這些授權；特別是 GPL-2.0 要求提供對應的原始碼。
+韌體本身包含 OpenWrt、ImmortalWrt 以及大量上游元件，各自遵循原有授權。散布韌體映像時同樣要遵守這些授權；特別是 GPL-2.0 要求提供對應的原始碼。
 
 ## 免責聲明
 

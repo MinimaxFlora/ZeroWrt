@@ -6,7 +6,7 @@
 
 # ZeroWrt
 
-### Własny firmware oparty na ImmortalWrt / LEDE, z aktualizacją online jednym kliknięciem.
+### Własny firmware oparty na ImmortalWrt, z aktualizacją online jednym kliknięciem.
 
 **Jedna komenda buduje, jedno kliknięcie aktualizuje.**
 
@@ -30,12 +30,11 @@
 
 ---
 
-ZeroWrt to niewielki własny firmware dla routerów klasy OpenWrt, budowany przez GitHub
-Actions z dwóch publicznych drzew: [ImmortalWrt
-24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) dla płytki MT7986
-i [LEDE](https://github.com/coolsnowwolf/lede) dla x86_64. Każdy build powstaje ze źródeł,
-jest publikowany razem z `SHA256SUMS` i `BUILD_INFO.txt` i trafia do indeksu aktualizacji,
-dzięki czemu urządzenie może zaktualizować się samo z LuCI.
+ZeroWrt to niewielki własny firmware dla Ruijie RG-X60 New (MT7986), budowany z
+[ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) przez
+GitHub Actions. Każdy build powstaje ze źródeł, jest publikowany razem z `SHA256SUMS` i
+`BUILD_INFO.txt` i trafia do indeksu aktualizacji, dzięki czemu urządzenie może zaktualizować się
+samo z LuCI.
 
 Ciekawe nie jest kolejna lista pakietów, tylko pętla: build
 publikuje obraz i indeks, a router przy następnym sprawdzeniu widzi nową wersję.
@@ -47,20 +46,19 @@ publikuje obraz i indeks, a router przy następnym sprawdzeniu widzi nową wersj
 - **Konfiguracja z workflow** — adres LAN, nazwa hosta oraz trzy SSID i hasła Wi-Fi to parametry builda, a nie ręcznie edytowane pliki.
 - **Branding Argon 3** — tło, logo logowania, favicon i paleta (`#2E9D72` / `#4CAF86`) są podmieniane podczas budowania.
 - **Zestaw proxy w komplecie** — PassWall (rdzeń sing-box, bez Xray i SmartDNS) i OpenClash, synchronizowane przez skrypty budujące.
-- **Kontrolowany potok** — `ruff` i 44 testów jednostkowych przy każdym pull requeście.
+- **Kontrolowany potok** — `ruff` i 38 testów jednostkowych przy każdym pull requeście.
 
 ## Obsługiwane urządzenia
 
 | Urządzenie | Źródło | Układ | Obrazy |
 | --- | --- | --- | --- |
 | Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
-| x86_64 | LEDE (`master`) | EFI i klasyczny BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
 
 > **Przejście z buildów LEDE:** obraz RG-X60 New zmienił układ partycji z fabrycznego na
 > **ubootmod**. Wgraj go ze strony recovery U-Boot i nie zachowuj konfiguracji; stary i nowy
 > obraz nie są zamienne.
 
-Tagi release to nazwy urządzeń (`ruijie_rg-x60-new`, `x86_64`). Każde urządzenie ma własny
+Tagi release to nazwy urządzeń (`ruijie_rg-x60-new`). Każde urządzenie ma własny
 release, więc indeks i strona pobierania mogą pokazywać je obok siebie.
 
 ## Pobieranie
@@ -108,7 +106,7 @@ Buildy uruchamia się ręcznie: *Actions → Build ZeroWrt → Run workflow*. Ni
 
 ## FAQ
 
-**Gdzie są źródła?** RG-X60 New budowany jest z [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly), a x86_64 z [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). To repozytorium zawiera potok, materiały brandingowe i testy.
+**Gdzie są źródła?** RG-X60 New budowany jest z [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly). To repozytorium zawiera potok, materiały brandingowe i testy.
 
 **Dlaczego nie ma obrazu `factory`?** Te płytki wgrywa się ze strony recovery bootloadera, która przyjmuje obraz sysupgrade bezpośrednio.
 
@@ -126,7 +124,7 @@ Buildy uruchamia się ręcznie: *Actions → Build ZeroWrt → Run workflow*. Ni
 
 Skrypty, materiały brandingowe i dokumentacja w tym repozytorium są udostępniane na licencji **GPL-2.0** — zobacz [LICENSE](../../LICENSE).
 
-Samo firmware zawiera OpenWrt, LEDE i wiele komponentów nadrzędnych, każdy na własnej licencji. Redystrybuując obraz, trzeba tych licencji przestrzegać; GPL-2.0 wymaga w szczególności udostępnienia odpowiadającego kodu źródłowego.
+Samo firmware zawiera OpenWrt, ImmortalWrt i wiele komponentów nadrzędnych, każdy na własnej licencji. Redystrybuując obraz, trzeba tych licencji przestrzegać; GPL-2.0 wymaga w szczególności udostępnienia odpowiadającego kodu źródłowego.
 
 ## Zastrzeżenia
 

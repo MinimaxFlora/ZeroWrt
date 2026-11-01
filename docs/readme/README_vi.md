@@ -6,7 +6,7 @@
 
 # ZeroWrt
 
-### Firmware tùy biến dựa trên ImmortalWrt / LEDE, cập nhật trực tuyến chỉ bằng một cú nhấp.
+### Firmware tùy biến dựa trên ImmortalWrt, cập nhật trực tuyến chỉ bằng một cú nhấp.
 
 **Một lệnh để build, một cú nhấp để cập nhật.**
 
@@ -30,12 +30,10 @@
 
 ---
 
-ZeroWrt là firmware tùy biến nhỏ gọn cho các router dòng OpenWrt, được GitHub Actions biên
-dịch từ hai cây công khai: [ImmortalWrt
-24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) cho bo mạch MT7986
-và [LEDE](https://github.com/coolsnowwolf/lede) cho x86_64. Mỗi bản build đều sinh ra từ mã
-nguồn, phát hành kèm `SHA256SUMS` và `BUILD_INFO.txt`, đồng thời ghi vào chỉ mục cập nhật để
-thiết bị có thể tự nâng cấp ngay trong LuCI.
+ZeroWrt là firmware tùy biến nhỏ gọn cho Ruijie RG-X60 New (MT7986), được GitHub Actions biên
+dịch từ [ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly).
+Mỗi bản build đều sinh ra từ mã nguồn, phát hành kèm `SHA256SUMS` và `BUILD_INFO.txt`, đồng thời
+ghi vào chỉ mục cập nhật để thiết bị có thể tự nâng cấp ngay trong LuCI.
 
 Điểm đáng nói không phải một danh sách gói khác, mà là vòng lặp: build phát hành ảnh và chỉ mục, router thấy phiên bản mới ở lần kiểm tra kế tiếp.
 
@@ -46,20 +44,19 @@ thiết bị có thể tự nâng cấp ngay trong LuCI.
 - **Cấu hình do workflow truyền vào** — IP LAN, tên máy và ba SSID/mật khẩu Wi-Fi là tham số build, không phải sửa tay trong tệp.
 - **Thương hiệu Argon 3** — ảnh nền, logo đăng nhập, favicon và bảng màu (`#2E9D72` / `#4CAF86`) được thay khi build.
 - **Kèm bộ proxy** — PassWall (nhân sing-box, không Xray, không SmartDNS) và OpenClash, được script build đồng bộ.
-- **Quy trình có kiểm soát** — `ruff` và 44 bài kiểm thử đơn vị cho mỗi pull request.
+- **Quy trình có kiểm soát** — `ruff` và 38 bài kiểm thử đơn vị cho mỗi pull request.
 
 ## Thiết bị hỗ trợ
 
 | Thiết bị | Nguồn | Bố cục | Ảnh |
 | --- | --- | --- | --- |
 | Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
-| x86_64 | LEDE (`master`) | EFI và BIOS cũ | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
 
 > **Chuyển từ các bản LEDE:** ảnh RG-X60 New đổi từ phân vùng của hãng sang **ubootmod**.
 > Nạp từ trang phục hồi U-Boot và đừng giữ cấu hình; ảnh cũ và ảnh này không thay thế được
 > cho nhau.
 
-Thẻ release chính là tên thiết bị (`ruijie_rg-x60-new`, `x86_64`). Mỗi thiết bị giữ release
+Thẻ release chính là tên thiết bị (`ruijie_rg-x60-new`). Mỗi thiết bị giữ release
 riêng nên chỉ mục và trang tải xuống có thể liệt kê song song.
 
 ## Tải xuống
@@ -107,7 +104,7 @@ Build được khởi chạy thủ công: *Actions → Build ZeroWrt → Run wor
 
 ## FAQ
 
-**Mã nguồn ở đâu?** RG-X60 New được build từ [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly), x86_64 từ [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). Kho này chứa quy trình, tài nguyên thương hiệu và kiểm thử.
+**Mã nguồn ở đâu?** RG-X60 New được build từ [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly). Kho này chứa quy trình, tài nguyên thương hiệu và kiểm thử.
 
 **Vì sao không có ảnh `factory`?** Bo mạch này được nạp qua trang phục hồi của bootloader, trang đó nhận thẳng ảnh sysupgrade.
 
@@ -125,7 +122,7 @@ Build được khởi chạy thủ công: *Actions → Build ZeroWrt → Run wor
 
 Script, tài nguyên thương hiệu và tài liệu trong kho này được phát hành theo **GPL-2.0** — xem [LICENSE](../../LICENSE).
 
-Bản thân firmware gồm OpenWrt, LEDE và nhiều thành phần thượng nguồn khác, mỗi phần theo giấy phép riêng. Khi phát hành lại ảnh, các giấy phép đó cũng áp dụng; GPL-2.0 đặc biệt yêu cầu cung cấp mã nguồn tương ứng.
+Bản thân firmware gồm OpenWrt, ImmortalWrt và nhiều thành phần thượng nguồn khác, mỗi phần theo giấy phép riêng. Khi phát hành lại ảnh, các giấy phép đó cũng áp dụng; GPL-2.0 đặc biệt yêu cầu cung cấp mã nguồn tương ứng.
 
 ## Miễn trừ trách nhiệm
 

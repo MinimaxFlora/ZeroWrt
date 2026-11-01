@@ -1,7 +1,7 @@
 """Validated build settings.
 
 Values come from the GitHub Actions inputs (or their defaults on a push
-build) and are validated before any file in the LEDE tree is modified.
+build) and are validated before any file in the source tree is modified.
 """
 
 from __future__ import annotations

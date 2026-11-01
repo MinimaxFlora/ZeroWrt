@@ -6,7 +6,7 @@
 
 # ZeroWrt
 
-### ImmortalWrt / LEDE 기반 커스텀 펌웨어, 웹에서 원클릭 온라인 업데이트.
+### ImmortalWrt 기반 커스텀 펌웨어, 웹에서 원클릭 온라인 업데이트.
 
 **명령 하나로 빌드, 클릭 하나로 업데이트.**
 
@@ -30,12 +30,10 @@
 
 ---
 
-ZeroWrt 는 OpenWrt 계열 공유기용 커스텀 펌웨어입니다. GitHub Actions 로 두 개의 공개 트리에서
-빌드합니다. MT7986 보드는
-[ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly),
-x86_64 는 [LEDE](https://github.com/coolsnowwolf/lede) 입니다. 모든 빌드는 소스에서 생성되어
-`SHA256SUMS` 와 `BUILD_INFO.txt` 와 함께 공개되고 업데이트 인덱스에 등록되므로 기기가
-LuCI 에서 직접 업그레이드할 수 있습니다.
+ZeroWrt 는 Ruijie RG-X60 New(MT7986)용 커스텀 펌웨어입니다.
+[ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) 에서
+GitHub Actions 로 빌드합니다. 모든 빌드는 소스에서 생성되어 `SHA256SUMS` 와 `BUILD_INFO.txt`
+와 함께 공개되고 업데이트 인덱스에 등록되므로 기기가 LuCI 에서 직접 업그레이드할 수 있습니다.
 
 핵심은 패키지 목록이 아니라 이 순환입니다. 빌드가 이미지와
 인덱스를 공개하며, 다음 확인 때 공유기가 새 버전을 발견합니다.
@@ -47,19 +45,18 @@ LuCI 에서 직접 업그레이드할 수 있습니다.
 - **워크플로에서 설정 주입** — LAN IP, 호스트 이름, 세 개의 Wi-Fi SSID 와 비밀번호가 빌드 입력입니다.
 - **Argon 3 브랜딩** — 배경, 로그인 로고, 파비콘, 색상(`#2E9D72` / `#4CAF86`)을 빌드 시 교체합니다.
 - **프록시 구성 포함** — PassWall(sing-box 커널, Xray 및 SmartDNS 없음)과 OpenClash 를 빌드 스크립트가 동기화합니다.
-- **검증된 파이프라인** — 모든 PR 에서 `ruff` 와 44 개 단위 테스트를 실행합니다.
+- **검증된 파이프라인** — 모든 PR 에서 `ruff` 와 38 개 단위 테스트를 실행합니다.
 
 ## 지원 기기
 
 | 기기 | 소스 | 레이아웃 | 이미지 |
 | --- | --- | --- | --- |
 | Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
-| x86_64 | LEDE (`master`) | EFI 및 레거시 BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
 
 > **LEDE 빌드에서 이동:** RG-X60 New 이미지는 정품 파티션에서 **ubootmod** 로 바뀌었습니다.
 > U-Boot 복구 페이지에서 플래싱하고 설정은 유지하지 마세요. 예전 이미지와는 호환되지 않습니다.
 
-Release 태그는 기기 이름입니다(`ruijie_rg-x60-new`, `x86_64`). 기기마다 release 를
+Release 태그는 기기 이름입니다(`ruijie_rg-x60-new`). 기기마다 release 를
 따로 두므로 인덱스와 다운로드 페이지에 나란히 표시할 수 있습니다.
 
 ## 다운로드
@@ -107,7 +104,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## FAQ
 
-**소스는 어디에 있나요?** RG-X60 New 는 [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly), x86_64 는 [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede) 에서 빌드합니다. 이 저장소에는 파이프라인, 브랜딩 자산, 테스트가 있습니다.
+**소스는 어디에 있나요?** RG-X60 New 는 [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) 에서 빌드합니다. 이 저장소에는 파이프라인, 브랜딩 자산, 테스트가 있습니다.
 
 **`factory` 이미지는 왜 없나요?** 이 보드는 부트로더의 웹 복구 페이지로 플래싱하며, sysupgrade 이미지를 그대로 받습니다.
 
@@ -125,7 +122,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 이 저장소의 스크립트, 브랜딩 자산, 문서는 **GPL-2.0**으로 배포됩니다([LICENSE](../../LICENSE)).
 
-펌웨어 자체에는 OpenWrt, LEDE 및 다수의 업스트림 구성 요소가 포함되며 각자의 라이선스를 따릅니다. 이미지를 재배포할 때도 마찬가지이며, GPL-2.0은 해당 소스 제공을 요구합니다.
+펌웨어 자체에는 OpenWrt, ImmortalWrt 및 다수의 업스트림 구성 요소가 포함되며 각자의 라이선스를 따릅니다. 이미지를 재배포할 때도 마찬가지이며, GPL-2.0은 해당 소스 제공을 요구합니다.
 
 ## 면책
 

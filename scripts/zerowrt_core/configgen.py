@@ -29,7 +29,7 @@ PACKAGES = [
 ]
 
 # PassWall flags. The Makefile sets INCLUDE_Xray, INCLUDE_SingBox and
-# INCLUDE_SmartDNS to "y" for aarch64/x86_64, so all three have to be written
+# INCLUDE_SmartDNS to "y" for aarch64, so all three have to be written
 # explicitly: sing-box is the core, Xray and SmartDNS must stay out.
 PASSWALL_SELECTION = [
     "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox=y",
@@ -65,10 +65,10 @@ def build_date() -> str:
 def resolve_target(tree: Path, name: str) -> dict:
     """Resolve a workflow device selection to target information.
 
-    A profile pins board, subtarget and Device name: the workflow name cannot
-    be looked up directly (``x86_64`` has no ``Device/x86_64``, and the RG-X60
-    profile builds the ubootmod layout). Names that are not profiles fall back
-    to a plain ``Device/`` lookup.
+    A profile pins board, subtarget and Device name: the profile name cannot be
+    looked up directly (the RG-X60 profile builds the ubootmod variant, not the
+    stock Device). Names that are not profiles fall back to a plain ``Device/``
+    lookup.
     """
     profile = profiles.find(name)
     if profile is None:
@@ -157,8 +157,7 @@ def find_device(
     """Return target information for a device profile name.
 
     Passing *board*/*subtarget* narrows the search, which matters for target
-    families where several subtargets declare a device with the same name
-    (x86 declares "generic" for both "64" and "generic").
+    families where several subtargets declare a device with the same name.
     """
     tree = Path(tree)
     linux = tree / "target" / "linux"
@@ -196,20 +195,16 @@ def find_device(
     )
 
 
-def _packages(tree: Path, device: str | None = None) -> list[str]:
-    """Return the package list for this checkout and device.
+def _packages(tree: Path) -> list[str]:
+    """Return the package list for this checkout.
 
     Argon master integrates the config app into the theme package, so the
     standalone luci-app-argon-config is only selected when it was cloned
-    (non-integrated theme, e.g. v2.4.8). Device specific packages come from
-    the profile (mosdns is x86_64 only).
+    (non-integrated theme, e.g. v2.4.8).
     """
     packages = list(PACKAGES)
     if not (Path(tree) / "package" / "new" / "luci-app-argon-config").exists():
         packages.remove("CONFIG_PACKAGE_luci-app-argon-config")
-    profile = profiles.find(device)
-    if profile is not None:
-        packages.extend(f"CONFIG_PACKAGE_{name}" for name in profile.packages)
     return sorted(packages)
 
 
@@ -232,7 +227,7 @@ def generate(tree: Path, device: str) -> dict:
     tree = Path(tree)
     profile = profiles.find(device)
     target = resolve_target(tree, device)
-    packages = _packages(tree, device)
+    packages = _packages(tree)
     version = build_date()
     util.log(
         f"device {target['name']} ({target['vendor']} {target['model']}) on {target['board']}/{target['subtarget']}"

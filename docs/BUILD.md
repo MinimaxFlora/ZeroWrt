@@ -7,22 +7,21 @@ Back to the [README](../README.md) · [other languages](readme)
 
 ---
 
-ZeroWrt 通过 GitHub Actions 自动编译，源码来自两份**公开**仓库：
+ZeroWrt 通过 GitHub Actions 自动编译，源码来自一个**公开**仓库：
 
 | 设备 | 源码树 | 分支 |
 | --- | --- | --- |
 | 锐捷 RG-X60 New | [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) | `openwrt-24.10-6.6` |
-| x86_64 | [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede) | `master` |
 
 - 固件名称：`ZeroWrt`
 - 构建环境：Ubuntu 24.04
-- IP、WiFi 名称、WiFi 密码、设备型号全部在 Actions 中设置
+- IP、WiFi 名称、WiFi 密码全部在 Actions 中设置
 - 软件包和设备由 Python 脚本统一写入 `.config`，不再维护单独的配置文件
 - 代码质量由 Ruff 检查和单元测试保证
 
 ## 一、源码与 Secrets
 
-两份源码树都是公开仓库，**不需要**任何源码 Token；`git clone` 直接匿名拉取。
+源码树是公开仓库，**不需要**任何源码 Token；`git clone` 直接匿名拉取。
 `LEDE_REPO` / `LEDE_TOKEN` / `LEDE_REF` 三个旧的 Secret 已经删除，留着也不会被读取。
 
 仍然需要的 Secret 只有发布相关的两个：
@@ -47,7 +46,6 @@ ZeroWrt 通过 GitHub Actions 自动编译，源码来自两份**公开**仓库�
 | `ip` | `10.0.0.1` | 管理地址 / LAN IP |
 | `wifi_name` | `ZeroWrt` | WiFi 名称前缀，自动生成 `-2.4G`、`-5G`、`-6G` |
 | `wifi_password` | `1234567890` | WiFi 密码，8–63 位，仅字母/数字/`!@#$%^&*()_+.:=?-`；不经过命令行、不打印 |
-| `device` | `ruijie_rg-x60-new` | 设备选择：`ruijie_rg-x60-new` 或 `x86_64` |
 
 例如 `wifi_name=MyNet` 时，实际 SSID 为：
 
@@ -74,14 +72,14 @@ MyNet-6G
    - 只有 `/mnt` 与根分区是同一块盘、且根分区已有 50 GiB 空闲时，才跳过清理；swap 不足时只调整 swap
 2. **安装依赖**：对齐 sbwml 的 `openwrt-build-setup` 包列表，并补充 lvm2、xfsprogs、python3-pil 等；Docker 默认不装（当前配置没有 docker 插件），需要时运行 `system install-deps --docker`
 3. **安装 LLVM**：Clang 23.0.1 到 `/opt/clang`，与 `install-llvm` 使用同一版本
-4. **拉取源码**：按 `device` 选仓库和分支（MT7986 → ImmortalWrt，x86_64 → LEDE），匿名 clone，不需要 Token
-5. **更新 feeds**：删除 feeds 里与 `package/new` 重名的包（Argon 主题/插件、PassWall、sing-box、mosdns 等）
+4. **拉取源码**：按 `profiles.py` 里的仓库和分支匿名 clone ImmortalWrt，不需要 Token
+5. **更新 feeds**：删除 feeds 里与 `package/new` 重名的包（Argon 主题/插件、PassWall、sing-box 等）
 6. **核心定制**：删除源码树根部的 `files/` 覆盖层、版本/发行字符串、IP、主机名、WiFi 名称/密码
 7. **添加第三方包与主题品牌化**
 8. **生成 `.config`**：设备/profile 选择 + 固定软件包列表
 9. **恢复工具链缓存**：从 `toolchain` release 下载 tar.zst，解压后 touch `staging_dir`/`tmp`，跳过 40 分钟的工具链编译
 10. **下载、编译、收集产物**：编译使用 `nproc + 1` 个并行任务和 `IGNORE_ERRORS="n m"`
-11. **发布 Release**：tag 和 release 名称都使用设备名（`ruijie_rg-x60-new` / `x86_64`），上传 `dist/*`
+11. **发布 Release**：tag 和 release 名称都使用设备名（`ruijie_rg-x60-new`），上传 `dist/*`
 
 产物在本次 Run 的 **Artifacts** 中：`ZeroWrt-<run_number>`，包含固件、`SHA256SUMS`、`BUILD_INFO.txt`。构建成功后还会自动创建/更新以设备命名的 Release；同一设备再次构建会删除旧 release/tag 后重新发布。
 
@@ -99,26 +97,22 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 | --- | --- | --- |
 | 源码树覆盖层 | `files/`（源码树根部） | ImmortalWrt 在这里放了一份 `etc/banner`，会盖掉我们自己的 banner，构建时整个目录删除 |
 | 固件名 `ZeroWrt` | `include/version.mk` | 把 `VERSION_DIST`、`VERSION_MANUFACTURER` 的默认值（`ImmortalWrt` 或 `OpenWrt`）改为 `ZeroWrt`；`VERSION_NUMBER` 设为构建日期 |
-| 发行字符串 | `package/base-files/files/etc/openwrt_release`<br>`package/base-files/files/usr/lib/os-release`<br>`package/lean/default-settings/files/zzz-default-settings`（仅 LEDE） | 两棵树的 release 文件都是 `%D %V %C` 模板，脚本直接写成字面量：`DISTRIB_DESCRIPTION='ZeroWrt-20261020'`、`DISTRIB_REVISION=' By MinimaxFlora'`、`OPENWRT_RELEASE="ZeroWrt 标准版 @R20261020 BY MinimaxFlora"`；LEDE 首次启动会重写这两个文件，所以 `zzz-default-settings` 里的同一批字符串也要改 |
-| 内核版本 | `target/linux/x86/Makefile`（仅 LEDE） | LEDE 树把 `KERNEL_PATCHVER`、`KERNEL_TESTING_PATCHVER` 改为 `6.18`；MT798x 树是 6.6 + MTK 补丁集，**不碰** |
-| 管理 IP | `package/base-files/files/bin/config_generate`<br>`package/base-files/luci/bin/config_generate`（仅 LEDE） | 把所有 `ipad=${ipaddr:-"..."}` 默认值改为 Actions 里的 `ip`（ImmortalWrt 的 `ruijie,rg-x60*` 分支默认是 `192.168.110.1`），主机名默认 `ZeroWrt` |
+| 发行字符串 | `package/base-files/files/etc/openwrt_release`<br>`package/base-files/files/usr/lib/os-release` | release 文件是 `%D %V %C` 模板，脚本直接写成字面量：`DISTRIB_DESCRIPTION='ZeroWrt-20261020'`、`DISTRIB_REVISION=' By MinimaxFlora'`、`OPENWRT_RELEASE="ZeroWrt 标准版 @R20261020 BY MinimaxFlora"` |
+| 管理 IP | `package/base-files/files/bin/config_generate` | 把所有 `ipad=${ipaddr:-"..."}` 默认值改为 Actions 里的 `ip`（默认 `10.0.0.1`）。ImmortalWrt 给 `ruijie,rg-x60*` 分支单独写了 `192.168.110.1`，也一并改掉；校验步骤会确认没有任何分支还留着别的默认值，所以 LAN 登录地址不随设备变化。主机名默认 `ZeroWrt` |
 | WiFi 名称与密码（MT7986） | `package/mtk/applications/mtwifi-cfg/files/mtwifi.sh` | 改掉 `ImmortalWrt-2.4G` / `-5G` 两个默认 SSID，并把 `encryption=none` 改成 `psk2` + `key` |
-| WiFi 名称与密码（x86_64） | `package/kernel/mac80211/files/lib/wifi/mac80211.sh` | 2.4G/5G/6G 分别生成 SSID；WPA2/WPA3 密码 |
 | Argon 主题 | `package/new/luci-theme-argon` | 跟踪 `master`（3.x），登录背景、登录 Logo、网站图标全部替换为 `assets/` 素材 |
 | Argon 外观 | 主题包内 `root/etc/config/argon` | 亮色模式、主色 `#2E9D72`、暗色主色 `#4CAF86`、在线壁纸 `none` |
 | 网站图标 | `package/new/luci-theme-argon/.../icon/*`、`package/base-files/files/www/favicon.ico` | 主题 favicon + `/favicon.ico` 都使用 ZeroWrt Logo；`branding.js` 指向新的 `favicon-zerowrt.png`，模板链接加 `?v=zerowrt` 避免浏览器缓存 |
 | 移除 SSR Plus+ | `include/target.mk`、`feeds/helloworld` | 删除默认 SSR Plus+ 插件及默认包引用 |
 | 代理插件 | `package/new/helloworld/*` | 来自 [openwrt_helloworld](https://github.com/MinimaxFlora/openwrt_helloworld)：PassWall（sing-box 内核，不含 Xray、不含 SmartDNS）、passwall2、OpenClash 与它们的内核软件包，版本更新和插件同步都在那个仓库里由 workflow 完成 |
-| 释放内存 | `package/new/luci-app-ramfree` | 来自 [sbwml/luci-app-ramfree](https://github.com/sbwml/luci-app-ramfree)，两种设备都装 |
-| mosdns（仅 x86_64） | `package/new/luci-app-mosdns/{mosdns,luci-app-mosdns,geo2txt}` | 来自 [sbwml/luci-app-mosdns](https://github.com/sbwml/luci-app-mosdns)（`v5`），一个仓库带三个包，跟 helloworld 同样的做法 |
-| 软件包列表 | `scripts/zerowrt_core/configgen.py` | 在 `PACKAGES` 中统一维护；只给某一台设备的包写在 `profiles.py` 的 `DeviceProfile.packages`（目前只有 x86_64 的 mosdns） |
+| 释放内存 | `package/new/luci-app-ramfree` | 来自 [sbwml/luci-app-ramfree](https://github.com/sbwml/luci-app-ramfree) |
+| 软件包列表 | `scripts/zerowrt_core/configgen.py` | 在 `PACKAGES` 中统一维护 |
 
 `package/new/` 下每个仓库一个目录，和 helloworld 平级：
 
 ```
 package/new/helloworld/            # 代理插件
 package/new/luci-app-ramfree/      # 释放内存
-package/new/luci-app-mosdns/       # mosdns + LuCI + geo2txt
 package/new/luci-theme-argon/      # 主题
 ```
 
@@ -168,20 +162,20 @@ option online_wallpaper 'none'
 
 OpenWrt 扫描包元数据时（`scripts/package-metadata.pl`）会**先按第一个冒号切分、再去校验依赖名是否存在**，
 两边都会被查一遍；而 `wget-any` 这个虚拟包只在 apk 世界（25.12 以后）由 `uclient-fetch` 提供，
-24.10 和 LEDE 里没有任何包 provide 它，于是每次构建都会打印：
+24.10 里没有任何包 provide 它，于是每次构建都会打印：
 
 ```
 WARNING: Makefile 'package/new/luci-theme-argon/Makefile' has a dependency on 'wget-any', which does not exist
 ```
 
 它只是一条警告（那条依赖会被丢掉，构建继续），但说明主题的依赖声明和当前包管理器不匹配。
-`packages.py` 在克隆后把这一串改成 `+wget-ssl`：两棵树都是 opkg，且主题的 rpcd 脚本
+`packages.py` 在克隆后把这一串改成 `+wget-ssl`：这棵树是 opkg，且主题的 rpcd 脚本
 （`luci.argon_update`、`luci.argon_wallpaper`）用 `wget` 访问 https，`/usr/bin/wget` 由
 `wget-ssl` 的 alternatives 提供。上游把这一行改成别的写法时脚本会直接报错，而不是继续刷警告。
 
 ## 五、设备
 
-设备由 Actions 的 `device` 参数选择，名字同时就是 Release tag。对应关系集中在
+目前只支持锐捷 RG-X60 New，名字同时就是 Release tag。对应关系集中在
 `scripts/zerowrt_core/profiles.py`：
 
 ```python
@@ -189,31 +183,23 @@ WARNING: Makefile 'package/new/luci-theme-argon/Makefile' has a dependency on 'w
     source="immortalwrt", board="mediatek", subtarget="filogic",
     device="ruijie_rg-x60-new-ubootmod", layout="OpenWrt U-Boot layout (ubootmod)",
 ),
-"x86_64": DeviceProfile(
-    source="lede", board="x86", subtarget="64", device="generic",
-    packages=("luci-app-mosdns",),
-),
 ```
 
-- `ruijie_rg-x60-new`：在 `target/linux/mediatek/image/filogic.mk` 中按 `define Device/ruijie_rg-x60-new-ubootmod` 查找，自动得到 `mediatek/filogic`。workflow 名字保持 `ruijie_rg-x60-new`，是为了让 Release tag 和 OTA 条目在换基线后不变。
-- `x86_64`：映射到 `x86/64` 的 `define Device/generic`（`target/linux/x86/image/64.mk`），生成 `CONFIG_TARGET_x86_64_DEVICE_generic=y`
-
-`x86/64` 没有独立 profile，设备名就是 upstream 里的小写 `generic`；符号必须带 `_DEVICE_` 前缀，
-写成 profile 形式（`CONFIG_TARGET_x86_64_Generic`）会被 `defconfig` 静默丢弃。因此设备名统一从源码树解析，
-不再硬编码。
+`ruijie_rg-x60-new`：在 `target/linux/mediatek/image/filogic.mk` 中按
+`define Device/ruijie_rg-x60-new-ubootmod` 查找，自动得到 `mediatek/filogic`。
+profile 名字保持 `ruijie_rg-x60-new`，是为了让 Release tag 和 OTA 条目在换基线后不变。
 
 当前支持：
 
 ```
 ruijie_rg-x60-new   (ImmortalWrt, mediatek/filogic, Device/ruijie_rg-x60-new-ubootmod)
-x86_64              (LEDE, x86/64, Device/generic)
 ```
 
 新增设备时：
 
-1. 源码树里必须有对应的 `define Device/<name>` 定义
-2. 在 `profiles.py` 的 `PROFILES` 里加一条（`source` 填 `immortalwrt` 或 `lede`）
-3. 在 [build.yml](.github/workflows/build.yml) 和 [toolchain.yml](.github/workflows/toolchain.yml) 的 `device.options` 增加同名选项
+1. 在 `profiles.py` 的 `SOURCES` 里登记源码树（如果和现在的 ImmortalWrt 不同）
+2. 源码树里必须有对应的 `define Device/<name>` 定义，并在 `PROFILES` 里加一条
+3. 在 [build.yml](.github/workflows/build.yml) 和 [toolchain.yml](.github/workflows/toolchain.yml) 里把 `ZEROWRT_DEVICE` 改成新名字，并补上 `--device` 参数
 
 如果名称写错，工作流会失败并列出源码树里可选的设备名，便于排查。
 
@@ -239,21 +225,12 @@ PACKAGES = [
     "CONFIG_PACKAGE_luci-app-openclash",
     "CONFIG_PACKAGE_luci-app-ota",
     "CONFIG_PACKAGE_luci-i18n-ota-zh-cn",
-    "CONFIG_PACKAGE_luci-app-ttyd",          # 终端：x86_64 与 RG-X60 都带
+    "CONFIG_PACKAGE_luci-app-ttyd",          # 终端
     "CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn",
 ]
 ```
 
-`PACKAGES` 是两种设备共用的一份列表，因此 `luci-app-ttyd`（依赖 feeds 里的 `ttyd`）会同时进入
-x86_64 和 `ruijie_rg-x60-new` 的固件。
-
-ShadowSocksR Plus+ 已从 `include/target.mk` 默认包、`feeds/helloworld` 和最终 `.config` 中移除。
-
-上游 `coolsnowwolf/luci` 已删除 `luci-app-turboacc`（提交 “luci-app-turboacc: remove obsolete acceleration interface”），
-因此 ZeroWrt 不再选择该包，也不再写入 `/etc/uci-defaults/zz-zerowrt-turboacc` 里的 BBR、硬件 NAT 和 WED 默认值。
-LEDE 的 `include/target.mk` 默认包里仍留着这条引用，脚本会像处理 `luci-app-ssr-plus` 一样把它从
-`DEFAULT_PACKAGES` 中删掉，避免镜像阶段去安装一个 feeds 里已经不存在的包。
-如果仍需要 BBR，可在设备启动后用 `sysctl net.ipv4.tcp_congestion_control=bbr` 自行开启。
+`luci-app-ttyd` 依赖 feeds 里的 `ttyd`，会进入固件。
 
 PassWall 改用 **sing-box 内核**，同时显式关掉 Xray 和 SmartDNS：
 
@@ -267,7 +244,7 @@ CONFIG_PACKAGE_sing-box=y
 ```
 
 PassWall 的 Makefile 里 `INCLUDE_Xray`、`INCLUDE_SingBox`、`INCLUDE_SmartDNS` 三个选项对
-aarch64 / x86_64 都默认 `y`，所以三个都必须显式写出来，否则镜像里会同时出现 Xray 内核和
+aarch64 默认都是 `y`，所以三个都必须显式写出来，否则镜像里会同时出现 Xray 内核和
 SmartDNS，体积变大还会在运行时抢 DNS。
 
 `INCLUDE_V2ray_Geodata` 带进 `v2ray-geoip` / `v2ray-geosite`，安装到 `/usr/share/v2ray/`，
@@ -293,15 +270,14 @@ make -j$(nproc) toolchain/compile || make -j$(nproc) toolchain/compile V=s
 tar -I "zstd -19 -T$(nproc --all)" -cf toolchain-cache/toolchain_${LIBC}_${toolchain_arch}_gcc-${gcc_version}.tar.zst ./{build_dir,dl,staging_dir,tmp}
 ```
 
-产物上传到 tag 为 `toolchain`、标题为 `Toolchain_Cache` 的 release，资产名按设备区分：
+产物上传到 tag 为 `toolchain`、标题为 `Toolchain_Cache` 的 release，资产名是：
 
 ```
-toolchain_<device>_<libc>_<arch>_gcc-<major>.tar.zst
+toolchain_<libc>_<arch>_gcc-<major>.tar.zst
 ```
 
-`<device>` 是 workflow 的设备名，`LIBC`/架构/GCC 版本从 `staging_dir/toolchain-*` 目录名解析。
-两台设备的源码树不同，工具链不能混用，所以名字里必须带设备；固件构建只挑自己设备前缀的资产，
-同名资产会被新构建覆盖。
+`LIBC`/架构/GCC 版本从 `staging_dir/toolchain-*` 目录名解析，固件构建挑最新的匹配资产，
+同名资产会被新构建覆盖。带设备前缀的旧资产（`toolchain_<device>_...`）不再被识别。
 
 **使用缓存**：固件构建在编译前执行
 
@@ -380,9 +356,7 @@ https://minimaxflora.github.io/ZeroWrt/history.json  # 下载页用的发布历�
 2. `Embed OTA metadata`：写入 `/etc/ota/build.json`、`version.date` 和默认更新源地址（`/etc/uci-defaults`），让固件能自报设备名与构建时间
 3. `Publish OTA page`：Release 发布后把页面、`ota.json`、`history.json` 推送到 `gh-pages` 分支
 
-每台设备构建完成后只更新自己在索引里的条目，不同设备的条目不会互相覆盖；所以
-`ruijie_rg-x60-new` 和 `x86_64` 各构建一次后，索引和下载页里两套设备就都齐了。
-x86 会分成「传统 BIOS」和「UEFI」两项，刷错会无法启动，下载页上用徽章区分。
+每次构建只更新 `ruijie_rg-x60-new` 自己在索引里的条目，其它条目保持不动。
 
 > **RG-X60 New 换基线后不能跨版本在线升级。** 旧固件是 LEDE + 原厂分区布局，新固件是
 > ImmortalWrt + **ubootmod** 布局，镜像格式和分区表都不同。Release tag 仍然是

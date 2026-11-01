@@ -18,14 +18,6 @@ on:
         required: true
         type: string
         default: "1234567890"
-      device:
-        description: "Device profile; ruijie_rg-x60-new builds the ubootmod layout, x86_64 uses LEDE"
-        required: true
-        type: choice
-        default: "ruijie_rg-x60-new"
-        options:
-          - ruijie_rg-x60-new
-          - x86_64
 
 permissions:
   contents: write
@@ -38,7 +30,7 @@ env:
   PYTHONUNBUFFERED: "1"
   BUILD_ROOT: /builder
   ZEROWRT_SOURCE_DIR: /builder/source
-  ZEROWRT_DEVICE: ${{ github.event.inputs.device || 'ruijie_rg-x60-new' }}
+  ZEROWRT_DEVICE: ruijie_rg-x60-new
   OTA_BASE_URL: "https://ota.tatalvpai.vip"
 
 jobs:
@@ -76,13 +68,12 @@ jobs:
       - name: Install LLVM
         run: python3 scripts/zerowrt.py system install-llvm
 
-      # The device profile decides the tree: ImmortalWrt for the MT7986 board,
-      # LEDE for x86_64. Both are public, so no repository secret is involved.
+      # The profile table in scripts/zerowrt_core/profiles.py points at the
+      # ImmortalWrt tree; it is public, so no repository secret is involved.
       - name: Clone build source
         run: |
           python3 scripts/zerowrt.py source clone \
-            --dest "$ZEROWRT_SOURCE_DIR" \
-            --device "$ZEROWRT_DEVICE"
+            --dest "$ZEROWRT_SOURCE_DIR"
 
       - name: Update feeds
         run: python3 scripts/zerowrt.py source feeds --tree "$ZEROWRT_SOURCE_DIR"
@@ -103,8 +94,7 @@ jobs:
         run: |
           python3 scripts/zerowrt.py packages add \
             --tree "$ZEROWRT_SOURCE_DIR" \
-            --assets "$GITHUB_WORKSPACE/assets" \
-            --device "$ZEROWRT_DEVICE"
+            --assets "$GITHUB_WORKSPACE/assets"
 
       # Clones luci-app-ota and patches its index generator so the ubootmod
       # image is published (and preloader.bin is not).
@@ -115,8 +105,7 @@ jobs:
       - name: Generate .config
         run: |
           python3 scripts/zerowrt.py config generate \
-            --tree "$ZEROWRT_SOURCE_DIR" \
-            --device "$ZEROWRT_DEVICE"
+            --tree "$ZEROWRT_SOURCE_DIR"
 
       - name: Embed OTA metadata
         run: |
@@ -127,10 +116,10 @@ jobs:
             --api-url "$OTA_BASE_URL/ota.json" \
             --emit "$GITHUB_WORKSPACE/ota-meta.json"
 
-      # The cache is keyed by device as well as by arch: the two devices build
-      # from different trees, so a toolchain from the other tree (or from the
-      # old LEDE branch) must never be restored. The newest matching asset wins,
-      # which also retires a cache built with an older GCC.
+      # Assets are named toolchain_<libc>_<arch>_gcc-<major>.tar.zst. Names
+      # carrying a device prefix come from an older layout and are ignored.
+      # The newest matching asset wins, which also retires a cache built with
+      # an older GCC.
       - name: Restore toolchain cache
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -140,11 +129,11 @@ jobs:
           # error yet: both cases end in the explicit message below.
           set +e
           assets=$(gh release view toolchain --repo "$GITHUB_REPOSITORY" --json assets \
-            --jq ".assets[] | select(.name | startswith(\"toolchain_${ZEROWRT_DEVICE}_\")) | [.createdAt, .name] | @tsv")
+            --jq ".assets[] | select(.name | test(\"^toolchain_(musl|glibc|uclibc)_\")) | [.createdAt, .name] | @tsv")
           set -e
           asset=$(printf '%s\n' "$assets" | sort -r | head -n1 | cut -f2)
           if [ -z "$asset" ]; then
-            echo "no toolchain cache for ${ZEROWRT_DEVICE} in the 'toolchain' release"
+            echo "no toolchain cache in the 'toolchain' release"
             echo "run the 'Build Toolchain Cache' workflow for this device first"
             exit 1
           fi

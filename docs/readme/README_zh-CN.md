@@ -6,7 +6,7 @@
 
 # ZeroWrt
 
-### 基于 ImmortalWrt / LEDE 的定制固件，内置网页一键在线升级。
+### 基于 ImmortalWrt 的定制固件，内置网页一键在线升级。
 
 **一条命令出固件，点一下完成升级。**
 
@@ -30,9 +30,10 @@
 
 ---
 
-ZeroWrt 是面向 OpenWrt 类路由器的定制固件，由 GitHub Actions 从两份公开源码树
-自动编译：锐捷 RG-X60 New 用 ImmortalWrt 24.10，x86_64 用 LEDE。每次构建都从源码产出，连同 `SHA256SUMS` 和 `BUILD_INFO.txt` 一起
-发布，并写进更新索引，设备可以自己从 LuCI 升级。
+ZeroWrt 是面向锐捷 RG-X60 New（MT7986）的定制固件，由 GitHub Actions 从
+[ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) 自动编译。
+每次构建都从源码产出，连同 `SHA256SUMS` 和 `BUILD_INFO.txt` 一起发布，并写进更新索引，
+设备可以自己从 LuCI 升级。
 
 真正有意思的不是又一份软件包清单，而是这条链路：构建产出镜像和
 索引，路由器下次检查时就能看到新版本。
@@ -51,9 +52,8 @@ ZeroWrt 是面向 OpenWrt 类路由器的定制固件，由 GitHub Actions 从�
 | 设备 | 源码 | 布局 | 镜像 |
 | --- | --- | --- | --- |
 | 锐捷 RG-X60 New | ImmortalWrt 24.10（`openwrt-24.10-6.6`） | OpenWrt U-Boot（ubootmod） | `-squashfs-sysupgrade.itb`、`preloader.bin`、`bl31-uboot.fip` |
-| x86_64 | LEDE（`master`） | EFI 与传统 BIOS | `-squashfs-combined*.img.gz`、`-generic-ext4-combined*.img.gz` |
 
-Release 的 tag 就是设备名（`ruijie_rg-x60-new`、`x86_64`）。每台设备保留自己的
+Release 的 tag 就是设备名（`ruijie_rg-x60-new`）。每台设备保留自己的
 release，索引和下载页可以把它们并排列出来。
 
 > **从上一版 LEDE 固件迁移：** RG-X60 New 从原厂分区布局改成了 **ubootmod**。
@@ -102,7 +102,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## 常见问题
 
-**源码在哪？** RG-X60 New 用 [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)，x86_64 用 [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede)。本仓库放的是流水线、品牌素材和测试。
+**源码在哪？** RG-X60 New 用 [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)。本仓库放的是流水线、品牌素材和测试。
 
 **为什么没有 `factory` 镜像？** 这块板子通过引导的网页恢复页刷机，它直接接受 sysupgrade 镜像。
 
@@ -120,7 +120,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 本仓库的脚本、品牌素材与文档以 **GPL-2.0** 发布，见 [LICENSE](../../LICENSE)。
 
-固件本身包含 OpenWrt、LEDE 以及大量上游组件，各自遵循原有许可证。分发固件镜像时同样要遵守这些许可证；特别是 GPL-2.0 要求提供对应的源码。
+固件本身包含 OpenWrt、ImmortalWrt 以及大量上游组件，各自遵循原有许可证。分发固件镜像时同样要遵守这些许可证；特别是 GPL-2.0 要求提供对应的源码。
 
 ## 免责声明
 

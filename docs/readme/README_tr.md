@@ -6,7 +6,7 @@
 
 # ZeroWrt
 
-### ImmortalWrt / LEDE tabanlı özel yazılım, web arayüzünden tek tıkla güncelleme.
+### ImmortalWrt tabanlı özel yazılım, web arayüzünden tek tıkla güncelleme.
 
 **Tek komut derler, tek tık günceller.**
 
@@ -30,12 +30,11 @@
 
 ---
 
-ZeroWrt, OpenWrt sınıfı yönlendiriciler için küçük bir özel yazılımdır ve GitHub Actions ile
-iki genel ağaçtan derlenir: MT7986 kartı için [ImmortalWrt
-24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly), x86_64 için
-[LEDE](https://github.com/coolsnowwolf/lede). Her derleme kaynaktan üretilir, `SHA256SUMS` ve
-`BUILD_INFO.txt` ile yayınlanır ve güncelleme dizinine yazılır; böylece cihaz kendini
-LuCI'den güncelleyebilir.
+ZeroWrt, Ruijie RG-X60 New (MT7986) için küçük bir özel yazılımdır ve
+[ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)
+deposundan GitHub Actions ile derlenir. Her derleme kaynaktan üretilir, `SHA256SUMS` ve
+`BUILD_INFO.txt` ile yayınlanır ve güncelleme dizinine yazılır; böylece cihaz kendini LuCI'den
+güncelleyebilir.
 
 İlginç olan başka bir paket listesi değil, döngü: derleme
 imajı ve dizini yayınlar, yönlendirici bir sonraki denetimde yeni sürümü görür.
@@ -47,20 +46,19 @@ imajı ve dizini yayınlar, yönlendirici bir sonraki denetimde yeni sürümü g
 - **Yapılandırma workflow'dan** — LAN IP'si, ana makine adı ve üç Wi-Fi SSID/parolası derleme girdisidir, elle düzenlenen dosyalar değildir.
 - **Argon 3 markası** — arka plan, giriş logosu, favicon ve palet (`#2E9D72` / `#4CAF86`) derleme sırasında değiştirilir.
 - **Proxy yığını dahil** — PassWall (sing-box çekirdeği, Xray ve SmartDNS yok) ve OpenClash, derleme betikleriyle eşitlenir.
-- **Kontrollü hat** — her pull request'te `ruff` ve 44 birim testi çalışır.
+- **Kontrollü hat** — her pull request'te `ruff` ve 38 birim testi çalışır.
 
 ## Desteklenen cihazlar
 
 | Cihaz | Kaynak | Düzen | İmajlar |
 | --- | --- | --- | --- |
 | Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
-| x86_64 | LEDE (`master`) | EFI ve eski BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
 
 > **LEDE derlemelerinden geçiş:** RG-X60 New imajı fabrika bölümlemesinden **ubootmod**'a
 > geçti. U-Boot kurtarma sayfasından yaz ve yapılandırmayı koruma; eski imaj ile bu imaj
 > birbirinin yerine geçmez.
 
-Release etiketleri cihaz adıdır (`ruijie_rg-x60-new`, `x86_64`). Her cihaz kendi release'ini
+Release etiketleri cihaz adıdır (`ruijie_rg-x60-new`). Her cihaz kendi release'ini
 korur; dizin ve indirme sayfası ikisini yan yana listeleyebilir.
 
 ## İndirme
@@ -108,7 +106,7 @@ Derlemeler elle başlatılır: *Actions → Build ZeroWrt → Run workflow*. `pu
 
 ## SSS
 
-**Kaynak nerede?** RG-X60 New [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) deposundan, x86_64 ise [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede) deposundan derlenir. Bu depoda hat, marka varlıkları ve testler var.
+**Kaynak nerede?** RG-X60 New [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) deposundan derlenir. Bu depoda hat, marka varlıkları ve testler var.
 
 **Neden `factory` imajı yok?** Bu kartlar önyükleyicinin web kurtarma sayfasından yüklenir ve o sayfa sysupgrade imajını doğrudan kabul eder.
 
@@ -126,7 +124,7 @@ Derlemeler elle başlatılır: *Actions → Build ZeroWrt → Run workflow*. `pu
 
 Bu depodaki betikler, marka varlıkları ve belgeler **GPL-2.0** ile yayımlanır — bkz. [LICENSE](../../LICENSE).
 
-Yazılımın kendisi OpenWrt, LEDE ve daha birçok üst kaynak bileşeni içerir; her biri kendi lisansına tabidir. Bir imajı yeniden dağıtırken bu lisanslar da geçerlidir; GPL-2.0 özellikle ilgili kaynak kodun sunulmasını şart koşar.
+Yazılımın kendisi OpenWrt, ImmortalWrt ve daha birçok üst kaynak bileşeni içerir; her biri kendi lisansına tabidir. Bir imajı yeniden dağıtırken bu lisanslar da geçerlidir; GPL-2.0 özellikle ilgili kaynak kodun sunulmasını şart koşar.
 
 ## Yasal uyarı
 

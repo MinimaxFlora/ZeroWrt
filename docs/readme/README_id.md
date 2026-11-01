@@ -6,7 +6,7 @@
 
 # ZeroWrt
 
-### Firmware kustom berbasis ImmortalWrt / LEDE, dengan pembaruan online sekali klik.
+### Firmware kustom berbasis ImmortalWrt, dengan pembaruan online sekali klik.
 
 **Satu perintah mem-build, satu klik memperbarui.**
 
@@ -30,12 +30,11 @@
 
 ---
 
-ZeroWrt adalah firmware kustom kecil untuk router kelas OpenWrt, dibangun dari dua pohon
-publik lewat GitHub Actions: [ImmortalWrt
-24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) untuk papan MT7986
-dan [LEDE](https://github.com/coolsnowwolf/lede) untuk x86_64. Setiap build dihasilkan dari
-kode sumber, diterbitkan bersama `SHA256SUMS` dan `BUILD_INFO.txt`, lalu dicatat dalam
-indeks pembaruan sehingga perangkat dapat memperbarui dirinya sendiri dari LuCI.
+ZeroWrt adalah firmware kustom kecil untuk Ruijie RG-X60 New (MT7986), dibangun dari
+[ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) lewat
+GitHub Actions. Setiap build dihasilkan dari kode sumber, diterbitkan bersama `SHA256SUMS` dan
+`BUILD_INFO.txt`, lalu dicatat dalam indeks pembaruan sehingga perangkat dapat memperbarui
+dirinya sendiri dari LuCI.
 
 Yang menarik bukan daftar paket lain, tetapi siklusnya: build
 menerbitkan image dan indeks, dan router melihat versi baru saat pemeriksaan berikutnya.
@@ -47,20 +46,19 @@ menerbitkan image dan indeks, dan router melihat versi baru saat pemeriksaan ber
 - **Konfigurasi dari workflow** — IP LAN, hostname, serta tiga SSID dan sandi Wi-Fi adalah input build, bukan berkas yang diedit manual.
 - **Branding Argon 3** — latar, logo login, favicon, dan palet (`#2E9D72` / `#4CAF86`) diganti saat build.
 - **Tumpukan proxy disertakan** — PassWall (inti sing-box, tanpa Xray dan SmartDNS) dan OpenClash, disinkronkan oleh skrip build.
-- **Pipeline berpenjaga** — `ruff` dan 44 unit test pada setiap pull request.
+- **Pipeline berpenjaga** — `ruff` dan 38 unit test pada setiap pull request.
 
 ## Perangkat yang didukung
 
 | Perangkat | Sumber | Tata letak | Image |
 | --- | --- | --- | --- |
 | Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
-| x86_64 | LEDE (`master`) | EFI dan BIOS lama | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
 
 > **Pindah dari build LEDE:** image RG-X60 New berubah dari tata letak pabrik ke
 > **ubootmod**. Flash dari halaman pemulihan U-Boot dan jangan pertahankan konfigurasi;
 > image lama dan yang ini tidak bisa saling tukar.
 
-Tag release adalah nama perangkat (`ruijie_rg-x60-new`, `x86_64`). Setiap perangkat punya
+Tag release adalah nama perangkat (`ruijie_rg-x60-new`). Setiap perangkat punya
 release sendiri, jadi indeks dan halaman unduhan dapat menampilkannya berdampingan.
 
 ## Unduhan
@@ -108,7 +106,7 @@ Build dijalankan manual dari *Actions → Build ZeroWrt → Run workflow*. Tidak
 
 ## FAQ
 
-**Di mana kode sumbernya?** RG-X60 New dibangun dari [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly), x86_64 dari [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). Repositori ini berisi pipeline, aset branding, dan tes.
+**Di mana kode sumbernya?** RG-X60 New dibangun dari [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly). Repositori ini berisi pipeline, aset branding, dan tes.
 
 **Mengapa tidak ada image `factory`?** Papan ini di-flash lewat halaman pemulihan bootloader yang menerima image sysupgrade secara langsung.
 
@@ -126,7 +124,7 @@ Build dijalankan manual dari *Actions → Build ZeroWrt → Run workflow*. Tidak
 
 Skrip, aset branding, dan dokumentasi di repositori ini dirilis di bawah **GPL-2.0** — lihat [LICENSE](../../LICENSE).
 
-Firmware itu sendiri memuat OpenWrt, LEDE, dan banyak komponen hulu lain, masing-masing dengan lisensinya. Saat mendistribusikan ulang image, lisensi tersebut juga berlaku; GPL-2.0 khususnya mewajibkan penyediaan kode sumber terkait.
+Firmware itu sendiri memuat OpenWrt, ImmortalWrt, dan banyak komponen hulu lain, masing-masing dengan lisensinya. Saat mendistribusikan ulang image, lisensi tersebut juga berlaku; GPL-2.0 khususnya mewajibkan penyediaan kode sumber terkait.
 
 ## Penafian
 

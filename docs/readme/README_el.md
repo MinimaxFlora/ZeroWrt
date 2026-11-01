@@ -6,7 +6,7 @@
 
 # ZeroWrt
 
-### Προσαρμοσμένο firmware βασισμένο στο ImmortalWrt / LEDE, με ενημέρωση online με ένα κλικ.
+### Προσαρμοσμένο firmware βασισμένο στο ImmortalWrt, με ενημέρωση online με ένα κλικ.
 
 **Μία εντολή το χτίζει, ένα κλικ το ενημερώνει.**
 
@@ -30,12 +30,11 @@
 
 ---
 
-Το ZeroWrt είναι ένα μικρό προσαρμοσμένο firmware για ρούτερ κλάσης OpenWrt, χτισμένο από
-δύο δημόσια δέντρα μέσω GitHub Actions: [ImmortalWrt
-24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) για την πλακέτα
-MT7986 και [LEDE](https://github.com/coolsnowwolf/lede) για x86_64. Κάθε build παράγεται
-από τον πηγαίο κώδικα, δημοσιεύεται μαζί με `SHA256SUMS` και `BUILD_INFO.txt` και
-καταχωρείται σε ευρετήριο ενημερώσεων, ώστε η συσκευή να ενημερώνεται μόνη της από το LuCI.
+Το ZeroWrt είναι ένα μικρό προσαρμοσμένο firmware για το Ruijie RG-X60 New (MT7986), χτισμένο
+από [ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) μέσω
+GitHub Actions. Κάθε build παράγεται από τον πηγαίο κώδικα, δημοσιεύεται μαζί με `SHA256SUMS`
+και `BUILD_INFO.txt` και καταχωρείται σε ευρετήριο ενημερώσεων, ώστε η συσκευή να ενημερώνεται
+μόνη της από το LuCI.
 
 Το ενδιαφέρον δεν είναι άλλη μια λίστα πακέτων, αλλά ο κύκλος: το
 build δημοσιεύει image και ευρετήριο, και το ρούτερ βλέπει τη νέα έκδοση στον επόμενο έλεγχο.
@@ -47,20 +46,19 @@ build δημοσιεύει image και ευρετήριο, και το ρούτ
 - **Ρυθμίσεις από το workflow** — διεύθυνση LAN, hostname και τρία SSID/κωδικοί Wi-Fi είναι είσοδοι build, όχι αρχεία με χειροκίνητες αλλαγές.
 - **Branding Argon 3** — φόντο, λογότυπο σύνδεσης, favicon και παλέτα (`#2E9D72` / `#4CAF86`) αντικαθίστανται κατά το build.
 - **Πλήρες proxy stack** — PassWall (πυρήνας sing-box, χωρίς Xray και SmartDNS) και OpenClash, συγχρονισμένα από τα scripts build.
-- **Ελεγχόμενη ροή** — `ruff` και 44 unit tests σε κάθε pull request.
+- **Ελεγχόμενη ροή** — `ruff` και 38 unit tests σε κάθε pull request.
 
 ## Υποστηριζόμενες συσκευές
 
 | Συσκευή | Πηγή | Διάταξη | Images |
 | --- | --- | --- | --- |
 | Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
-| x86_64 | LEDE (`master`) | EFI και παλαιό BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
 
 > **Μετάβαση από τα builds LEDE:** η εικόνα του RG-X60 New άλλαξε από τη διάταξη
 > κατασκευαστή σε **ubootmod**. Γράψ' την από τη σελίδα ανάκτησης U-Boot και μη κρατήσεις
 > τις ρυθμίσεις· το παλιό και το νέο image δεν είναι συμβατά.
 
-Τα tags των release είναι το όνομα της συσκευής (`ruijie_rg-x60-new`, `x86_64`). Κάθε
+Τα tags των release είναι το όνομα της συσκευής (`ruijie_rg-x60-new`). Κάθε
 συσκευή κρατά δικό της release, οπότε το ευρετήριο και η σελίδα λήψης τα δείχνουν δίπλα δίπλα.
 
 ## Λήψη
@@ -108,7 +106,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## Συχνές ερωτήσεις
 
-**Πού είναι ο κώδικας;** Το RG-X60 New χτίζεται από το [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) και το x86_64 από το [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). Αυτό το αποθετήριο έχει τη ροή, τα υλικά branding και τα tests.
+**Πού είναι ο κώδικας;** Το RG-X60 New χτίζεται από το [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly). Αυτό το αποθετήριο έχει τη ροή, τα υλικά branding και τα tests.
 
 **Γιατί δεν υπάρχει image `factory`;** Αυτές οι πλακέτες κάνουν flash από τη σελίδα ανάκτησης του bootloader, που δέχεται απευθείας το image sysupgrade.
 
@@ -126,7 +124,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 Τα scripts, τα υλικά branding και η τεκμηρίωση αυτού του αποθετηρίου διανέμονται με **GPL-2.0** — βλ. [LICENSE](../../LICENSE).
 
-Το ίδιο το firmware περιλαμβάνει OpenWrt, LEDE και πολλά άλλα upstream στοιχεία, καθένα με τη δική του άδεια. Κατά την αναδιανομή ενός image ισχύουν κι αυτές· η GPL-2.0 ειδικότερα απαιτεί τη διάθεση του αντίστοιχου πηγαίου κώδικα.
+Το ίδιο το firmware περιλαμβάνει OpenWrt, ImmortalWrt και πολλά άλλα upstream στοιχεία, καθένα με τη δική του άδεια. Κατά την αναδιανομή ενός image ισχύουν κι αυτές· η GPL-2.0 ειδικότερα απαιτεί τη διάθεση του αντίστοιχου πηγαίου κώδικα.
 
 ## Αποποίηση ευθυνών
 

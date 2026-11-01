@@ -74,8 +74,7 @@ def cmd_source_customize(args: argparse.Namespace) -> None:
 
 
 def cmd_packages_add(args: argparse.Namespace) -> None:
-    device = args.device or settings.BuildSettings.from_environment().device
-    packages.add_external_packages(Path(args.tree), device)
+    packages.add_external_packages(Path(args.tree))
     packages.apply_argon_branding(Path(args.tree), Path(args.assets))
 
 
@@ -164,7 +163,6 @@ def build_parser() -> argparse.ArgumentParser:
     add = pkg_sub.add_parser("add", help="clone Argon, PassWall and OpenClash")
     add.add_argument("--tree", default=str(DEFAULT_TREE))
     add.add_argument("--assets", default=str(DEFAULT_ASSETS))
-    add.add_argument("--device", default=None, help="device profile (default: ZEROWRT_DEVICE)")
     add.set_defaults(func=cmd_packages_add)
 
     ota = pkg_sub.add_parser("ota", help="clone luci-app-ota and patch its index generator")

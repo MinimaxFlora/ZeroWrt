@@ -1,14 +1,12 @@
-"""Device profiles and the upstream tree each one is built from.
+"""Device profile and the upstream tree it is built from.
 
-ZeroWrt builds two different trees:
+ZeroWrt builds one device: the Ruijie RG-X60 New (MT7986), from the ImmortalWrt
+24.10 fork that carries the padavanonly MTK wireless driver. The repository is
+public, so the workflow needs no source token.
 
-* ``ruijie_rg-x60-new`` -- the MT7986 board, built from the ImmortalWrt 24.10
-  fork that carries the padavanonly MTK wireless driver.
-* ``x86_64`` -- plain x86_64, still built from LEDE.
-
-Both repositories are public, so the workflow needs no source token at all.
-A profile name doubles as the release tag and as the ``device`` workflow
-input, which is why the name never follows an upstream ``Device/`` rename.
+The profile indirection stays so the upstream branch and the ``Device/`` name
+are resolved in one place and the profile name (which doubles as the release
+tag) never follows an upstream rename.
 """
 
 from __future__ import annotations
@@ -30,16 +28,14 @@ class Source:
 
 @dataclass(frozen=True)
 class DeviceProfile:
-    """A buildable device: target, source tree and the packages it adds."""
+    """A buildable device: target and the source tree it comes from."""
 
     name: str
     source: str
     board: str
     subtarget: str
     device: str
-    packages: tuple[str, ...] = ()
     layout: str = ""
-    has_wifi: bool = True
 
 
 SOURCES: dict[str, Source] = {
@@ -49,18 +45,12 @@ SOURCES: dict[str, Source] = {
         ref="openwrt-24.10-6.6",
         label="ImmortalWrt 24.10 (MT798x, padavanonly)",
     ),
-    "lede": Source(
-        key="lede",
-        repo="coolsnowwolf/lede",
-        ref="master",
-        label="LEDE",
-    ),
 }
 
 PROFILES: dict[str, DeviceProfile] = {
-    # The workflow name stays "ruijie_rg-x60-new" so the release tag and the
-    # OTA index entry survive the move from LEDE to ImmortalWrt; the firmware
-    # itself is the U-Boot layout (ubootmod) build.
+    # The profile name stays "ruijie_rg-x60-new" so the release tag and the OTA
+    # index entry survive upstream renames; the firmware itself is the U-Boot
+    # layout (ubootmod) build.
     "ruijie_rg-x60-new": DeviceProfile(
         name="ruijie_rg-x60-new",
         source="immortalwrt",
@@ -68,17 +58,6 @@ PROFILES: dict[str, DeviceProfile] = {
         subtarget="filogic",
         device="ruijie_rg-x60-new-ubootmod",
         layout="OpenWrt U-Boot layout (ubootmod)",
-    ),
-    "x86_64": DeviceProfile(
-        name="x86_64",
-        source="lede",
-        board="x86",
-        subtarget="64",
-        device="generic",
-        packages=("luci-app-mosdns",),
-        layout="EFI and legacy BIOS",
-        # No radio on the board: patching the mac80211 defaults is optional.
-        has_wifi=False,
     ),
 }
 
@@ -104,14 +83,3 @@ def require(name: str) -> DeviceProfile:
 def source(profile: DeviceProfile) -> Source:
     """Upstream tree for *profile*."""
     return SOURCES[profile.source]
-
-
-def base_for(name: str | None) -> str:
-    """Upstream family for *name*.
-
-    An unknown name falls back to LEDE, which is what the plain
-    ``owner/name`` device lookups used by the tests and by ``find_device``
-    assume.
-    """
-    profile = find(name)
-    return profile.source if profile else "lede"

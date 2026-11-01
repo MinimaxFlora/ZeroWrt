@@ -66,43 +66,38 @@ class SettingsTest(unittest.TestCase):
                 "ZEROWRT_IP": "192.168.8.1",
                 "ZEROWRT_WIFI_NAME": "Lab",
                 "ZEROWRT_WIFI_PASSWORD": "password123",
-                "ZEROWRT_DEVICE": "x86_64",
+                "ZEROWRT_DEVICE": "ruijie_rg-x60-new",
             }
         )
         self.assertEqual(value.ip, "192.168.8.1")
         self.assertEqual(value.ssid("5g"), "Lab-5G")
-        self.assertEqual(value.device, "x86_64")
+        self.assertEqual(value.device, "ruijie_rg-x60-new")
 
 
 class ProfilesTest(unittest.TestCase):
-    def test_rg_x60_builds_immortalwrt_ubootmod(self) -> None:
+    def test_only_the_rg_x60_is_supported(self) -> None:
+        self.assertEqual(profiles.names(), ["ruijie_rg-x60-new"])
+
         profile = profiles.require("ruijie_rg-x60-new")
         self.assertEqual(profile.source, "immortalwrt")
         self.assertEqual(profile.device, "ruijie_rg-x60-new-ubootmod")
-        self.assertEqual(profile.packages, ())
-        self.assertEqual(profiles.base_for(profile.name), "immortalwrt")
 
         upstream = profiles.source(profile)
         self.assertEqual(upstream.repo, "Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly")
         self.assertEqual(upstream.ref, "openwrt-24.10-6.6")
+        self.assertEqual(profiles.DEFAULT_DEVICE, "ruijie_rg-x60-new")
 
-    def test_x86_stays_on_lede(self) -> None:
-        profile = profiles.require("x86_64")
-        self.assertEqual(profile.source, "lede")
-        self.assertEqual((profile.board, profile.subtarget, profile.device), ("x86", "64", "generic"))
-        self.assertIn("luci-app-mosdns", profile.packages)
-
-        upstream = profiles.source(profile)
-        self.assertEqual(upstream.repo, "coolsnowwolf/lede")
+    def test_x86_profile_is_gone(self) -> None:
+        self.assertIsNone(profiles.find("x86_64"))
+        with self.assertRaises(util.BuildError):
+            profiles.require("x86_64")
 
     def test_unknown_profile_raises(self) -> None:
         with self.assertRaises(util.BuildError):
             profiles.require("ruijie_rg-x60-pro")
-        self.assertIsNone(profiles.find("ruijie_rg-x60-pro"))
-        self.assertEqual(profiles.base_for("ruijie_rg-x60-pro"), "lede")
 
 
-class ImmortalWrtPatchesTest(TempTreeTest):
+class CorePatchesTest(TempTreeTest):
     """Core customisations for the MT798x ImmortalWrt tree."""
 
     VERSION_MK = """\
@@ -193,6 +188,7 @@ detect_mtwifi() {
         config_generate = util.read_text(tree / source.CORE_FILES["config_generate"])
         self.assertEqual(config_generate.count('ipad=${ipaddr:-"192.168.8.1"}'), 2)
         self.assertNotIn("192.168.110.1", config_generate)
+        self.assertNotIn("192.168.6.1", config_generate)
         self.assertIn("hostname='ZeroWrt'", config_generate)
         self.assertNotIn("ImmortalWrt", config_generate)
 
@@ -217,11 +213,16 @@ detect_mtwifi() {
         expected_banner = (REPO_ROOT / "assets" / "banner").read_text(encoding="utf-8")
         self.assertEqual(util.read_text(tree / source.CORE_FILES["banner"]), expected_banner)
 
-    def test_upstream_kernel_is_left_alone(self) -> None:
+    def test_verify_rejects_a_leftover_board_default(self) -> None:
         tree = self.prepare()
-        self.write("target/linux/mediatek/Makefile", "KERNEL_PATCHVER:=6.6\n")
-        source.apply_core_customisations(tree, settings.BuildSettings().validated())
-        self.assertIn("KERNEL_PATCHVER:=6.6", util.read_text(tree / "target/linux/mediatek/Makefile"))
+        build_settings = settings.BuildSettings().validated()
+        source.apply_core_customisations(tree, build_settings)
+
+        path = tree / source.CORE_FILES["config_generate"]
+        text = util.read_text(path).replace('ipad=${ipaddr:-"10.0.0.1"}', 'ipad=${ipaddr:-"192.168.110.1"}', 1)
+        util.write_text(path, text)
+        with self.assertRaises(util.BuildError):
+            source.verify_core(tree, build_settings)
 
     def test_missing_banner_asset_is_not_fatal(self) -> None:
         tree = self.prepare()
@@ -243,163 +244,6 @@ detect_mtwifi() {
         # A re-run (local debugging, retried step) must not fail on its own
         # output.
         source.apply_core_customisations(tree, build_settings)
-
-
-class LedePatchesTest(TempTreeTest):
-    """Core customisations for the LEDE tree used by x86_64."""
-
-    VERSION_MK = """\
-VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),OpenWrt)
-VERSION_MANUFACTURER:=$(if $(VERSION_MANUFACTURER),$(VERSION_MANUFACTURER),OpenWrt)
-VERSION_NUMBER:=$(call qstrip,$(CONFIG_VERSION_NUMBER))
-VERSION_NUMBER:=$(if $(VERSION_NUMBER),$(VERSION_NUMBER),24.10.5)
-"""
-
-    CONFIG_GENERATE = """\
-generate_static_system() {
-\tset system.@system[-1].hostname='LEDE'
-}
-generate_network() {
-\tcase "$protocol" in
-\t\tstatic)
-\t\t\tcase "$1" in
-\t\t\t\tlan) ipad=${ipaddr:-"192.168.1.1"} ;;
-\t\t\t\t*) ipad=${ipaddr:-"192.168.$((addr_offset++)).1"} ;;
-\t\t\tesac
-\t\t;;
-\tesac
-}
-"""
-
-    DEFAULT_SETTINGS = """\
-sed -i '/DISTRIB_REVISION/d' /etc/openwrt_release
-echo "DISTRIB_REVISION='R@BUILD_DATE@'" >> /etc/openwrt_release
-sed -i '/DISTRIB_DESCRIPTION/d' /etc/openwrt_release
-echo "DISTRIB_DESCRIPTION='LEDE '" >> /etc/openwrt_release
-echo 'OPENWRT_RELEASE="LEDE R@BUILD_DATE@"' >> /usr/lib/os-release
-"""
-
-    OPENWRT_RELEASE = """\
-DISTRIB_ID='%D'
-DISTRIB_RELEASE='%V'
-DISTRIB_REVISION='%R'
-DISTRIB_DESCRIPTION='%D %V %C'
-"""
-
-    OS_RELEASE = """\
-NAME="%D"
-PRETTY_NAME="%D %V"
-OPENWRT_RELEASE="%D %V %C"
-"""
-
-    WIFI_SCRIPT = """\
-mac80211_emit_detect() {
-\tlocal band="$3"
-\tlocal ssid="$default_ssid"
-\tlocal key="$default_key"
-\tlocal encryption="$default_encryption"
-
-\t[ -n "$ssid" ] || ssid="LEDE"
-\tkey="$default_key"
-
-\tcase "$band" in
-\t\t6g)
-\t\t\t[ -n "$encryption" ] || encryption="owe"
-\t\t;;
-\t\t*)
-\t\t\t[ -n "$encryption" ] || encryption="none"
-\t\t;;
-\tesac
-}
-"""
-
-    def prepare(self) -> Path:
-        self.write("include/version.mk", self.VERSION_MK)
-        self.write("package/base-files/files/bin/config_generate", self.CONFIG_GENERATE)
-        self.write("package/base-files/luci/bin/config_generate", self.CONFIG_GENERATE)
-        self.write("package/base-files/files/etc/openwrt_release", self.OPENWRT_RELEASE)
-        self.write("package/base-files/files/usr/lib/os-release", self.OS_RELEASE)
-        self.write("package/lean/default-settings/files/zzz-default-settings", self.DEFAULT_SETTINGS)
-        self.write("package/base-files/files/etc/banner", "upstream banner\n")
-        self.write("package/kernel/mac80211/files/lib/wifi/mac80211.sh", self.WIFI_SCRIPT)
-        self.write(
-            "target/linux/x86/Makefile",
-            "KERNEL_PATCHVER:=6.12\nKERNEL_TESTING_PATCHVER:=6.15\n",
-        )
-        return self.root
-
-    def run_customisations(self) -> None:
-        build_settings = settings.BuildSettings(
-            ip="192.168.8.1",
-            wifi_name="LabNet",
-            wifi_password="password123",
-            device="x86_64",
-        ).validated()
-        source.apply_core_customisations(self.root, build_settings)
-
-    def test_core_customisations(self) -> None:
-        tree = self.prepare()
-        self.run_customisations()
-
-        version = util.read_text(tree / "include/version.mk")
-        self.assertIn("VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),ZeroWrt)", version)
-        self.assertIn("VERSION_MANUFACTURER:=$(if $(VERSION_MANUFACTURER),$(VERSION_MANUFACTURER),ZeroWrt)", version)
-
-        kernel = util.read_text(tree / "target/linux/x86/Makefile")
-        self.assertIn("KERNEL_PATCHVER:=6.18", kernel)
-        self.assertIn("KERNEL_TESTING_PATCHVER:=6.18", kernel)
-
-        for relative in (source.CORE_FILES["config_generate"], source.CORE_FILES["config_generate_luci"]):
-            text = util.read_text(tree / relative)
-            self.assertIn('lan) ipad=${ipaddr:-"192.168.8.1"}', text)
-            self.assertIn("hostname='ZeroWrt'", text)
-            self.assertNotIn("192.168.1.1", text)
-
-        # LEDE rewrites the release files from default-settings on first boot.
-        default_settings = util.read_text(tree / source.CORE_FILES["default_settings"])
-        self.assertIn(f"DISTRIB_DESCRIPTION='ZeroWrt-{TODAY}'", default_settings)
-        self.assertIn("DISTRIB_REVISION=' By MinimaxFlora'", default_settings)
-        self.assertIn(f'OPENWRT_RELEASE="ZeroWrt 标准版 @R{TODAY} BY MinimaxFlora"', default_settings)
-        self.assertNotIn("LEDE", default_settings)
-
-        wifi = util.read_text(tree / source.WIFI_SCRIPTS[0])
-        self.assertIn("2g) ssid=LabNet-2.4G", wifi)
-        self.assertIn("5g) ssid=LabNet-5G", wifi)
-        self.assertIn("key=password123", wifi)
-        self.assertIn('encryption="psk2"', wifi)
-        self.assertIn('encryption="sae"', wifi)
-        self.assertNotIn('ssid="LEDE"', wifi)
-
-    def test_x86_without_wifi_scripts_is_not_fatal(self) -> None:
-        tree = self.prepare()
-        (tree / source.WIFI_SCRIPTS[0]).unlink()
-        build_settings = settings.BuildSettings(device="x86_64").validated()
-        source.apply_core_customisations(tree, build_settings)
-        self.assertFalse((tree / source.WIFI_SCRIPTS[0]).exists())
-
-    def test_ssr_plus_removed(self) -> None:
-        tree = self.prepare()
-        self.write("include/target.mk", "DEFAULT_PACKAGES.router += luci-app-ssr-plus luci-app-wol\n")
-        self.write("package/lean/luci-app-ssr-plus/Makefile", "include $(TOPDIR)/rules.mk\n")
-        self.write("target/linux/x86/64/target.mk", "DEFAULT_PACKAGES += luci-app-ssr-plus\n")
-
-        self.run_customisations()
-
-        self.assertFalse((tree / "package/lean/luci-app-ssr-plus").exists())
-        self.assertNotIn("luci-app-ssr-plus", util.read_text(tree / "include/target.mk"))
-        self.assertNotIn("luci-app-ssr-plus", util.read_text(tree / "target/linux/x86/64/target.mk"))
-
-    def test_turboacc_removed(self) -> None:
-        """Upstream luci dropped luci-app-turboacc, so ZeroWrt must not ship it."""
-        tree = self.prepare()
-        self.write("include/target.mk", "DEFAULT_PACKAGES.router += luci-app-turboacc luci-app-wol\n")
-        self.write("package/lean/luci-app-turboacc/Makefile", "include $(TOPDIR)/rules.mk\n")
-
-        self.run_customisations()
-
-        self.assertFalse((tree / "package/lean/luci-app-turboacc").exists())
-        self.assertNotIn("luci-app-turboacc", util.read_text(tree / "include/target.mk"))
-        self.assertFalse([package for package in configgen.PACKAGES if "turboacc" in package])
 
 
 class DeviceLookupTest(TempTreeTest):
@@ -445,36 +289,6 @@ TARGET_DEVICES += ruijie_rg-x60-pro
         with self.assertRaises(util.BuildError):
             configgen.find_device(self.root, "missing_device")
 
-    def prepare_x86(self) -> Path:
-        self.write("target/linux/x86/Makefile", "SUBTARGETS:=64 generic geode legacy\nKERNEL_PATCHVER:=6.18\n")
-        for subtarget in ("64", "generic", "geode", "legacy"):
-            self.write(f"target/linux/x86/{subtarget}/target.mk", f"BOARDNAME:={subtarget}\n")
-        self.write(
-            "target/linux/x86/image/64.mk",
-            "define Device/generic\n  DEVICE_VENDOR := Generic\n  DEVICE_MODEL := x86/64\nendef\n"
-            "TARGET_DEVICES += generic\n",
-        )
-        self.write(
-            "target/linux/x86/image/generic.mk",
-            "define Device/generic\n  DEVICE_VENDOR := Generic\n  DEVICE_MODEL := x86\nendef\n"
-            "TARGET_DEVICES += generic\n",
-        )
-        return self.root
-
-    def test_x86_64_target(self) -> None:
-        # Upstream declares "Device/generic" (lowercase) in
-        # target/linux/x86/image/64.mk, so the symbol carries _DEVICE_.
-        tree = self.prepare_x86()
-        target = configgen.resolve_target(tree, "x86_64")
-        self.assertEqual(target["board"], "x86")
-        self.assertEqual(target["subtarget"], "64")
-        self.assertEqual(target["name"], "generic")
-
-        text = configgen._render_config(target, configgen.PACKAGES)
-        self.assertIn("CONFIG_TARGET_x86=y", text)
-        self.assertIn("CONFIG_TARGET_x86_64=y", text)
-        self.assertIn("CONFIG_TARGET_x86_64_DEVICE_generic=y", text)
-
     def test_unknown_name_falls_back_to_device_lookup(self) -> None:
         tree = self.prepare()
         target = configgen.resolve_target(tree, "ruijie_rg-x60-pro")
@@ -482,7 +296,7 @@ TARGET_DEVICES += ruijie_rg-x60-pro
 
     def test_profile_without_source_tree_raises(self) -> None:
         with self.assertRaises(util.BuildError):
-            configgen.resolve_target(self.root, "x86_64")
+            configgen.resolve_target(self.root, "ruijie_rg-x60-new")
 
 
 class ConfigRenderTest(unittest.TestCase):
@@ -506,7 +320,7 @@ class ConfigRenderTest(unittest.TestCase):
         self.assertIn("CONFIG_DEVEL=y", text)
 
     def test_passwall_uses_sing_box_without_smartdns(self) -> None:
-        target = {"board": "x86", "subtarget": "64", "name": "generic"}
+        target = {"board": "mediatek", "subtarget": "filogic", "name": "ruijie_rg-x60-new-ubootmod"}
         text = configgen._render_config(target, [])
         self.assertIn("CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox=y", text)
         self.assertIn("# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray is not set", text)
@@ -525,33 +339,26 @@ class PackageSelectionTest(TempTreeTest):
         (self.root / "package/new/luci-app-argon-config").mkdir(parents=True)
         self.assertIn(package, configgen._packages(self.root))
 
-    def test_ramfree_goes_into_every_device(self) -> None:
-        for device in (None, "ruijie_rg-x60-new", "x86_64"):
-            with self.subTest(device=device):
-                self.assertIn("CONFIG_PACKAGE_luci-app-ramfree", configgen._packages(self.root, device))
-
-    def test_mosdns_is_x86_only(self) -> None:
-        self.assertNotIn("CONFIG_PACKAGE_luci-app-mosdns", configgen._packages(self.root))
-        self.assertNotIn("CONFIG_PACKAGE_luci-app-mosdns", configgen._packages(self.root, "ruijie_rg-x60-new"))
-        self.assertIn("CONFIG_PACKAGE_luci-app-mosdns", configgen._packages(self.root, "x86_64"))
+    def test_shared_packages_are_always_selected(self) -> None:
+        packages_ = configgen._packages(self.root)
+        self.assertIn("CONFIG_PACKAGE_luci-app-ramfree", packages_)
+        self.assertIn("CONFIG_PACKAGE_luci-app-passwall", packages_)
+        self.assertIn("CONFIG_PACKAGE_luci-app-openclash", packages_)
+        self.assertNotIn("CONFIG_PACKAGE_luci-app-mosdns", packages_)
 
     def test_device_packages_land_in_the_config(self) -> None:
-        target = configgen.resolve_target(self._x86_tree(), "x86_64")
-        text = configgen._render_config(target, configgen._packages(self.root, "x86_64"))
-        self.assertIn("CONFIG_PACKAGE_luci-app-mosdns=y", text)
+        target = configgen.resolve_target(self._tree(), "ruijie_rg-x60-new")
+        text = configgen._render_config(target, configgen._packages(self.root))
         self.assertIn("CONFIG_PACKAGE_luci-app-ramfree=y", text)
+        self.assertIn("CONFIG_TARGET_mediatek_filogic_DEVICE_ruijie_rg-x60-new-ubootmod=y", text)
 
-    def test_mosdns_checkout_matches_the_profile(self) -> None:
-        self.assertTrue(packages._wants_mosdns("x86_64"))
-        self.assertFalse(packages._wants_mosdns("ruijie_rg-x60-new"))
-
-    def _x86_tree(self) -> Path:
-        self.write("target/linux/x86/Makefile", "SUBTARGETS:=64 generic geode legacy\n")
-        self.write("target/linux/x86/64/target.mk", "BOARDNAME:=x86_64\n")
+    def _tree(self) -> Path:
+        self.write("target/linux/mediatek/Makefile", "SUBTARGETS:=filogic\n")
+        self.write("target/linux/mediatek/filogic/target.mk", "BOARDNAME:=MediaTek Filogic\n")
         self.write(
-            "target/linux/x86/image/64.mk",
-            "define Device/generic\n  DEVICE_VENDOR := Generic\n  DEVICE_MODEL := x86/64\nendef\n"
-            "TARGET_DEVICES += generic\n",
+            "target/linux/mediatek/image/filogic.mk",
+            "define Device/ruijie_rg-x60-new-ubootmod\n  DEVICE_VENDOR := Ruijie\n"
+            "  DEVICE_MODEL := RG-X60 New\nendef\nTARGET_DEVICES += ruijie_rg-x60-new-ubootmod\n",
         )
         return self.root
 
@@ -581,11 +388,10 @@ class FeedConflictTest(TempTreeTest):
         source.prune_feed_conflicts(self.root)
         self.assertFalse((self.root / "feeds/packages/net/sing-box").exists())
 
-    def test_mosdns_and_ramfree_feed_copies_are_dropped(self) -> None:
-        self.feed("feeds/packages/net/mosdns", "mosdns", "$(eval $(call BuildPackage,mosdns))")
+    def test_passwall_and_ramfree_feed_copies_are_dropped(self) -> None:
         self.feed(
-            "feeds/luci/applications/luci-app-mosdns",
-            "luci-app-mosdns",
+            "feeds/luci/applications/luci-app-passwall",
+            "luci-app-passwall",
             "$(eval $(call BuildPackage,$(PKG_NAME)))",
         )
         self.feed(
@@ -594,14 +400,13 @@ class FeedConflictTest(TempTreeTest):
             "$(eval $(call BuildPackage,$(PKG_NAME)))",
         )
         source.prune_feed_conflicts(self.root)
-        self.assertFalse((self.root / "feeds/packages/net/mosdns").exists())
-        self.assertFalse((self.root / "feeds/luci/applications/luci-app-mosdns").exists())
+        self.assertFalse((self.root / "feeds/luci/applications/luci-app-passwall").exists())
         self.assertFalse((self.root / "feeds/luci/applications/luci-app-ramfree").exists())
 
     def test_installed_feed_links_are_pruned_too(self) -> None:
-        self.feed("package/feeds/packages/mosdns", "mosdns", "$(eval $(call BuildPackage,mosdns))")
+        self.feed("package/feeds/packages/sing-box", "sing-box", "$(eval $(call BuildPackage,sing-box))")
         source.prune_feed_conflicts(self.root)
-        self.assertFalse((self.root / "package/feeds/packages/mosdns").exists())
+        self.assertFalse((self.root / "package/feeds/packages/sing-box").exists())
 
     def test_unrelated_feed_package_survives(self) -> None:
         self.feed("feeds/packages/net/curl", "curl", "$(eval $(call BuildPackage,curl))")
@@ -611,9 +416,9 @@ class FeedConflictTest(TempTreeTest):
     def test_asset_directory_with_a_package_name_survives(self) -> None:
         # A LuCI app ships static assets under a path that can end in a package
         # name; those directories have no Makefile and must not be touched.
-        self.write("feeds/luci/applications/luci-app-example/htdocs/mosdns/index.html", "hi")
+        self.write("feeds/luci/applications/luci-app-example/htdocs/sing-box/index.html", "hi")
         source.prune_feed_conflicts(self.root)
-        self.assertTrue((self.root / "feeds/luci/applications/luci-app-example/htdocs/mosdns").exists())
+        self.assertTrue((self.root / "feeds/luci/applications/luci-app-example/htdocs/sing-box").exists())
 
 
 class OtaIndexTest(TempTreeTest):
@@ -662,7 +467,7 @@ BAD_TOKENS = (
 
 
 class ArgonWgetTest(TempTreeTest):
-    """Argon's apk-only wget-any must not reach the opkg-only trees."""
+    """Argon's apk-only wget-any must not reach the opkg-only tree."""
 
     def test_apk_only_dependency_is_replaced(self) -> None:
         makefile = self.write(
@@ -806,21 +611,6 @@ class CollectTest(TempTreeTest):
         info_text = (out / "BUILD_INFO.txt").read_text(encoding="utf-8")
         self.assertIn("profile: ruijie_rg-x60-new", info_text)
         self.assertIn("layout: OpenWrt U-Boot layout (ubootmod)", info_text)
-
-    def test_collect_x86_image(self) -> None:
-        self.write(
-            ".zerowrt-info.json",
-            '{"board": "x86", "subtarget": "64", "device": "Generic", "artifact": "x86_64", "version": "20261020"}\n',
-        )
-        source_dir = self.root / "bin/targets/x86/64"
-        source_dir.mkdir(parents=True)
-        firmware = "zerowrt-x86-64-generic-squashfs-combined-efi.img.gz"
-        (source_dir / firmware).write_bytes(b"firmware")
-
-        out = self.root / "dist"
-        build.collect(self.root, out)
-        names = {path.name for path in out.iterdir()}
-        self.assertIn(firmware, names)
 
 
 if __name__ == "__main__":

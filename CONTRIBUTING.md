@@ -2,7 +2,7 @@
 
 欢迎提 Issue 和 PR。先说清楚这个仓库**不是**什么，能省你不少时间：
 
-> 这里没有 OpenWrt 源码。源码树是两份公开仓库（MT7986 用 ImmortalWrt，x86_64 用 LEDE），
+> 这里没有 OpenWrt 源码。源码树是一份公开仓库（ImmortalWrt 的 MT798x 分支），
 > Actions 里直接匿名 clone，不需要配置源码 Secret。
 > 这个仓库装的是**构建流水线本身**：`scripts/`、`tests/`、品牌素材 `assets/`，以及触发它们的 workflow。
 
@@ -46,9 +46,9 @@ ruff format scripts tests
 
 - **`from __future__ import annotations`** —— 所有模块都加，然后放心用 `str | None` 这类新语法
 - **错误信息要能指导下一步** —— 抛 `util.BuildError`，内容写清"哪里错了 / 该怎么修"，而不是 `assert failed`。参考 `source.verify_core()`：它会在失败时列出所有问题，而不是遇到第一个就崩。
-- **不要在脚本里 hardcode 上游结构** —— 这是踩过坑的一条。曾经把 target profile 符号写死成
-  `CONFIG_TARGET_x86_64_Generic`，上游改了 device 名后 `defconfig` 静默丢弃这个符号，构建失败且很难查。
-  现在的做法是**从源码树里真实解析**。同理，涉及".config 里的包名"的改动，请确认这个包真的存在。
+- **不要在脚本里 hardcode 上游结构** —— 这是踩过坑的一条。设备符号必须从源码树里真实的
+  `define Device/<name>` 解析，写死的名字一旦上游重命名就会被 `defconfig` 静默丢弃，构建失败且很难查。
+  同理，涉及“.config 里的包名”的改动，请确认这个包真的存在。
 - **不要吞掉失败** —— `check=False` 的 subprocess 后面要有明确的处理或告警，不要指望下游自己发现。
 
 ## 测试怎么加
@@ -64,7 +64,7 @@ class MyPatchTest(TempTreeTest):
 ```
 
 用 `self.write()` 造最小输入，**不要依赖真实源码树**（几十万个文件，而且每次构建都可能变）。现有的
-`ImmortalWrtPatchesTest`、`LedePatchesTest`、`DeviceLookupTest`、`FeedConflictTest` 都是这个套路，照着抄最快。
+`CorePatchesTest`、`DeviceLookupTest`、`FeedConflictTest` 都是这个套路，照着抄最快。
 
 ## 关于 `package/new`
 
@@ -104,7 +104,7 @@ feeds 里的同名包会依据这份清单自动被删掉，漏登记会让 buil
 ```
 build: switch the PassWall core from Xray to sing-box
 build: build the RG-X60 New from ImmortalWrt
-fix: resolve x86_64 device from the source tree
+fix: resolve the device from the source tree
 docs: describe the package/new layout
 ```
 

@@ -235,8 +235,7 @@ def clone(
 ) -> str:
     """Clone ``owner/name`` into *dest* and return the checked out commit.
 
-    The repository name itself may be a secret (the LEDE source tree is
-    private), so it is never echoed in logs.
+    The repository name is never echoed in logs together with a token.
     """
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo or ""):
         raise BuildError("invalid repository name; expected 'owner/name'")

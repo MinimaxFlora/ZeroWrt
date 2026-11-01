@@ -6,7 +6,7 @@
 
 # ZeroWrt
 
-### Custom firmware built from ImmortalWrt and LEDE, with one-click online updates.
+### Custom firmware built from ImmortalWrt, with one-click online updates.
 
 **One command builds it, one click updates it.**
 
@@ -30,12 +30,12 @@
 
 ---
 
-ZeroWrt is a small custom firmware for OpenWrt-class routers, compiled from two
-public trees by GitHub Actions: [ImmortalWrt
-24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) for the
-MT7986 board and [LEDE](https://github.com/coolsnowwolf/lede) for x86_64. Every
-build is produced from source, published with `SHA256SUMS` and `BUILD_INFO.txt`,
-and listed in an update index so the device can upgrade itself from LuCI.
+ZeroWrt is a small custom firmware for the Ruijie RG-X60 New (MT7986), compiled
+from [ImmortalWrt
+24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) by
+GitHub Actions. Every build is produced from source, published with
+`SHA256SUMS` and `BUILD_INFO.txt`, and listed in an update index so the device
+can upgrade itself from LuCI.
 
 The interesting part is not another package list — it is the loop: the build
 publishes the image and the index, and the router sees the new version the next
@@ -55,10 +55,9 @@ time it checks.
 | Device | Source | Layout | Images |
 | --- | --- | --- | --- |
 | Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
-| x86_64 | LEDE (`master`) | EFI and legacy BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
 
-Release tags are the device name (`ruijie_rg-x60-new`, `x86_64`). Each device
-keeps its own release, so the index and the download page can list them side by side.
+The release tag is the device name (`ruijie_rg-x60-new`); the index and the
+download page list that one entry.
 
 > **Moving from the LEDE-based builds:** the RG-X60 New image switched from the
 > stock partition layout to **ubootmod**. Flash it from the U-Boot recovery page
@@ -114,7 +113,7 @@ are public, so no repository secret is needed; the pipeline is documented in
 
 ## FAQ
 
-**Where is the source?** The MT7986 image is built from [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) and x86_64 from [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). This repository holds the pipeline, the branding assets and the tests.
+**Where is the source?** The image is built from [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly). This repository holds the pipeline, the branding assets and the tests.
 
 **Why is there no `factory` image?** These boards are flashed through their bootloader recovery page, which accepts the sysupgrade image directly.
 
@@ -132,7 +131,7 @@ are public, so no repository secret is needed; the pipeline is documented in
 
 The scripts, branding assets and documentation in this repository are released under **GPL-2.0** — see [LICENSE](LICENSE).
 
-The firmware itself bundles OpenWrt, LEDE and many other upstream components, each under its own licence. Redistributing an image means honouring those licences too; GPL-2.0 in particular requires you to make the corresponding source available.
+The firmware itself bundles OpenWrt, ImmortalWrt and many other upstream components, each under its own licence. Redistributing an image means honouring those licences too; GPL-2.0 in particular requires you to make the corresponding source available.
 
 ## Disclaimer
 

@@ -6,7 +6,7 @@
 
 # ZeroWrt
 
-### Firmware personalizado basado en ImmortalWrt / LEDE, con actualización en línea de un clic.
+### Firmware personalizado basado en ImmortalWrt, con actualización en línea de un clic.
 
 **Un comando lo compila, un clic lo actualiza.**
 
@@ -30,12 +30,11 @@
 
 ---
 
-ZeroWrt es un firmware personalizado para routers de la clase OpenWrt, compilado desde dos
-árboles públicos con GitHub Actions: [ImmortalWrt
-24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) para la placa
-MT7986 y [LEDE](https://github.com/coolsnowwolf/lede) para x86_64. Cada compilación se
-genera desde el código fuente, se publica con `SHA256SUMS` y `BUILD_INFO.txt`, y se registra
-en un índice de actualizaciones para que el equipo pueda actualizarse solo desde LuCI.
+ZeroWrt es un firmware personalizado para el Ruijie RG-X60 New (MT7986), compilado desde
+[ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) con GitHub
+Actions. Cada compilación se genera desde el código fuente, se publica con `SHA256SUMS` y
+`BUILD_INFO.txt`, y se registra en un índice de actualizaciones para que el equipo pueda
+actualizarse solo desde LuCI.
 
 Lo interesante no es otra lista de paquetes, sino el ciclo: la compilación publica la imagen y el índice, y el router ve la nueva versión
 en la siguiente comprobación.
@@ -47,20 +46,19 @@ en la siguiente comprobación.
 - **Configuración desde el workflow** — IP de LAN, nombre de host y tres SSID y contraseñas de Wi-Fi son entradas del build, no archivos editados a mano.
 - **Marca Argon 3** — fondo, logo de acceso, favicon y paleta (`#2E9D72` / `#4CAF86`) se sustituyen al compilar.
 - **Stack de proxy incluido** — PassWall (núcleo sing-box, sin Xray ni SmartDNS) y OpenClash, sincronizados por los scripts de build.
-- **Pipeline con control** — `ruff` y 44 pruebas unitarias en cada pull request.
+- **Pipeline con control** — `ruff` y 38 pruebas unitarias en cada pull request.
 
 ## Dispositivos compatibles
 
 | Dispositivo | Origen | Diseño | Imágenes |
 | --- | --- | --- | --- |
 | Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
-| x86_64 | LEDE (`master`) | EFI y BIOS heredado | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
 
 > **Al pasar de las compilaciones LEDE:** la imagen del RG-X60 New pasó del esquema de
 > fábrica a **ubootmod**. Flashéala desde la página de recuperación U-Boot y no conserves la
 > configuración; la imagen antigua y esta no son intercambiables.
 
-Las etiquetas de release son el nombre del dispositivo (`ruijie_rg-x60-new`, `x86_64`).
+Las etiquetas de release son el nombre del dispositivo (`ruijie_rg-x60-new`).
 Cada dispositivo conserva su propio release, así el índice y la página de descarga pueden
 listarlos juntos.
 
@@ -109,7 +107,7 @@ Las compilaciones se inician a mano: *Actions → Build ZeroWrt → Run workflow
 
 ## FAQ
 
-**¿Dónde está el código?** El RG-X60 New se compila desde [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) y x86_64 desde [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). Este repositorio contiene el pipeline, los recursos de marca y las pruebas.
+**¿Dónde está el código?** El RG-X60 New se compila desde [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly). Este repositorio contiene el pipeline, los recursos de marca y las pruebas.
 
 **¿Por qué no hay imagen `factory`?** Estas placas se flashean desde la página de recuperación del gestor de arranque, que acepta directamente la imagen sysupgrade.
 
@@ -127,7 +125,7 @@ Las compilaciones se inician a mano: *Actions → Build ZeroWrt → Run workflow
 
 Los scripts, los recursos de marca y la documentación de este repositorio se publican bajo **GPL-2.0**; consulta [LICENSE](../../LICENSE).
 
-El firmware incluye OpenWrt, LEDE y muchos otros componentes upstream, cada uno con su licencia. Al redistribuir una imagen también se aplican esas licencias; GPL-2.0 exige en particular facilitar el código fuente correspondiente.
+El firmware incluye OpenWrt, ImmortalWrt y muchos otros componentes upstream, cada uno con su licencia. Al redistribuir una imagen también se aplican esas licencias; GPL-2.0 exige en particular facilitar el código fuente correspondiente.
 
 ## Aviso legal
 

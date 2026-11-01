@@ -4,23 +4,12 @@ name: Build Toolchain Cache
 # in the "toolchain" release. The firmware build restores that archive and skips
 # the toolchain compile entirely.
 #
-# The archive name follows sbwml/r4s_build_script, with the device prefixed so
-# the two source trees can never restore each other's toolchain:
-#   toolchain_<device>_<libc>_<arch>_gcc-<major>.tar.zst
-# and is derived from the staging_dir/toolchain-* directory name, so a different
-# device only needs a different input, not a different script.
+# The archive name follows sbwml/r4s_build_script:
+#   toolchain_<libc>_<arch>_gcc-<major>.tar.zst
+# and is derived from the staging_dir/toolchain-* directory name.
 
 on:
   workflow_dispatch:
-    inputs:
-      device:
-        description: "Device profile the toolchain is built for"
-        required: true
-        type: choice
-        default: "ruijie_rg-x60-new"
-        options:
-          - ruijie_rg-x60-new
-          - x86_64
 
 permissions:
   contents: write
@@ -33,7 +22,7 @@ env:
   PYTHONUNBUFFERED: "1"
   BUILD_ROOT: /builder
   ZEROWRT_SOURCE_DIR: /builder/source
-  ZEROWRT_DEVICE: ${{ github.event.inputs.device || 'ruijie_rg-x60-new' }}
+  ZEROWRT_DEVICE: ruijie_rg-x60-new
 
 jobs:
   toolchain:
@@ -61,13 +50,12 @@ jobs:
       - name: Install LLVM
         run: python3 scripts/zerowrt.py system install-llvm
 
-      # The device profile decides the tree: ImmortalWrt for the MT7986 board,
-      # LEDE for x86_64. Both are public, so no repository secret is involved.
+      # The profile table in scripts/zerowrt_core/profiles.py points at the
+      # ImmortalWrt tree; it is public, so no repository secret is involved.
       - name: Clone build source
         run: |
           python3 scripts/zerowrt.py source clone \
-            --dest "$ZEROWRT_SOURCE_DIR" \
-            --device "$ZEROWRT_DEVICE"
+            --dest "$ZEROWRT_SOURCE_DIR"
 
       - name: Update feeds
         run: python3 scripts/zerowrt.py source feeds --tree "$ZEROWRT_SOURCE_DIR"
@@ -87,8 +75,7 @@ jobs:
         run: |
           python3 scripts/zerowrt.py packages add \
             --tree "$ZEROWRT_SOURCE_DIR" \
-            --assets "$GITHUB_WORKSPACE/assets" \
-            --device "$ZEROWRT_DEVICE"
+            --assets "$GITHUB_WORKSPACE/assets"
 
       # Clones luci-app-ota and patches its index generator so the ubootmod
       # image is published (and preloader.bin is not).
@@ -99,8 +86,7 @@ jobs:
       - name: Generate .config
         run: |
           python3 scripts/zerowrt.py config generate \
-            --tree "$ZEROWRT_SOURCE_DIR" \
-            --device "$ZEROWRT_DEVICE"
+            --tree "$ZEROWRT_SOURCE_DIR"
 
       - name: Build toolchain
         env:
@@ -122,7 +108,7 @@ jobs:
           gcc=$(echo "$dir" | sed -E 's/.*_gcc-([0-9]+)\..*/\1/')
           libc=$(echo "$dir" | sed -E 's/.*_gcc-[0-9.]+_//')
 
-          asset="toolchain_${ZEROWRT_DEVICE}_${libc}_${arch}_gcc-${gcc}.tar.zst"
+          asset="toolchain_${libc}_${arch}_gcc-${gcc}.tar.zst"
           echo "packaging $asset (from $dir)"
           tar -I "zstd -19 -T$(nproc --all)" -cf "toolchain-cache/$asset" ./{build_dir,dl,staging_dir,tmp}
           ls -lh "toolchain-cache/$asset"

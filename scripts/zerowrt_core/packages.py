@@ -1,7 +1,10 @@
 """External packages and Argon branding.
 
 Everything that is fetched from GitHub lives under ``package/new`` so the
-upstream LEDE tree stays untouched and updates never conflict.
+upstream tree stays untouched and updates never conflict. The same set is
+cloned for both bases (ImmortalWrt for the MT7986 board, LEDE for x86_64);
+whichever feed ships a package with the same name loses it to
+:func:`zerowrt_core.source.prune_feed_conflicts`.
 
 The Argon theme is pinned to the last 2.x release on purpose: 3.x merged the
 configuration UI into the theme package, which would collide with the
@@ -15,15 +18,15 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from . import images, util
+from . import images, profiles, util
 
 ARGON_THEME_REPO = "jerrykuku/luci-theme-argon"
 ARGON_THEME_REF = "master"
 ARGON_CONFIG_REPO = "jerrykuku/luci-app-argon-config"
 ARGON_CONFIG_REF = "master"
-# One repository carries the PassWall toolchain, its two LuCI front ends and
-# OpenClash, so a build only needs a single checkout and upstream breakage can
-# be fixed in one place.
+# One repository carries the PassWall toolchain (sing-box core), its two LuCI
+# front ends and OpenClash, so a build only needs a single checkout and
+# upstream breakage can be fixed in one place.
 HELLOWORLD_REPO = "MinimaxFlora/openwrt_helloworld"
 HELLOWORLD_REF = "main"
 # Same idea as helloworld: one repository carries mosdns itself, its LuCI
@@ -32,6 +35,10 @@ MOSDNS_REPO = "sbwml/luci-app-mosdns"
 MOSDNS_REF = "v5"
 RAMFREE_REPO = "sbwml/luci-app-ramfree"
 RAMFREE_REF = "main"
+# The OTA app ships the index generator the release step runs, so it is cloned
+# here (and patched, see patch_ota_index) instead of in a shell step.
+OTA_REPO = "MinimaxFlora/luci-app-ota"
+OTA_REF = "main"
 
 PACKAGE_DIR_NAMES = {
     # Argon theme and the standalone settings app.
@@ -162,7 +169,7 @@ def _clone(repo: str, ref: str, dest: Path) -> None:
     util.clone(repo, dest, ref=ref, token=None, depth=1)
 
 
-def add_external_packages(tree: Path) -> None:
+def add_external_packages(tree: Path, device: str | None = None) -> None:
     tree = Path(tree)
     new_dir = tree / "package" / "new"
     new_dir.mkdir(parents=True, exist_ok=True)
@@ -211,10 +218,73 @@ def add_external_packages(tree: Path) -> None:
     if not (ramfree_dir / "Makefile").exists():
         raise util.BuildError(f"ramfree checkout is missing a Makefile: {ramfree_dir}")
 
-    mosdns_dir = new_dir / "luci-app-mosdns"
-    _clone(_env("MOSDNS_REPO", MOSDNS_REPO), _env("MOSDNS_REF", MOSDNS_REF), mosdns_dir)
+    wants_mosdns = _wants_mosdns(device)
+    if wants_mosdns:
+        mosdns_dir = new_dir / "luci-app-mosdns"
+        _clone(_env("MOSDNS_REPO", MOSDNS_REPO), _env("MOSDNS_REF", MOSDNS_REF), mosdns_dir)
+    else:
+        util.log(f"mosdns is not selected for {device}; skipping its checkout")
 
-    _validate_layout(new_dir)
+    _validate_layout(new_dir, mosdns=wants_mosdns)
+
+
+def add_ota_app(tree: Path) -> None:
+    """Clone luci-app-ota into ``package/new`` and patch its index generator.
+
+    The clone used to live in the workflow as a bare ``git clone``; doing it
+    here means the patch below is guaranteed to run before the release step
+    uses the generator.
+    """
+    tree = Path(tree)
+    dest = tree / "package" / "new" / "luci-app-ota"
+    _clone(_env("OTA_REPO", OTA_REPO), _env("OTA_REF", OTA_REF), dest)
+    if not (dest / "Makefile").exists():
+        raise util.BuildError(f"luci-app-ota checkout is missing a Makefile: {dest}")
+    patch_ota_index(dest)
+
+
+# Upstream drops any artifact whose name contains "uboot", which silently
+# removes the ubootmod sysupgrade image, and it has no rule against picking
+# preloader.bin. Both are wrong for the RG-X60 New: narrow the token to the
+# bootloader artifacts, and skip preloader/bl31 by name.
+OTA_BAD_TOKENS_OLD = '    "u-boot",\n    "uboot",\n'
+OTA_BAD_TOKENS_NEW = '    "u-boot",\n    "preloader",\n    "bl31",\n'
+
+
+def patch_ota_index(app_dir: Path) -> None:
+    """Make ``tools/gen_ota_index.py`` accept the ubootmod image names."""
+    path = Path(app_dir) / "tools" / "gen_ota_index.py"
+    if not path.exists():
+        raise util.BuildError(f"missing {path}")
+
+    text = util.read_text(path)
+    if '"preloader",' in text and '"bl31",' in text:
+        util.log("ota index generator already handles ubootmod images")
+        return
+    if OTA_BAD_TOKENS_OLD not in text:
+        raise util.BuildError(
+            f"{path}: BAD_TOKENS layout changed upstream; cannot teach it about "
+            "ubootmod (it would publish preloader.bin or drop the firmware image)"
+        )
+
+    util.write_text(path, text.replace(OTA_BAD_TOKENS_OLD, OTA_BAD_TOKENS_NEW, 1))
+    util.log("ota index generator: ubootmod images are published, preloader/bl31 are not")
+
+
+MOSDNS_PACKAGE = "luci-app-mosdns"
+
+
+def _wants_mosdns(device: str | None) -> bool:
+    """True when the device profile selects mosdns (x86_64 only).
+
+    Without a profile the checkout is kept: the package list then decides
+    whether it ends up in the image, which is how the tests and a manual
+    ``packages add`` call behave.
+    """
+    profile = profiles.find(device)
+    if profile is None:
+        return True
+    return MOSDNS_PACKAGE in profile.packages
 
 
 def _fix_openclash(helloworld_dir: Path) -> None:
@@ -244,23 +314,24 @@ def _fix_openclash(helloworld_dir: Path) -> None:
     util.log("openclash: added luci-base/host build dependency (po2lmo)")
 
 
-def _validate_layout(new_dir: Path) -> None:
+def _validate_layout(new_dir: Path, *, mosdns: bool = True) -> None:
     checks = {
         "package/new/helloworld/luci-app-passwall/Makefile": (
             new_dir / "helloworld" / "luci-app-passwall" / "Makefile"
         ),
-        # The PassWall core is Xray; the Sing-Box package is not selected.
-        "package/new/helloworld/xray-core/Makefile": (new_dir / "helloworld" / "xray-core" / "Makefile"),
+        # PassWall is built around the Sing-Box core; Xray is not shipped.
+        "package/new/helloworld/sing-box/Makefile": (new_dir / "helloworld" / "sing-box" / "Makefile"),
         "package/new/helloworld/v2ray-geodata/Makefile": (new_dir / "helloworld" / "v2ray-geodata" / "Makefile"),
         "package/new/helloworld/luci-app-openclash/Makefile": (
             new_dir / "helloworld" / "luci-app-openclash" / "Makefile"
         ),
         "package/new/luci-app-ramfree/Makefile": (new_dir / "luci-app-ramfree" / "Makefile"),
-        "package/new/luci-app-mosdns/mosdns/Makefile": (new_dir / "luci-app-mosdns" / "mosdns" / "Makefile"),
-        "package/new/luci-app-mosdns/luci-app-mosdns/Makefile": (
-            new_dir / "luci-app-mosdns" / "luci-app-mosdns" / "Makefile"
-        ),
     }
+    if mosdns:
+        checks["package/new/luci-app-mosdns/mosdns/Makefile"] = new_dir / "luci-app-mosdns" / "mosdns" / "Makefile"
+        checks["package/new/luci-app-mosdns/luci-app-mosdns/Makefile"] = (
+            new_dir / "luci-app-mosdns" / "luci-app-mosdns" / "Makefile"
+        )
     missing = [name for name, path in checks.items() if not path.exists()]
     if missing:
         raise util.BuildError("unexpected repository layout, missing:\n  - " + "\n  - ".join(missing))

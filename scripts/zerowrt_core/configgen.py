@@ -1,8 +1,8 @@
 """Generate the OpenWrt ``.config`` for the selected ZeroWrt device.
 
 The device profile is supplied by the workflow (``--device``) and looked up in
-the LEDE tree. Package selections live here, in one place, instead of a
-separate config file.
+the source tree that profile builds from. Package selections live here, in one
+place, instead of a separate config file.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from . import util
+from . import profiles, util
 
 # Packages added to the image. Dependencies (luci-compat, lyaml, ...) are
 # resolved by OpenWrt itself and must not be listed here.
@@ -28,23 +28,26 @@ PACKAGES = [
     "CONFIG_PACKAGE_luci-app-ramfree",
 ]
 
-# Selected only for the devices listed here. Dependencies (mosdns itself,
-# uclient-fetch, geo2txt, ...) are resolved by OpenWrt.
-DEVICE_PACKAGES = {
-    "x86_64": [
-        "CONFIG_PACKAGE_luci-app-mosdns",
-    ],
-}
+# PassWall flags. The Makefile sets INCLUDE_Xray, INCLUDE_SingBox and
+# INCLUDE_SmartDNS to "y" for aarch64/x86_64, so all three have to be written
+# explicitly: sing-box is the core, Xray and SmartDNS must stay out.
+PASSWALL_SELECTION = [
+    "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox=y",
+    "# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray is not set",
+    "# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SmartDNS is not set",
+    # geoip.dat / geosite.dat feed both the sing-box rules and the PassWall UI.
+    "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_V2ray_Geodata=y",
+    "CONFIG_PACKAGE_sing-box=y",
+    "# CONFIG_PACKAGE_smartdns is not set",
+]
 
-# Workflow device names that do not match a Device/ definition one to one:
-# x86 has no per-board profile, so both points at "Device/generic" inside a
-# different subtarget. The Device name is resolved from the source tree, and
-# these entries only pin the board/subtarget it lives in ("generic" exists in
-# target/linux/x86/image/{64,generic}.mk alike).
-DEVICE_ALIASES = {
-    "x86_64": {"board": "x86", "subtarget": "64", "device": "generic"},
-    "x86_generic": {"board": "x86", "subtarget": "generic", "device": "generic"},
-}
+# Selections that must not survive defconfig.
+PASSWALL_FORBIDDEN = (
+    "CONFIG_PACKAGE_xray-core=y",
+    "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y",
+    "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SmartDNS=y",
+    "CONFIG_PACKAGE_smartdns=y",
+)
 
 
 def profile_symbol(target: dict) -> str:
@@ -60,22 +63,27 @@ def build_date() -> str:
 
 
 def resolve_target(tree: Path, name: str) -> dict:
-    """Resolve a workflow device selection to target information."""
-    alias = DEVICE_ALIASES.get(name)
-    if alias is None:
+    """Resolve a workflow device selection to target information.
+
+    A profile pins board, subtarget and Device name: the workflow name cannot
+    be looked up directly (``x86_64`` has no ``Device/x86_64``, and the RG-X60
+    profile builds the ubootmod layout). Names that are not profiles fall back
+    to a plain ``Device/`` lookup.
+    """
+    profile = profiles.find(name)
+    if profile is None:
         return find_device(tree, name)
 
-    # Resolve the real Device/ name from the tree: an alias such as "x86_64"
-    # cannot be looked up directly, and a name that is guessed instead of
-    # read from the tree silently disappears from defconfig when upstream
-    # renames the device.
-    board_dir = Path(tree) / "target" / "linux" / alias["board"]
+    # Resolve the real Device/ name from the tree: a name that is guessed
+    # instead of read from the tree silently disappears from defconfig when
+    # upstream renames the device.
+    board_dir = Path(tree) / "target" / "linux" / profile.board
     if not board_dir.exists():
         raise util.BuildError(
             f"target {name!r} is built from {board_dir}, which does not exist.\n"
-            f"Check that {tree} is the LEDE source tree and that 'source clone' succeeded."
+            f"Check that {tree} is the {profile.source} source tree and that 'source clone' succeeded."
         )
-    return find_device(tree, alias["device"], board=alias["board"], subtarget=alias["subtarget"])
+    return find_device(tree, profile.device, board=profile.board, subtarget=profile.subtarget)
 
 
 def _board_subtargets(board_dir: Path) -> list[str]:
@@ -193,12 +201,15 @@ def _packages(tree: Path, device: str | None = None) -> list[str]:
 
     Argon master integrates the config app into the theme package, so the
     standalone luci-app-argon-config is only selected when it was cloned
-    (non-integrated theme, e.g. v2.4.8).
+    (non-integrated theme, e.g. v2.4.8). Device specific packages come from
+    the profile (mosdns is x86_64 only).
     """
     packages = list(PACKAGES)
     if not (Path(tree) / "package" / "new" / "luci-app-argon-config").exists():
         packages.remove("CONFIG_PACKAGE_luci-app-argon-config")
-    packages.extend(DEVICE_PACKAGES.get(device or "", []))
+    profile = profiles.find(device)
+    if profile is not None:
+        packages.extend(f"CONFIG_PACKAGE_{name}" for name in profile.packages)
     return sorted(packages)
 
 
@@ -212,31 +223,22 @@ def _render_config(target: dict, packages: list[str]) -> str:
         ]
     )
     lines.extend(f"{package}=y" for package in sorted(packages))
-    lines.extend(
-        [
-            "CONFIG_DEVEL=y",
-            # PassWall: use the Xray core, drop the Sing-Box core.
-            "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y",
-            "# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox is not set",
-            # geoip.dat / geosite.dat: Xray's geo-based routing rules need them,
-            # and PassWall logs a missing-geodata error for every shunt node
-            # without them.
-            "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_V2ray_Geodata=y",
-            "CONFIG_PACKAGE_xray-core=y",
-            "# CONFIG_PACKAGE_sing-box is not set",
-        ]
-    )
+    lines.append("CONFIG_DEVEL=y")
+    lines.extend(PASSWALL_SELECTION)
     return "\n".join(lines) + "\n"
 
 
 def generate(tree: Path, device: str) -> dict:
     tree = Path(tree)
+    profile = profiles.find(device)
     target = resolve_target(tree, device)
     packages = _packages(tree, device)
     version = build_date()
     util.log(
         f"device {target['name']} ({target['vendor']} {target['model']}) on {target['board']}/{target['subtarget']}"
     )
+    if profile is not None:
+        util.log(f"profile {profile.name}: {profile.source} source, {profile.layout}")
 
     config_path = tree / ".config"
     util.write_text(config_path, _render_config(target, packages))
@@ -249,9 +251,9 @@ def generate(tree: Path, device: str) -> dict:
     resolved = util.read_text(config_path)
     required = [
         f"{profile_symbol(target)}=y",
-        "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y",
+        "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox=y",
         "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_V2ray_Geodata=y",
-        "CONFIG_PACKAGE_xray-core=y",
+        "CONFIG_PACKAGE_sing-box=y",
         *[f"{package}=y" for package in packages],
     ]
     missing = [item for item in required if item not in resolved]
@@ -264,20 +266,12 @@ def generate(tree: Path, device: str) -> dict:
             + tail
         )
 
-    # PassWall must ship exactly one core: a leftover Sing-Box selection would
-    # put two large kernels in the image and silently win at runtime.
-    stale = [
-        item
-        for item in (
-            "CONFIG_PACKAGE_sing-box=y",
-            "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox=y",
-        )
-        if item in resolved
-    ]
+    # One proxy core only: a leftover Xray or SmartDNS selection would put a
+    # second engine (or an extra DNS daemon) into the image and silently win
+    # at runtime.
+    stale = [item for item in PASSWALL_FORBIDDEN if item in resolved]
     if stale:
-        raise util.BuildError(
-            "sing-box is still selected; PassWall should use the Xray core:\n  - " + "\n  - ".join(stale)
-        )
+        raise util.BuildError("PassWall should use the sing-box core without SmartDNS:\n  - " + "\n  - ".join(stale))
 
     info = {
         "board": target["board"],
@@ -287,6 +281,10 @@ def generate(tree: Path, device: str) -> dict:
         "device_vendor": target["vendor"],
         "artifact": device,
         "kind": target.get("kind", "device"),
+        "source": profile.source if profile else "",
+        "source_repo": profiles.source(profile).repo if profile else "",
+        "source_ref": profiles.source(profile).ref if profile else "",
+        "layout": profile.layout if profile else "",
     }
     resolved_version = re.search(r'^CONFIG_VERSION_NUMBER="?([^"\n]+)"?$', resolved, re.M)
     info["version"] = resolved_version.group(1) if resolved_version else version

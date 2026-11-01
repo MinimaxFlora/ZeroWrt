@@ -9,27 +9,55 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **RG-X60 New 换基线**：源码从私有 LEDE 分支换成
+  [`Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly`](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)
+  的 `openwrt-24.10-6.6` 分支，固件改成 **ubootmod** 布局（`Device/ruijie_rg-x60-new-ubootmod`），
+  产物是 `-squashfs-sysupgrade.itb` + `preloader.bin` / `bl31-uboot.fip`。
+  Release tag 仍沿用 `ruijie_rg-x60-new`；跨基线不能在线升级，需要从 U-Boot 恢复页全新刷机。
+- **x86_64 改用公开的 `coolsnowwolf/lede`**，两份源码树都不再需要 `LEDE_REPO` / `LEDE_TOKEN` /
+  `LEDE_REF` 三个 Secret，`source clone` 只按设备选仓库和分支。
+- **设备映射收敛到 `scripts/zerowrt_core/profiles.py`**，删掉 `configgen.DEVICE_ALIASES` 与
+  `configgen.DEVICE_PACKAGES`；`source`、`packages`、`config` 三个子命令都接受 `--device`。
+- **版本字符串改为直接写模板**：ImmortalWrt 的 `openwrt_release` / `os-release` 是
+  `%D %V %C` 模板，脚本现在直接把 `DISTRIB_DESCRIPTION='ZeroWrt-<日期>'`、
+  `DISTRIB_REVISION=' By MinimaxFlora'`、`OPENWRT_RELEASE="ZeroWrt 标准版 @R<日期> BY MinimaxFlora"`
+  写成字面量；LEDE 的 `zzz-default-settings` 同步改写，避免首次启动又变回 `LEDE`。
+- **WiFi 默认值按源码树分别处理**：MT7986 改 `package/mtk/applications/mtwifi-cfg/files/mtwifi.sh`
+  （SSID + `encryption=psk2` + `key`），x86_64 继续用 `mac80211.sh`。
+- **内核只对 LEDE 树固定 6.18**；MT798x 树保持上游 6.6 + MTK 补丁集。
+- `BUILD_INFO.txt` 增加 `profile`、`layout`、`source repo/ref/commit`。
+
 ### Added
 
 - **释放内存插件** —— `luci-app-ramfree`（`sbwml/luci-app-ramfree`），克隆到 `package/new/luci-app-ramfree`，两种设备都装。
 - **mosdns（仅 x86_64）** —— `luci-app-mosdns` 及其依赖 `mosdns`、`geo2txt`（`sbwml/luci-app-mosdns@v5`），
-  克隆到 `package/new/luci-app-mosdns`。`ruijie_rg-x60-new` 不含此插件。
+  克隆到 `package/new/luci-app-mosdns`。`ruijie_rg-x60-new` 不再克隆也不再选它。
 - **自定义登录 banner** —— 新增 `assets/banner`，构建时整体替换 `package/base-files/files/etc/banner`，
-  改横幅只需改这一个文件。
+  改横幅只需改这一个文件。源码树根部的 `files/` 覆盖层会在替换前删除，否则 ImmortalWrt 自带的那份会盖回去。
 - 仓库治理文件：`SECURITY.md`、`CONTRIBUTING.md`、`CHANGELOG.md`、Issue/PR 模板、Dependabot 配置。
+- 单元测试覆盖两份源码树的补丁、`files/` 清理、`mtwifi.sh` 改写与 sing-box 选择。
 
 ### Fixed
 
+- **PassWall 内核改回 sing-box**：PassWall 的 Makefile 对 aarch64/x86_64 默认同时打开
+  Xray、Sing-Box 和 SmartDNS，现在显式打开 Sing-Box、关闭另外两个，并在 `defconfig` 后校验，
+  避免镜像里塞进两个内核和一个多余的 DNS 服务。
 - **x86_64 目标构建失败** —— `.config` 里写的是 profile 形式的 `CONFIG_TARGET_x86_64_Generic`，
   但 `target/linux/x86/image/64.mk` 定义的是 `Device/generic`（小写），Kconfig 实际符号为
   `CONFIG_TARGET_x86_64_DEVICE_generic`。符号不存在，`make defconfig` 直接丢弃该选项，构建随即失败。
-  现在 device 名从源码树真实解析，不再硬编码；顺带支持了 `x86_generic` 目标。
+  现在 device 名从源码树真实解析，不再硬编码。
 - **feeds 与 `package/new` 重复包** —— 清理逻辑现在会从 `packages.PACKAGE_DIR_NAMES` 派发，
   并按**目录名 + Makefile 实际 BuildPackage 包名**双路匹配。此前 `net/v2ray-geodata`、
   `luci-app-passwall2`、`luci-app-mosdns`、`luci-app-ramfree` 等一批 feed 副本未被删除，
   会造成 duplicate package；`v2ray-geodata` 之所以漏掉，是因为它从同名目录里 BuildPackage 出的是
   `v2ray-geoip` / `v2ray-geosite`，只比目录名识别不到。
 - 删除 feed 包时要求目录必须含 `Makefile`，避免误删 LuCI 应用的同名静态资源目录（如 `htdocs/.../mosdns`）。
+- **OTA 索引不再漏掉 ubootmod 镜像**：`luci-app-ota` 的 `tools/gen_ota_index.py` 会把文件名里带
+  `uboot` 的镜像全部排除，正好命中了 `-squashfs-sysupgrade.itb`；同时它没有规则阻止选中
+  `preloader.bin`。现在 `packages ota` 在克隆后把 `BAD_TOKENS` 里的 `"uboot"` 换成
+  `"preloader"` / `"bl31"`，只排除引导文件，上游布局变了会直接失败。
 
 ### Changed
 
@@ -37,7 +65,7 @@
   mosdns 仓库的落点由 `package/new/mosdns` 调整为 `package/new/luci-app-mosdns`。
 - "我们拥有哪些包"的清单收敛到 `scripts/zerowrt_core/packages.py` 的 `PACKAGE_DIR_NAMES`，
   feeds 清理与 `package/` 清理共用这一份，不再各自维护导致漂移。
-- 单元测试增至 30 个，新增 `FeedConflictTest` 覆盖上述重复包场景。
+- 单元测试增至 44 个，新增 `FeedConflictTest`、`ProfilesTest`、`OtaIndexTest` 以及两棵树各自的补丁测试。
 
 ### Removed
 

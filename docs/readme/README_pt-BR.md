@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### Firmware personalizado baseado em LEDE, com atualização online em um clique.
+### Firmware personalizado baseado em ImmortalWrt / LEDE, com atualização online em um clique.
 
 **Um comando compila, um clique atualiza.**
 
 [![Build](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![Kernel](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![Kernel](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Alvo](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -30,10 +30,12 @@
 
 ---
 
-ZeroWrt é um firmware personalizado para roteadores da classe OpenWrt, compilado de uma
-árvore LEDE privada pelo GitHub Actions. Todo build é gerado a partir do código, publicado
-com `SHA256SUMS` e `BUILD_INFO.txt` e registrado em um índice de atualização, para que o
-dispositivo se atualize sozinho pelo LuCI.
+ZeroWrt é um firmware personalizado para roteadores da classe OpenWrt, compilado de duas
+árvores públicas pelo GitHub Actions: [ImmortalWrt
+24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) para a placa MT7986
+e [LEDE](https://github.com/coolsnowwolf/lede) para x86_64. Todo build é gerado a partir do
+código, publicado com `SHA256SUMS` e `BUILD_INFO.txt` e registrado em um índice de
+atualização, para que o dispositivo se atualize sozinho pelo LuCI.
 
 O interessante não é mais uma lista de pacotes, e sim o ciclo: o
 build publica a imagem e o índice, e o roteador vê a nova versão na próxima verificação.
@@ -44,15 +46,19 @@ build publica a imagem e o índice, e o roteador vê a nova versão na próxima 
 - **Comparação honesta de versão** — o carimbo de build decide; sem ele, compara strings de versão. Data desconhecida aparece como desconhecida, não é inventada.
 - **Configuração vinda do workflow** — IP da LAN, hostname e três SSIDs/senhas de Wi-Fi são entradas de build, não arquivos editados à mão.
 - **Identidade Argon 3** — plano de fundo, logo de login, favicon e paleta (`#2E9D72` / `#4CAF86`) substituídos na compilação.
-- **Stack de proxy incluído** — PassWall (apenas Xray) e OpenClash, sincronizados pelos scripts de build.
-- **Pipeline com controle** — `ruff` e 18 testes unitários em todo pull request.
+- **Stack de proxy incluído** — PassWall (núcleo sing-box, sem Xray e sem SmartDNS) e OpenClash, sincronizados pelos scripts de build.
+- **Pipeline com controle** — `ruff` e 44 testes unitários em todo pull request.
 
 ## Dispositivos suportados
 
-| Dispositivo | Alvo | Imagens |
-| --- | --- | --- |
-| Ruijie RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin`, `-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI e BIOS legado |
+| Dispositivo | Fonte | Layout | Imagens |
+| --- | --- | --- | --- |
+| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI e BIOS legado | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
+
+> **Vindo dos builds LEDE:** a imagem do RG-X60 New mudou do layout de fábrica para
+> **ubootmod**. Grave pela página de recuperação do U-Boot e não mantenha a configuração; a
+> imagem antiga e esta não são intercambiáveis.
 
 As tags de release são o nome do dispositivo (`ruijie_rg-x60-new`, `x86_64`). Cada
 dispositivo mantém a própria release, então o índice e a página de download podem listá-los
@@ -65,13 +71,13 @@ lado a lado.
 - **No dispositivo** — *Sistema → Atualização online* faz o mesmo sem baixar no navegador.
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## Gravação
 
 **A. A partir do OpenWrt ou ImmortalWrt**
-*Sistema → Backup / Gravar firmware*, envie o `-squashfs-sysupgrade.bin` e não mantenha a
+*Sistema → Backup / Gravar firmware*, envie o `-squashfs-sysupgrade.itb` e não mantenha a
 configuração ao trocar de versão principal.
 
 **B. A partir do firmware de fábrica**
@@ -79,7 +85,7 @@ Instale primeiro a recuperação do bootloader (a página web U-Boot habitual ne
 envie a mesma imagem por lá. Não grave pela interface de fábrica.
 
 **C. Recuperação**
-Inicie o `-initramfs-kernel.bin` pelo bootloader para ter um sistema temporário e grave a
+Inicie o `-initramfs-recovery.itb` pelo bootloader para ter um sistema temporário e grave a
 imagem sysupgrade a partir dele.
 
 Endereço padrão `10.0.0.1`, usuário `root`, senha `password`. Troque no primeiro acesso.
@@ -103,7 +109,7 @@ Os builds são iniciados manualmente: *Actions → Build ZeroWrt → Run workflo
 
 ## FAQ
 
-**Onde está o código?** A árvore LEDE é privada. Este repositório contém o pipeline, os assets de marca e os testes.
+**Onde está o código?** O RG-X60 New é compilado de [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) e o x86_64 de [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). Este repositório contém o pipeline, os assets de marca e os testes.
 
 **Por que não existe imagem `factory`?** Estas placas são gravadas pela página de recuperação do bootloader, que aceita a imagem sysupgrade diretamente.
 

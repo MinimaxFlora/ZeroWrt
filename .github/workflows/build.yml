@@ -19,7 +19,7 @@ on:
         type: string
         default: "1234567890"
       device:
-        description: "Device profile"
+        description: "Device profile; ruijie_rg-x60-new builds the ubootmod layout, x86_64 uses LEDE"
         required: true
         type: choice
         default: "ruijie_rg-x60-new"
@@ -37,7 +37,7 @@ concurrency:
 env:
   PYTHONUNBUFFERED: "1"
   BUILD_ROOT: /builder
-  LEDE_DIR: /builder/lede
+  ZEROWRT_SOURCE_DIR: /builder/source
   ZEROWRT_DEVICE: ${{ github.event.inputs.device || 'ruijie_rg-x60-new' }}
   OTA_BASE_URL: "https://ota.tatalvpai.vip"
 
@@ -48,8 +48,6 @@ jobs:
     # October 2026 and would swap the toolchain under an unchanged build.
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-    env:
-      ZEROWRT_REF: ${{ secrets.LEDE_REF || 'ruijie-rg-x60-new' }}
 
     steps:
       - name: Checkout ZeroWrt
@@ -78,18 +76,16 @@ jobs:
       - name: Install LLVM
         run: python3 scripts/zerowrt.py system install-llvm
 
-      - name: Clone private LEDE source
-        env:
-          LEDE_REPO: ${{ secrets.LEDE_REPO }}
-          LEDE_TOKEN: ${{ secrets.LEDE_TOKEN }}
-          REF: ${{ secrets.LEDE_REF }}
+      # The device profile decides the tree: ImmortalWrt for the MT7986 board,
+      # LEDE for x86_64. Both are public, so no repository secret is involved.
+      - name: Clone build source
         run: |
           python3 scripts/zerowrt.py source clone \
-            --dest "$LEDE_DIR" \
-            --ref "${REF:-ruijie-rg-x60-new}"
+            --dest "$ZEROWRT_SOURCE_DIR" \
+            --device "$ZEROWRT_DEVICE"
 
       - name: Update feeds
-        run: python3 scripts/zerowrt.py source feeds --tree "$LEDE_DIR"
+        run: python3 scripts/zerowrt.py source feeds --tree "$ZEROWRT_SOURCE_DIR"
 
       - name: Apply core customisations
         env:
@@ -98,7 +94,7 @@ jobs:
           ZEROWRT_WIFI_PASSWORD: ${{ github.event.inputs.wifi_password || '1234567890' }}
         run: |
           python3 scripts/zerowrt.py source customize \
-            --tree "$LEDE_DIR" \
+            --tree "$ZEROWRT_SOURCE_DIR" \
             --ip "$ZEROWRT_IP" \
             --wifi-name "$ZEROWRT_WIFI_NAME" \
             --assets "$GITHUB_WORKSPACE/assets"
@@ -106,40 +102,50 @@ jobs:
       - name: Add external packages and branding
         run: |
           python3 scripts/zerowrt.py packages add \
-            --tree "$LEDE_DIR" \
-            --assets "$GITHUB_WORKSPACE/assets"
+            --tree "$ZEROWRT_SOURCE_DIR" \
+            --assets "$GITHUB_WORKSPACE/assets" \
+            --device "$ZEROWRT_DEVICE"
 
+      # Clones luci-app-ota and patches its index generator so the ubootmod
+      # image is published (and preloader.bin is not).
       - name: Add luci-app-ota
         run: |
-          git clone --depth 1 https://github.com/MinimaxFlora/luci-app-ota.git \
-            "$LEDE_DIR/package/new/luci-app-ota"
-          test -f "$LEDE_DIR/package/new/luci-app-ota/Makefile"
+          python3 scripts/zerowrt.py packages ota --tree "$ZEROWRT_SOURCE_DIR"
 
       - name: Generate .config
         run: |
           python3 scripts/zerowrt.py config generate \
-            --tree "$LEDE_DIR" \
+            --tree "$ZEROWRT_SOURCE_DIR" \
             --device "$ZEROWRT_DEVICE"
 
       - name: Embed OTA metadata
         run: |
-          python3 "$LEDE_DIR/package/new/luci-app-ota/tools/embed_ota_meta.py" \
-            --tree "$LEDE_DIR" \
-            --info "$LEDE_DIR/.zerowrt-info.json" \
+          python3 "$ZEROWRT_SOURCE_DIR/package/new/luci-app-ota/tools/embed_ota_meta.py" \
+            --tree "$ZEROWRT_SOURCE_DIR" \
+            --info "$ZEROWRT_SOURCE_DIR/.zerowrt-info.json" \
             --dist-name ZeroWrt \
             --api-url "$OTA_BASE_URL/ota.json" \
             --emit "$GITHUB_WORKSPACE/ota-meta.json"
 
+      # The cache is keyed by device as well as by arch: the two devices build
+      # from different trees, so a toolchain from the other tree (or from the
+      # old LEDE branch) must never be restored. The newest matching asset wins,
+      # which also retires a cache built with an older GCC.
       - name: Restore toolchain cache
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd "$LEDE_DIR"
-          asset=$(gh release view toolchain --repo "$GITHUB_REPOSITORY" --json assets \
-            --jq '.assets[] | select(.name | startswith("toolchain_")) | .name' | head -n1)
+          cd "$ZEROWRT_SOURCE_DIR"
+          # A missing release or a release without a matching asset is not an
+          # error yet: both cases end in the explicit message below.
+          set +e
+          assets=$(gh release view toolchain --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq ".assets[] | select(.name | startswith(\"toolchain_${ZEROWRT_DEVICE}_\")) | [.createdAt, .name] | @tsv")
+          set -e
+          asset=$(printf '%s\n' "$assets" | sort -r | head -n1 | cut -f2)
           if [ -z "$asset" ]; then
-            echo "no toolchain cache in the 'toolchain' release"
-            echo "run the 'Build Toolchain Cache' workflow first"
+            echo "no toolchain cache for ${ZEROWRT_DEVICE} in the 'toolchain' release"
+            echo "run the 'Build Toolchain Cache' workflow for this device first"
             exit 1
           fi
           echo "restoring $asset"
@@ -157,15 +163,15 @@ jobs:
           TMPDIR: /builder/tmp
         run: |
           mkdir -p "$TMPDIR"
-          python3 scripts/zerowrt.py build download --tree "$LEDE_DIR" --jobs "$(nproc)"
+          python3 scripts/zerowrt.py build download --tree "$ZEROWRT_SOURCE_DIR" --jobs "$(nproc)"
 
       - name: Compile firmware
         env:
           TMPDIR: /builder/tmp
-        run: python3 scripts/zerowrt.py build compile --tree "$LEDE_DIR" --jobs "$(nproc)"
+        run: python3 scripts/zerowrt.py build compile --tree "$ZEROWRT_SOURCE_DIR" --jobs "$(nproc)"
 
       - name: Collect artifacts
-        run: python3 scripts/zerowrt.py build collect --tree "$LEDE_DIR" --out dist
+        run: python3 scripts/zerowrt.py build collect --tree "$ZEROWRT_SOURCE_DIR" --out dist
 
       - name: Build summary
         if: success()
@@ -210,7 +216,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          sh "$LEDE_DIR/package/new/luci-app-ota/tools/publish_site.sh" \
+          sh "$ZEROWRT_SOURCE_DIR/package/new/luci-app-ota/tools/publish_site.sh" \
             --repo "$GITHUB_REPOSITORY" \
             --dist dist \
             --meta "$GITHUB_WORKSPACE/ota-meta.json" \
@@ -238,8 +244,8 @@ jobs:
         run: |
           mkdir -p dist
           for log in build download defconfig feeds-update feeds-install toolchain; do
-            if [ -f "/builder/lede/$log.log" ]; then
-              tail -n 3000 "/builder/lede/$log.log" > "dist/$log-tail.log"
+            if [ -f "/builder/source/$log.log" ]; then
+              tail -n 3000 "/builder/source/$log.log" > "dist/$log-tail.log"
             fi
           done
 

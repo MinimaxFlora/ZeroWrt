@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### LEDE അടിസ്ഥാനമാക്കിയുള്ള ഇഷ്ടാനുസൃത ഫേംവെയർ, ഒറ്റ ക്ലിക്കിൽ ഓൺലൈൻ അപ്ഡേറ്റ്.
+### ImmortalWrt / LEDE അടിസ്ഥാനമാക്കിയുള്ള ഇഷ്ടാനുസൃത ഫേംവെയർ, ഒറ്റ ക്ലിക്കിൽ ഓൺലൈൻ അപ്ഡേറ്റ്.
 
 **ഒരു കമാൻഡ് ബിൽഡ് ചെയ്യുന്നു, ഒരു ക്ലിക്ക് അപ്ഡേറ്റ് ചെയ്യുന്നു.**
 
 [![ബിൽഡ്](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![കേർണൽ](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![കേർണൽ](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![പ്ലാറ്റ്ഫോം](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -30,11 +30,12 @@
 
 ---
 
-ZeroWrt, OpenWrt കുടുംബത്തിലെ റൂട്ടറുകൾക്കുള്ള ചെറിയ ഇഷ്ടാനുസൃത ഫേംവെയറാണ്; സ്വകാര്യ LEDE
-ട്രീയിൽ നിന്ന് GitHub Actions ഉപയോഗിച്ച് ഇത് ബിൽഡ് ചെയ്യുന്നു. ഓരോ ബിൽഡും സോഴ്സിൽ നിന്ന്
-നിർമ്മിച്ച് `SHA256SUMS`, `BUILD_INFO.txt` എന്നിവയോടൊപ്പം പ്രസിദ്ധീകരിക്കുകയും അപ്ഡേറ്റ്
-ഇൻഡക്സിൽ ചേർക്കുകയും ചെയ്യുന്നു, അതിനാൽ ഉപകരണത്തിന് LuCI-ൽ നിന്ന് തന്നെ അപ്ഗ്രേഡ്
-ചെയ്യാം.
+ZeroWrt, OpenWrt കുടുംബത്തിലെ റൂട്ടറുകൾക്കുള്ള ചെറിയ ഇഷ്ടാനുസൃത ഫേംവെയറാണ്; GitHub Actions
+ഉപയോഗിച്ച് രണ്ട് പൊതു ട്രീകളിൽ നിന്ന് ഇത് ബിൽഡ് ചെയ്യുന്നു: MT7986 ബോർഡിന്
+[ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly),
+x86_64-ന് [LEDE](https://github.com/coolsnowwolf/lede). ഓരോ ബിൽഡും സോഴ്സിൽ നിന്ന് നിർമ്മിച്ച്
+`SHA256SUMS`, `BUILD_INFO.txt` എന്നിവയോടൊപ്പം പ്രസിദ്ധീകരിക്കുകയും അപ്ഡേറ്റ് ഇൻഡക്സിൽ
+ചേർക്കുകയും ചെയ്യുന്നു, അതിനാൽ ഉപകരണത്തിന് LuCI-ൽ നിന്ന് തന്നെ അപ്ഗ്രേഡ് ചെയ്യാം.
 
 പ്രധാനം മറ്റൊരു പാക്കേജ് പട്ടികയല്ല, ഈ ചക്രമാണ്: ബിൽഡ്
 ഇമേജും ഇൻഡക്സും പ്രസിദ്ധീകരിക്കുന്നു, അടുത്ത പരിശോധനയിൽ റൂട്ടർ പുതിയ പതിപ്പ് കാണുന്നു.
@@ -45,15 +46,19 @@ ZeroWrt, OpenWrt കുടുംബത്തിലെ റൂട്ടറുക�
 - **സത്യസന്ധമായ പതിപ്പ് താരതമ്യം** — ബിൽഡ് സമയമാണ് "പുതിയത്" എന്ന് തീരുമാനിക്കുന്നത്, ഇല്ലെങ്കിൽ പതിപ്പ് സ്ട്രിംഗ് താരതമ്യം ചെയ്യുന്നു; അറിയാത്ത തീയതി അറിയില്ല എന്നു തന്നെ കാണിക്കുന്നു, കെട്ടിച്ചമയ്ക്കുന്നില്ല.
 - **വർക്ക്ഫ്ലോയിൽ നിന്നുള്ള കോൺഫിഗറേഷൻ** — LAN IP, ഹോസ്റ്റ്നെയിം, മൂന്ന് Wi-Fi SSID/പാസ്വേഡ് എന്നിവ ബിൽഡ് ഇൻപുട്ടുകളാണ്, കൈകൊണ്ട് തിരുത്തുന്ന ഫയലുകളല്ല.
 - **Argon 3 ബ്രാൻഡിംഗ്** — പശ്ചാത്തലം, ലോഗിൻ ലോഗോ, favicon, നിറക്കൂട്ട് (`#2E9D72` / `#4CAF86`) എന്നിവ ബിൽഡ് സമയത്ത് മാറ്റുന്നു.
-- **പ്രോക്സി സ്റ്റാക്ക് ഉൾപ്പെടെ** — PassWall (Xray മാത്രം), OpenClash എന്നിവ ബിൽഡ് സ്ക്രിപ്റ്റുകൾ സമന്വയിപ്പിക്കുന്നു.
-- **പരിശോധനയുള്ള പൈപ്പ്ലൈൻ** — ഓരോ pull request-ലും `ruff`-ഉം 18 യൂണിറ്റ് ടെസ്റ്റുകളും ഓടുന്നു.
+- **പ്രോക്സി സ്റ്റാക്ക് ഉൾപ്പെടെ** — PassWall (sing-box കോർ, Xray ഇല്ലാതെ, SmartDNS ഇല്ലാതെ), OpenClash എന്നിവ ബിൽഡ് സ്ക്രിപ്റ്റുകൾ സമന്വയിപ്പിക്കുന്നു.
+- **പരിശോധനയുള്ള പൈപ്പ്ലൈൻ** — ഓരോ pull request-ലും `ruff`-ഉം 44 യൂണിറ്റ് ടെസ്റ്റുകളും ഓടുന്നു.
 
 ## പിന്തുണയ്ക്കുന്ന ഉപകരണങ്ങൾ
 
-| ഉപകരണം | പ്ലാറ്റ്ഫോം | ഇമേജുകൾ |
-| --- | --- | --- |
-| Ruijie RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin`, `-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI, പഴയ BIOS |
+| ഉപകരണം | ഉറവിടം | ലേയൗട്ട് | ഇമേജുകൾ |
+| --- | --- | --- | --- |
+| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI, പഴയ BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
+
+> **LEDE ബിൽഡുകളിൽ നിന്നുള്ള മാറ്റം:** RG-X60 New ഇമേജ് ഫാക്ടറി പാർട്ടീഷനിൽ നിന്ന്
+> **ubootmod**-ലേക്ക് മാറി. U-Boot റിക്കവറി പേജിൽ നിന്ന് ഫ്ലാഷ് ചെയ്യുക, കോൺഫിഗറേഷൻ
+> നിലനിർത്തരുത്; പഴയ ഇമേജും ഇതും പരസ്പരം മാറ്റാനാവില്ല.
 
 Release ടാഗുകൾ ഉപകരണത്തിന്റെ പേരാണ് (`ruijie_rg-x60-new`, `x86_64`). ഓരോ ഉപകരണത്തിനും
 സ്വന്തം release ഉള്ളതിനാൽ ഇൻഡക്സും ഡൗൺലോഡ് പേജും ഇവ ഒരുമിച്ച് കാണിക്കാം.
@@ -65,13 +70,13 @@ Release ടാഗുകൾ ഉപകരണത്തിന്റെ പേരാ�
 - **ഉപകരണത്തിൽ തന്നെ** — *സിസ്റ്റം → ഓൺലൈൻ അപ്ഗ്രേഡ്* ബ്രൗസർ ഡൗൺലോഡ് ഇല്ലാതെ അതേ കാര്യം ചെയ്യുന്നു.
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## ഫ്ലാഷ് ചെയ്യൽ
 
 **A. OpenWrt അല്ലെങ്കിൽ ImmortalWrt-ൽ നിന്ന്**
-*സിസ്റ്റം → ബാക്കപ്പ് / ഫേംവെയർ ഫ്ലാഷ്*, `-squashfs-sysupgrade.bin` അപ്‌ലോഡ് ചെയ്യുക;
+*സിസ്റ്റം → ബാക്കപ്പ് / ഫേംവെയർ ഫ്ലാഷ്*, `-squashfs-sysupgrade.itb` അപ്‌ലോഡ് ചെയ്യുക;
 പ്രധാന പതിപ്പ് മാറുമ്പോൾ കോൺഫിഗറേഷൻ നിലനിർത്തരുത്.
 
 **B. ഫാക്ടറി ഫേംവെയറിൽ നിന്ന്**
@@ -80,7 +85,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 ചെയ്യരുത്.
 
 **C. റിക്കവറി**
-ബൂട്ട്ലോഡറിൽ നിന്ന് `-initramfs-kernel.bin` ബൂട്ട് ചെയ്ത് താൽക്കാലിക സിസ്റ്റം എടുത്ത ശേഷം
+ബൂട്ട്ലോഡറിൽ നിന്ന് `-initramfs-recovery.itb` ബൂട്ട് ചെയ്ത് താൽക്കാലിക സിസ്റ്റം എടുത്ത ശേഷം
 അതിൽ നിന്ന് sysupgrade ഇമേജ് എഴുതുക.
 
 സ്ഥിരസ്ഥിതി വിലാസം `10.0.0.1`, ഉപയോക്താവ് `root`, പാസ്‌വേഡ് `password`. ആദ്യ ലോഗിനിൽ തന്നെ മാറ്റുക.
@@ -105,7 +110,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## പതിവുചോദ്യങ്ങൾ
 
-**സോഴ്സ് എവിടെ?** LEDE ട്രീ സ്വകാര്യമാണ്. ഈ റിപ്പോയിൽ പൈപ്പ്ലൈനും ബ്രാൻഡിംഗ് അസറ്റുകളും ടെസ്റ്റുകളും ഉണ്ട്.
+**സോഴ്സ് എവിടെ?** RG-X60 New [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)-ൽ നിന്നും, x86_64 [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede)-ൽ നിന്നും ബിൽഡ് ചെയ്യുന്നു. ഈ റിപ്പോയിൽ പൈപ്പ്ലൈനും ബ്രാൻഡിംഗ് അസറ്റുകളും ടെസ്റ്റുകളും ഉണ്ട്.
 
 **`factory` ഇമേജ് എന്തുകൊണ്ട് ഇല്ല?** ഈ ബോർഡുകൾ ബൂട്ട്ലോഡറിന്റെ വെബ് റിക്കവറി പേജിലൂടെയാണ് ഫ്ലാഷ് ചെയ്യുന്നത്, അത് sysupgrade ഇമേജ് നേരിട്ട് സ്വീകരിക്കുന്നു.
 

@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### LEDE ベースのカスタムファームウェア。LuCI からワンクリック更新。
+### ImmortalWrt / LEDE ベースのカスタムファームウェア。LuCI からワンクリック更新。
 
 **コマンド一つでビルド、クリック一つで更新。**
 
 [![ビルド](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![カーネル](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![カーネル](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![ターゲット](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -30,8 +30,10 @@
 
 ---
 
-ZeroWrt は OpenWrt 系ルーター向けの小さなカスタムファームウェアです。プライベートな
-LEDE ツリーから GitHub Actions でビルドしています。すべてのビルドはソースから生成され、
+ZeroWrt は OpenWrt 系ルーター向けの小さなカスタムファームウェアです。GitHub Actions で 2 つの
+公開ツリーからビルドします。MT7986 ボードは
+[ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)、
+x86_64 は [LEDE](https://github.com/coolsnowwolf/lede) です。すべてのビルドはソースから生成され、
 `SHA256SUMS` と `BUILD_INFO.txt` を添えて公開され、更新インデックスに登録されるため、
 端末は LuCI から自分でアップグレードできます。
 
@@ -44,15 +46,19 @@ LEDE ツリーから GitHub Actions でビルドしています。すべての�
 - **誠実なバージョン判定** — ビルド時刻で新旧を判断し、無い場合だけバージョン文字列で比較します。判定できない日付は「不明」と表示し、捏造しません。
 - **設定はワークフローから注入** — LAN IP、ホスト名、3 つの Wi-Fi SSID とパスワードはビルド入力で、手編集のファイルではありません。
 - **Argon 3 のブランディング** — 背景、ログインロゴ、favicon、配色（`#2E9D72` / `#4CAF86`）をビルド時に差し替えます。
-- **プロキシ一式を同梱** — PassWall（Xray のみ）と OpenClash をビルドスクリプトが同期します。
-- **関門のあるパイプライン** — すべての PR で `ruff` と 18 個のユニットテストを実行します。
+- **プロキシ一式を同梱** — PassWall（sing-box カーネル、Xray と SmartDNS なし）と OpenClash をビルドスクリプトが同期します。
+- **関門のあるパイプライン** — すべての PR で `ruff` と 44 個のユニットテストを実行します。
 
 ## 対応デバイス
 
-| デバイス | ターゲット | イメージ |
-| --- | --- | --- |
-| Ruijie RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin`、`-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI とレガシー BIOS |
+| デバイス | ソース | レイアウト | イメージ |
+| --- | --- | --- | --- |
+| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI とレガシー BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
+
+> **LEDE 版からの移行：** RG-X60 New のイメージは純正パーティションから **ubootmod** に
+> 変わりました。U-Boot のリカバリページから書き込み、設定は引き継がないでください。
+> 旧イメージと互換性はありません。
 
 Release のタグはデバイス名（`ruijie_rg-x60-new`、`x86_64`）です。デバイスごとに
 release を分けているので、インデックスとダウンロードページに並べて表示できます。
@@ -64,13 +70,13 @@ release を分けているので、インデックスとダウンロードペー
 - **端末上で** — *システム → オンラインアップグレード* から、ブラウザでダウンロードせずに更新できます。
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## 書き込み
 
 **A. OpenWrt / ImmortalWrt から**
-*システム → バックアップ/ファームウェア書き込み* で `-squashfs-sysupgrade.bin` を
+*システム → バックアップ/ファームウェア書き込み* で `-squashfs-sysupgrade.itb` を
 アップロードします。メジャーバージョンをまたぐときは設定を引き継がないでください。
 
 **B. 純正ファームウェアから**
@@ -78,7 +84,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 そこで同じイメージを書き込みます。純正の管理画面から直接書き込まないでください。
 
 **C. 復旧**
-ブートローダーから `-initramfs-kernel.bin` を起動して一時システムを立て、そこから
+ブートローダーから `-initramfs-recovery.itb` を起動して一時システムを立て、そこから
 sysupgrade イメージを書き込みます。
 
 既定のアドレスは `10.0.0.1`、ユーザー `root`、パスワード `password`。初回ログインで変更してください。
@@ -102,7 +108,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## FAQ
 
-**ソースはどこに？** LEDE ツリーは非公開です。このリポジトリにはパイプライン、ブランド素材、テストがあります。
+**ソースはどこに？** RG-X60 New は [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)、x86_64 は [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede) からビルドします。このリポジトリにはパイプライン、ブランド素材、テストがあります。
 
 **`factory` イメージが無いのはなぜ？** この基板はブートローダーの Web リカバリから書き込む前提で、そこに sysupgrade イメージをそのまま渡せます。
 

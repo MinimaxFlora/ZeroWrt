@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### Προσαρμοσμένο firmware βασισμένο στο LEDE, με ενημέρωση online με ένα κλικ.
+### Προσαρμοσμένο firmware βασισμένο στο ImmortalWrt / LEDE, με ενημέρωση online με ένα κλικ.
 
 **Μία εντολή το χτίζει, ένα κλικ το ενημερώνει.**
 
 [![Build](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![Πυρήνας](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![Πυρήνας](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Πλατφόρμα](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -31,9 +31,11 @@
 ---
 
 Το ZeroWrt είναι ένα μικρό προσαρμοσμένο firmware για ρούτερ κλάσης OpenWrt, χτισμένο από
-ένα ιδιωτικό δέντρο LEDE μέσω GitHub Actions. Κάθε build παράγεται από τον πηγαίο κώδικα,
-δημοσιεύεται μαζί με `SHA256SUMS` και `BUILD_INFO.txt` και καταχωρείται σε ευρετήριο
-ενημερώσεων, ώστε η συσκευή να ενημερώνεται μόνη της από το LuCI.
+δύο δημόσια δέντρα μέσω GitHub Actions: [ImmortalWrt
+24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) για την πλακέτα
+MT7986 και [LEDE](https://github.com/coolsnowwolf/lede) για x86_64. Κάθε build παράγεται
+από τον πηγαίο κώδικα, δημοσιεύεται μαζί με `SHA256SUMS` και `BUILD_INFO.txt` και
+καταχωρείται σε ευρετήριο ενημερώσεων, ώστε η συσκευή να ενημερώνεται μόνη της από το LuCI.
 
 Το ενδιαφέρον δεν είναι άλλη μια λίστα πακέτων, αλλά ο κύκλος: το
 build δημοσιεύει image και ευρετήριο, και το ρούτερ βλέπει τη νέα έκδοση στον επόμενο έλεγχο.
@@ -44,15 +46,19 @@ build δημοσιεύει image και ευρετήριο, και το ρούτ
 - **Έντιμη σύγκριση εκδόσεων** — η χρονική σήμανση του build κρίνει το «νεότερο», αλλιώς συγκρίνονται συμβολοσειρές έκδοσης· άγνωστη ημερομηνία εμφανίζεται ως άγνωστη, δεν επινοείται.
 - **Ρυθμίσεις από το workflow** — διεύθυνση LAN, hostname και τρία SSID/κωδικοί Wi-Fi είναι είσοδοι build, όχι αρχεία με χειροκίνητες αλλαγές.
 - **Branding Argon 3** — φόντο, λογότυπο σύνδεσης, favicon και παλέτα (`#2E9D72` / `#4CAF86`) αντικαθίστανται κατά το build.
-- **Πλήρες proxy stack** — PassWall (μόνο Xray) και OpenClash, συγχρονισμένα από τα scripts build.
-- **Ελεγχόμενη ροή** — `ruff` και 18 unit tests σε κάθε pull request.
+- **Πλήρες proxy stack** — PassWall (πυρήνας sing-box, χωρίς Xray και SmartDNS) και OpenClash, συγχρονισμένα από τα scripts build.
+- **Ελεγχόμενη ροή** — `ruff` και 44 unit tests σε κάθε pull request.
 
 ## Υποστηριζόμενες συσκευές
 
-| Συσκευή | Πλατφόρμα | Images |
-| --- | --- | --- |
-| Ruijie RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin`, `-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI και παλαιό BIOS |
+| Συσκευή | Πηγή | Διάταξη | Images |
+| --- | --- | --- | --- |
+| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI και παλαιό BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
+
+> **Μετάβαση από τα builds LEDE:** η εικόνα του RG-X60 New άλλαξε από τη διάταξη
+> κατασκευαστή σε **ubootmod**. Γράψ' την από τη σελίδα ανάκτησης U-Boot και μη κρατήσεις
+> τις ρυθμίσεις· το παλιό και το νέο image δεν είναι συμβατά.
 
 Τα tags των release είναι το όνομα της συσκευής (`ruijie_rg-x60-new`, `x86_64`). Κάθε
 συσκευή κρατά δικό της release, οπότε το ευρετήριο και η σελίδα λήψης τα δείχνουν δίπλα δίπλα.
@@ -64,21 +70,21 @@ build δημοσιεύει image και ευρετήριο, και το ρούτ
 - **Στη συσκευή** — *Σύστημα → Ενημέρωση online* κάνει το ίδιο χωρίς λήψη από τον browser.
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## Εγκατάσταση
 
 **Α. Από OpenWrt ή ImmortalWrt**
 *Σύστημα → Αντίγραφο ασφαλείας / Εγκατάσταση firmware*, ανέβασε το
-`-squashfs-sysupgrade.bin` και μη διατηρήσεις τις ρυθμίσεις όταν αλλάζεις κύρια έκδοση.
+`-squashfs-sysupgrade.itb` και μη διατηρήσεις τις ρυθμίσεις όταν αλλάζεις κύρια έκδοση.
 
 **Β. Από το firmware του κατασκευαστή**
 Εγκατέστησε πρώτα τη σελίδα ανάκτησης του bootloader (συνήθως η web σελίδα U-Boot σε αυτή
 την πλακέτα) και ανέβασε εκεί το ίδιο image. Μην κάνεις flash από το περιβάλλον του κατασκευαστή.
 
 **Γ. Ανάκτηση**
-Εκκίνησε το `-initramfs-kernel.bin` από τον bootloader για προσωρινό σύστημα και γράψε από
+Εκκίνησε το `-initramfs-recovery.itb` από τον bootloader για προσωρινό σύστημα και γράψε από
 εκεί το image sysupgrade.
 
 Προεπιλεγμένη διεύθυνση `10.0.0.1`, χρήστης `root`, κωδικός `password`. Άλλαξέ τα στην πρώτη σύνδεση.
@@ -102,7 +108,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## Συχνές ερωτήσεις
 
-**Πού είναι ο κώδικας;** Το δέντρο LEDE είναι ιδιωτικό. Αυτό το αποθετήριο έχει τη ροή, τα υλικά branding και τα tests.
+**Πού είναι ο κώδικας;** Το RG-X60 New χτίζεται από το [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) και το x86_64 από το [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). Αυτό το αποθετήριο έχει τη ροή, τα υλικά branding και τα tests.
 
 **Γιατί δεν υπάρχει image `factory`;** Αυτές οι πλακέτες κάνουν flash από τη σελίδα ανάκτησης του bootloader, που δέχεται απευθείας το image sysupgrade.
 

@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### LEDE tabanlı özel yazılım, web arayüzünden tek tıkla güncelleme.
+### ImmortalWrt / LEDE tabanlı özel yazılım, web arayüzünden tek tıkla güncelleme.
 
 **Tek komut derler, tek tık günceller.**
 
 [![Derleme](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![Çekirdek](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![Çekirdek](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Hedef](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -30,8 +30,10 @@
 
 ---
 
-ZeroWrt, OpenWrt sınıfı yönlendiriciler için küçük bir özel yazılımdır ve özel bir LEDE
-ağacından GitHub Actions ile derlenir. Her derleme kaynaktan üretilir, `SHA256SUMS` ve
+ZeroWrt, OpenWrt sınıfı yönlendiriciler için küçük bir özel yazılımdır ve GitHub Actions ile
+iki genel ağaçtan derlenir: MT7986 kartı için [ImmortalWrt
+24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly), x86_64 için
+[LEDE](https://github.com/coolsnowwolf/lede). Her derleme kaynaktan üretilir, `SHA256SUMS` ve
 `BUILD_INFO.txt` ile yayınlanır ve güncelleme dizinine yazılır; böylece cihaz kendini
 LuCI'den güncelleyebilir.
 
@@ -44,15 +46,19 @@ imajı ve dizini yayınlar, yönlendirici bir sonraki denetimde yeni sürümü g
 - **Dürüst sürüm karşılaştırması** — "daha yeni" kararını derleme zaman damgası verir, yoksa sürüm dizesi karşılaştırılır; bilinmeyen tarih uydurulmaz, bilinmiyor olarak gösterilir.
 - **Yapılandırma workflow'dan** — LAN IP'si, ana makine adı ve üç Wi-Fi SSID/parolası derleme girdisidir, elle düzenlenen dosyalar değildir.
 - **Argon 3 markası** — arka plan, giriş logosu, favicon ve palet (`#2E9D72` / `#4CAF86`) derleme sırasında değiştirilir.
-- **Proxy yığını dahil** — PassWall (yalnızca Xray) ve OpenClash, derleme betikleriyle eşitlenir.
-- **Kontrollü hat** — her pull request'te `ruff` ve 18 birim testi çalışır.
+- **Proxy yığını dahil** — PassWall (sing-box çekirdeği, Xray ve SmartDNS yok) ve OpenClash, derleme betikleriyle eşitlenir.
+- **Kontrollü hat** — her pull request'te `ruff` ve 44 birim testi çalışır.
 
 ## Desteklenen cihazlar
 
-| Cihaz | Hedef | İmajlar |
-| --- | --- | --- |
-| Ruijie RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin`, `-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI ve eski BIOS |
+| Cihaz | Kaynak | Düzen | İmajlar |
+| --- | --- | --- | --- |
+| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI ve eski BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
+
+> **LEDE derlemelerinden geçiş:** RG-X60 New imajı fabrika bölümlemesinden **ubootmod**'a
+> geçti. U-Boot kurtarma sayfasından yaz ve yapılandırmayı koruma; eski imaj ile bu imaj
+> birbirinin yerine geçmez.
 
 Release etiketleri cihaz adıdır (`ruijie_rg-x60-new`, `x86_64`). Her cihaz kendi release'ini
 korur; dizin ve indirme sayfası ikisini yan yana listeleyebilir.
@@ -64,13 +70,13 @@ korur; dizin ve indirme sayfası ikisini yan yana listeleyebilir.
 - **Cihaz üzerinde** — *Sistem → Çevrimiçi güncelleme* tarayıcıdan indirmeden aynısını yapar.
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## Yükleme
 
 **A. OpenWrt veya ImmortalWrt üzerinden**
-*Sistem → Yedek / Yazılım yükle*, `-squashfs-sysupgrade.bin` dosyasını yükle ve ana sürüm
+*Sistem → Yedek / Yazılım yükle*, `-squashfs-sysupgrade.itb` dosyasını yükle ve ana sürüm
 atlıyorsan yapılandırmayı koruma.
 
 **B. Üretici yazılımından**
@@ -78,7 +84,7 @@ atlıyorsan yapılandırmayı koruma.
 imajı oradan yükle. Üretici arayüzünden doğrudan yazma.
 
 **C. Kurtarma**
-Önyükleyiciden `-initramfs-kernel.bin` başlatıp geçici bir sistem al, sonra sysupgrade imajını
+Önyükleyiciden `-initramfs-recovery.itb` başlatıp geçici bir sistem al, sonra sysupgrade imajını
 oradan yaz.
 
 Varsayılan adres `10.0.0.1`, kullanıcı `root`, parola `password`. İlk girişte değiştir.
@@ -102,7 +108,7 @@ Derlemeler elle başlatılır: *Actions → Build ZeroWrt → Run workflow*. `pu
 
 ## SSS
 
-**Kaynak nerede?** LEDE ağacı özel. Bu depoda hat, marka varlıkları ve testler var.
+**Kaynak nerede?** RG-X60 New [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) deposundan, x86_64 ise [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede) deposundan derlenir. Bu depoda hat, marka varlıkları ve testler var.
 
 **Neden `factory` imajı yok?** Bu kartlar önyükleyicinin web kurtarma sayfasından yüklenir ve o sayfa sysupgrade imajını doğrudan kabul eder.
 

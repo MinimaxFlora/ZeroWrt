@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### เฟิร์มแวร์กำหนดเองบนฐาน LEDE อัปเดตออนไลน์ได้ในคลิกเดียว
+### เฟิร์มแวร์กำหนดเองบนฐาน ImmortalWrt / LEDE อัปเดตออนไลน์ได้ในคลิกเดียว
 
 **คำสั่งเดียวบิลด์ คลิกเดียวอัปเดต**
 
 [![บิลด์](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![เคอร์เนล](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![เคอร์เนล](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![แพลตฟอร์ม](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -30,9 +30,12 @@
 
 ---
 
-ZeroWrt คือเฟิร์มแวร์กำหนดเองขนาดเล็กสำหรับเราเตอร์ตระกูล OpenWrt บิลด์จากต้นไม้ LEDE
-ส่วนตัวผ่าน GitHub Actions ทุกบิลด์สร้างจากซอร์สโค้ด เผยแพร่พร้อม `SHA256SUMS` และ
-`BUILD_INFO.txt` และถูกบันทึกในดัชนีอัปเดต อุปกรณ์จึงอัปเกรดตัวเองได้จาก LuCI
+ZeroWrt คือเฟิร์มแวร์กำหนดเองขนาดเล็กสำหรับเราเตอร์ตระกูล OpenWrt บิลด์ด้วย GitHub Actions
+จากสองต้นไม้สาธารณะ: [ImmortalWrt
+24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) สำหรับบอร์ด MT7986
+และ [LEDE](https://github.com/coolsnowwolf/lede) สำหรับ x86_64 ทุกบิลด์สร้างจากซอร์สโค้ด
+เผยแพร่พร้อม `SHA256SUMS` และ `BUILD_INFO.txt` และถูกบันทึกในดัชนีอัปเดต อุปกรณ์จึงอัปเกรด
+ตัวเองได้จาก LuCI
 
 จุดที่น่าสนใจไม่ใช่รายการแพ็กเกจอีกชุด แต่เป็นวงจรนี้: บิลด์เผยแพร่ image
 และดัชนี แล้วเราเตอร์เห็นเวอร์ชันใหม่ในการตรวจครั้งถัดไป
@@ -43,15 +46,18 @@ ZeroWrt คือเฟิร์มแวร์กำหนดเองขนา
 - **ตัดสินเวอร์ชันอย่างซื่อตรง** — ใช้เวลาบิลด์ตัดสินว่าใหม่กว่า ถ้าไม่มีจึงเทียบสตริงเวอร์ชัน และวันที่ที่ไม่ทราบจะแสดงว่าไม่ทราบ ไม่แต่งขึ้นมา
 - **กำหนดค่าจาก workflow** — IP ของ LAN ชื่อโฮสต์ และ SSID/รหัสผ่าน Wi-Fi สามชุดเป็นพารามิเตอร์บิลด์ ไม่ใช่ไฟล์ที่แก้มือ
 - **แบรนด์ Argon 3** — พื้นหลัง โลโก้หน้าเข้าสู่ระบบ favicon และชุดสี (`#2E9D72` / `#4CAF86`) ถูกแทนตอนบิลด์
-- **มาพร้อมพร็อกซี** — PassWall (เฉพาะ Xray) และ OpenClash ซิงก์โดยสคริปต์บิลด์
-- **ไปป์ไลน์มีด่านตรวจ** — `ruff` และยูนิตเทสต์ 18 ตัวในทุก pull request
+- **มาพร้อมพร็อกซี** — PassWall (แกน sing-box ไม่มี Xray และ SmartDNS) และ OpenClash ซิงก์โดยสคริปต์บิลด์
+- **ไปป์ไลน์มีด่านตรวจ** — `ruff` และยูนิตเทสต์ 44 ตัวในทุก pull request
 
 ## อุปกรณ์ที่รองรับ
 
-| อุปกรณ์ | แพลตฟอร์ม | อิมเมจ |
-| --- | --- | --- |
-| Ruijie RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin`, `-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI และ BIOS แบบเก่า |
+| อุปกรณ์ | แหล่งที่มา | เลย์เอาต์ | อิมเมจ |
+| --- | --- | --- | --- |
+| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI และ BIOS รุ่นเก่า | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
+
+> **ย้ายจากบิลด์ LEDE:** อิมเมจ RG-X60 New เปลี่ยนจากพาร์ทิชันโรงงานเป็น **ubootmod**
+> แฟลชจากหน้าผู้ช่วยกู้คืน U-Boot และอย่าเก็บค่าคอนฟิก อิมเมจเก่ากับอันนี้ใช้แทนกันไม่ได้
 
 แท็ก release คือชื่ออุปกรณ์ (`ruijie_rg-x60-new`, `x86_64`) อุปกรณ์แต่ละตัวมี release ของ
 ตัวเอง ดัชนีและหน้าดาวน์โหลดจึงแสดงร่วมกันได้
@@ -63,13 +69,13 @@ ZeroWrt คือเฟิร์มแวร์กำหนดเองขนา
 - **บนตัวเครื่อง** — *ระบบ → อัปเกรดออนไลน์* ทำแบบเดียวกันโดยไม่ต้องดาวน์โหลดในเบราว์เซอร์
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## การแฟลช
 
 **A. จาก OpenWrt หรือ ImmortalWrt**
-*ระบบ → สำรองข้อมูล / แฟลชเฟิร์มแวร์* อัปโหลด `-squashfs-sysupgrade.bin` และอย่าเก็บ
+*ระบบ → สำรองข้อมูล / แฟลชเฟิร์มแวร์* อัปโหลด `-squashfs-sysupgrade.itb` และอย่าเก็บ
 ค่าคอนฟิกเมื่อข้ามเวอร์ชันหลัก
 
 **B. จากเฟิร์มแวร์จากโรงงาน**
@@ -77,7 +83,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 อิมเมจเดียวกันที่นั่น อย่าแฟลชจากหน้าเว็บของผู้ผลิต
 
 **C. กู้เครื่อง**
-บูต `-initramfs-kernel.bin` จาก bootloader เพื่อได้ระบบชั่วคราว แล้วแฟลชอิมเมจ sysupgrade
+บูต `-initramfs-recovery.itb` จาก bootloader เพื่อได้ระบบชั่วคราว แล้วแฟลชอิมเมจ sysupgrade
 จากในนั้น
 
 ที่อยู่เริ่มต้น `10.0.0.1` ผู้ใช้ `root` รหัสผ่าน `password` ควรเปลี่ยนทันทีที่เข้าครั้งแรก
@@ -101,7 +107,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## คำถามที่พบบ่อย
 
-**ซอร์สอยู่ที่ไหน?** ต้นไม้ LEDE เป็นส่วนตัว รีโปนี้เก็บไปป์ไลน์ วัสดุแบรนด์ และเทสต์
+**ซอร์สอยู่ที่ไหน?** RG-X60 New บิลด์จาก [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) และ x86_64 จาก [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede) รีโปนี้เก็บไปป์ไลน์ วัสดุแบรนด์ และเทสต์
 
 **ทำไมไม่มีอิมเมจ `factory`?** บอร์ดเหล่านี้แฟลชผ่านหน้าผู้ช่วยกู้คืนของ bootloader ซึ่งรับอิมเมจ sysupgrade ได้โดยตรง
 

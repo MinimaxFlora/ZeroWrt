@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### نظام ثابت (firmware) مخصص مبني على LEDE، مع تحديث عبر الإنترنت بنقرة واحدة.
+### نظام ثابت (firmware) مخصص مبني على ImmortalWrt / LEDE، مع تحديث عبر الإنترنت بنقرة واحدة.
 
 **أمر واحد يبنيه، ونقرة واحدة تحدّثه.**
 
 [![البناء](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![النواة](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![النواة](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![المنصة](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -30,9 +30,11 @@
 
 ---
 
-ZeroWrt نظام ثابت مخصص صغير لمجموعة راوترات OpenWrt، يُبنى من شجرة LEDE خاصة عبر GitHub
-Actions. كل بناء يُنتج من الكود المصدري، ويُنشر مع `SHA256SUMS` و`BUILD_INFO.txt`،
-ويُسجَّل في فهرس التحديثات كي يستطيع الجهاز تحديث نفسه من LuCI.
+ZeroWrt نظام ثابت مخصص صغير لمجموعة راوترات OpenWrt، يُبنى عبر GitHub Actions من شجرتين
+عامتين: [ImmortalWrt 24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)
+للوحة MT7986 و[LEDE](https://github.com/coolsnowwolf/lede) لـ x86_64. كل بناء يُنتج من
+الكود المصدري، ويُنشر مع `SHA256SUMS` و`BUILD_INFO.txt`، ويُسجَّل في فهرس التحديثات كي
+يستطيع الجهاز تحديث نفسه من LuCI.
 
 المثير ليس قائمة حزم أخرى، بل الحلقة: والبناء ينشر الصورة والفهرس، ثم
 يرى الراوتر النسخة الجديدة عند التحقق التالي.
@@ -43,15 +45,18 @@ Actions. كل بناء يُنتج من الكود المصدري، ويُنشر 
 - **مقارنة إصدارات صادقة** — يحدد طابع وقت البناء الأحدث، وإن لم يوجد تُقارن سلاسل الإصدار؛ التاريخ المجهول يظهر مجهولًا ولا يُختلق.
 - **الإعداد من سير العمل** — عنوان LAN واسم المضيف وثلاث شبكات Wi-Fi وكلمات مرورها مدخلات بناء، لا ملفات تُحرَّر يدويًا.
 - **هوية Argon 3** — الخلفية وشعار الدخول وأيقونة الموقع ولوحة الألوان (`#2E9D72` / `#4CAF86`) تُستبدل أثناء البناء.
-- **حزمة وسيط مدمجة** — PassWall (Xray فقط) وOpenClash، تُزامنهما سكربتات البناء.
-- **خط أنابيب محكوم** — `ruff` و18 اختبار وحدة في كل طلب دمج.
+- **حزمة وسيط مدمجة** — PassWall (نواة sing-box، بدون Xray وبدون SmartDNS) وOpenClash، تُزامنهما سكربتات البناء.
+- **خط أنابيب محكوم** — `ruff` و44 اختبار وحدة في كل طلب دمج.
 
 ## الأجهزة المدعومة
 
-| الجهاز | المنصة | الصور |
-| --- | --- | --- |
-| Ruijie RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin` و`-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI وBIOS القديم |
+| الجهاز | المصدر | التخطيط | الصور |
+| --- | --- | --- | --- |
+| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI وBIOS القديم | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
+
+> **الانتقال من بناءات LEDE:** صورة RG-X60 New انتقلت من تقسيم المصنع إلى **ubootmod**.
+> ثبّتها من صفحة استعادة U-Boot ولا تحتفظ بالإعدادات؛ الصورة القديمة وهذه غير متبادلتين.
 
 وسوم الإصدارات هي أسماء الأجهزة (`ruijie_rg-x60-new` و`x86_64`). لكل جهاز إصداره الخاص،
 لذا يمكن للفهرس وصفحة التنزيل عرضها جنبًا إلى جنب.
@@ -63,13 +68,13 @@ Actions. كل بناء يُنتج من الكود المصدري، ويُنشر 
 - **على الجهاز** — *النظام ← التحديث عبر الإنترنت* يفعل الشيء نفسه دون تنزيل من المتصفح.
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## التثبيت
 
 **أ. من OpenWrt أو ImmortalWrt**
-*النظام ← نسخ احتياطي / تثبيت نظام ثابت*، وارفع ملف `-squashfs-sysupgrade.bin`، ولا تحتفظ
+*النظام ← نسخ احتياطي / تثبيت نظام ثابت*، وارفع ملف `-squashfs-sysupgrade.itb`، ولا تحتفظ
 بالإعدادات عند الانتقال بين إصدارات رئيسية.
 
 **ب. من نظام المصنع**
@@ -77,7 +82,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 الصورة نفسها هناك. لا تثبّت من واجهة المصنع مباشرة.
 
 **ج. الاستعادة**
-أقلع `-initramfs-kernel.bin` من المُقلع للحصول على نظام مؤقت، ثم ثبّت صورة sysupgrade منه.
+أقلع `-initramfs-recovery.itb` من المُقلع للحصول على نظام مؤقت، ثم ثبّت صورة sysupgrade منه.
 
 العنوان الافتراضي `10.0.0.1`، المستخدم `root`، كلمة المرور `password`. غيّرها عند أول دخول.
 
@@ -100,7 +105,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## الأسئلة الشائعة
 
-**أين الكود المصدري؟** شجرة LEDE خاصة. هذا المستودع يضم خط الأنابيب وأصول الهوية والاختبارات.
+**أين الكود المصدري؟** يستخدم RG-X60 New مستودع [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)، وx86_64 مستودع [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). هذا المستودع يضم خط الأنابيب وأصول الهوية والاختبارات.
 
 **لماذا لا توجد صورة `factory`؟** هذه اللوحات تُثبَّت عبر صفحة استعادة المُقلع التي تقبل صورة sysupgrade مباشرة.
 

@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### 基於 LEDE 的客製韌體，內建網頁一鍵線上更新。
+### 基於 ImmortalWrt / LEDE 的客製韌體，內建網頁一鍵線上更新。
 
 **一條命令出韌體，點一下完成升級。**
 
 [![建置](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![核心](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![核心](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![平台](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -30,9 +30,11 @@
 
 ---
 
-ZeroWrt 是給 OpenWrt 類路由器的客製韌體，由 GitHub Actions 從一份私有的 LEDE
-原始碼樹自動編譯。每次建置都從原始碼產出，連同 `SHA256SUMS` 與 `BUILD_INFO.txt`
-一起發布，並寫入更新索引，裝置可以自己從 LuCI 升級。
+ZeroWrt 是給 OpenWrt 類路由器的客製韌體，由 GitHub Actions 從兩份公開原始碼樹編譯：銳捷
+RG-X60 New 使用 [ImmortalWrt
+24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)，x86_64 使用
+[LEDE](https://github.com/coolsnowwolf/lede)。每次建置都從原始碼產出，連同 `SHA256SUMS` 與
+`BUILD_INFO.txt` 一起發布，並寫入更新索引，裝置可以自己從 LuCI 升級。
 
 有意思的不是又一份套件清單，而是這條流程：建置產出映像與索引，
 路由器下次檢查時就看到新版本。
@@ -43,15 +45,18 @@ ZeroWrt 是給 OpenWrt 類路由器的客製韌體，由 GitHub Actions 從一�
 - **不馬虎的版本判斷** — 以建置時間戳判斷新舊，沒有時間戳才退回比版本號；無法確定的日期顯示為「未知」，不會憑空捏造。
 - **設定由工作流程注入** — 管理 IP、主機名稱與三組 Wi-Fi 名稱/密碼都是建置參數，不是手改檔案。
 - **Argon 3 品牌化** — 登入背景、登入 Logo、網站圖示與配色（`#2E9D72` / `#4CAF86`）在建置時替換。
-- **內建代理套件** — PassWall（僅 Xray）與 OpenClash，由建置腳本自動同步。
-- **有門檻的流程** — 每個 PR 都要通過 `ruff` 與 18 個單元測試。
+- **內建代理套件** — PassWall（sing-box 核心，不含 Xray、不含 SmartDNS）與 OpenClash，由建置腳本自動同步。
+- **有門檻的流程** — 每個 PR 都要通過 `ruff` 與 44 個單元測試。
 
 ## 支援的裝置
 
-| 裝置 | 平台 | 映像 |
-| --- | --- | --- |
-| 銳捷 RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin`、`-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI 與傳統 BIOS 兩種 |
+| 裝置 | 原始碼 | 配置 | 映像 |
+| --- | --- | --- | --- |
+| 銳捷 RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI 與傳統 BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
+
+> **從 LEDE 版本遷移：** RG-X60 New 從原廠分割區改成 **ubootmod**。
+> 請從 U-Boot 救援頁刷入，且不要保留設定；舊映像與這個不能互刷。
 
 Release 的 tag 就是裝置名稱（`ruijie_rg-x60-new`、`x86_64`）。每台裝置保留自己的
 release，索引與下載頁可以並排列出。
@@ -63,20 +68,20 @@ release，索引與下載頁可以並排列出。
 - **在裝置上** — *系統 → 線上更新* 可直接升級，不必先在電腦下載。
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## 刷機
 
 **A. 已經是 OpenWrt / ImmortalWrt**
-*系統 → 備份/刷寫韌體*，上傳 `-squashfs-sysupgrade.bin`；跨大版本時不要保留設定。
+*系統 → 備份/刷寫韌體*，上傳 `-squashfs-sysupgrade.itb`；跨大版本時不要保留設定。
 
 **B. 原廠韌體**
 先裝好引導的不死 U-Boot（這塊板子通常是網頁救援頁），再在那裡上傳同一個映像。
 不要用原廠後台直接刷。
 
 **C. 救磚**
-從引導啟動 `-initramfs-kernel.bin` 取得臨時系統，再從裡面刷 sysupgrade 映像。
+從引導啟動 `-initramfs-recovery.itb` 取得臨時系統，再從裡面刷 sysupgrade 映像。
 
 預設位址 `10.0.0.1`，使用者 `root`，密碼 `password`，第一次登入請立刻修改。
 
@@ -99,7 +104,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## 常見問題
 
-**原始碼在哪？** LEDE 原始碼樹是私有的。本倉庫放的是流程、品牌素材與測試。
+**原始碼在哪？** RG-X60 New 使用 [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)，x86_64 使用 [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede)。本倉庫放的是流程、品牌素材與測試。
 
 **為什麼沒有 `factory` 映像？** 這塊板子透過引導的網頁救援頁刷機，它直接接受 sysupgrade 映像。
 

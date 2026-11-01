@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### فریمور سفارشی مبتنی بر LEDE، با به‌روزرسانی آنلاین با یک کلیک.
+### فریمور سفارشی مبتنی بر ImmortalWrt / LEDE، با به‌روزرسانی آنلاین با یک کلیک.
 
 **یک فرمان می‌سازد، یک کلیک به‌روز می‌کند.**
 
 [![ساخت](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![هسته](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![هسته](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![پلتفرم](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -30,9 +30,12 @@
 
 ---
 
-ZeroWrt یک فریمور سفارشی کوچک برای روترهای خانواده OpenWrt است که با GitHub Actions از یک
-درخت خصوصی LEDE ساخته می‌شود. هر ساخت از کد منبع تولید، همراه با `SHA256SUMS` و
-`BUILD_INFO.txt` منتشر و در فهرست به‌روزرسانی ثبت می‌شود تا دستگاه خودش را از LuCI به‌روز کند.
+ZeroWrt یک فریمور سفارشی کوچک برای روترهای خانواده OpenWrt است که با GitHub Actions از دو
+درخت عمومی ساخته می‌شود: [ImmortalWrt
+24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) برای برد MT7986 و
+[LEDE](https://github.com/coolsnowwolf/lede) برای x86_64. هر ساخت از کد منبع تولید، همراه
+با `SHA256SUMS` و `BUILD_INFO.txt` منتشر و در فهرست به‌روزرسانی ثبت می‌شود تا دستگاه خودش
+را از LuCI به‌روز کند.
 
 نکتهٔ جالب فهرست دیگری از بسته‌ها نیست، بلکه این چرخه است: ساخت
 تصویر و فهرست را منتشر می‌کند و روتر در بررسی بعدی نسخهٔ تازه را می‌بیند.
@@ -43,15 +46,19 @@ ZeroWrt یک فریمور سفارشی کوچک برای روترهای خانو
 - **مقایسهٔ صادقانهٔ نسخه** — مهر زمان ساخت تعیین می‌کند «تازه‌تر» کدام است، وگرنه رشتهٔ نسخه مقایسه می‌شود؛ تاریخ نامعلوم همان نامعلوم نمایش داده می‌شود و از خودمان نمی‌سازیم.
 - **پیکربندی از سوی workflow** — نشانی LAN، نام میزبان و سه SSID و گذرواژهٔ وای‌فای ورودی ساخت هستند، نه فایل دست‌کاری‌شده.
 - **هویت Argon 3** — پس‌زمینه، لوگوی ورود، favicon و پالت (`#2E9D72` / `#4CAF86`) هنگام ساخت جایگزین می‌شوند.
-- **پشتهٔ پروکسی همراه** — PassWall (فقط Xray) و OpenClash که اسکریپت‌های ساخت هم‌گام نگه می‌دارند.
-- **خط تولید دارای دروازه** — `ruff` و ۱۸ آزمون واحد روی هر pull request.
+- **پشتهٔ پروکسی همراه** — PassWall (هستهٔ sing-box، بدون Xray و بدون SmartDNS) و OpenClash که اسکریپت‌های ساخت هم‌گام نگه می‌دارند.
+- **خط تولید دارای دروازه** — `ruff` و ۴۴ آزمون واحد روی هر pull request.
 
 ## دستگاه‌های پشتیبانی‌شده
 
-| دستگاه | پلتفرم | تصاویر |
-| --- | --- | --- |
-| Ruijie RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin` و `-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI و BIOS قدیمی |
+| دستگاه | منبع | چیدمان | تصاویر |
+| --- | --- | --- | --- |
+| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI و BIOS قدیمی | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
+
+> **مهاجرت از ساخت‌های LEDE:** تصویر RG-X60 New از چیدمان کارخانه به **ubootmod** تغییر
+> کرده است. آن را از صفحهٔ بازیابی U-Boot بنویس و پیکربندی را نگه ندار؛ تصویر قدیمی و این
+> یکی قابل تبادل نیستند.
 
 برچسب انتشار همان نام دستگاه است (`ruijie_rg-x60-new` و `x86_64`). هر دستگاه انتشار خودش
 را دارد، بنابراین فهرست و صفحهٔ دانلود می‌توانند کنار هم نمایششان دهند.
@@ -63,13 +70,13 @@ ZeroWrt یک فریمور سفارشی کوچک برای روترهای خانو
 - **روی خود دستگاه** — *سیستم ← به‌روزرسانی آنلاین* همین کار را بدون دانلود در مرورگر انجام می‌دهد.
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## نصب
 
 **الف. از OpenWrt یا ImmortalWrt**
-*سیستم ← پشتیبان‌گیری / نوشتن فریمور*، فایل `-squashfs-sysupgrade.bin` را بارگذاری کن و
+*سیستم ← پشتیبان‌گیری / نوشتن فریمور*، فایل `-squashfs-sysupgrade.itb` را بارگذاری کن و
 هنگام عبور از نسخهٔ اصلی، پیکربندی را نگه ندار.
 
 **ب. از فریمور کارخانه**
@@ -77,7 +84,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 آنجا بارگذاری کن. از رابط کارخانه مستقیم ننویس.
 
 **ج. بازیابی**
-`-initramfs-kernel.bin` را از بوت‌لودر بالا بیاور تا یک سیستم موقت داشته باشی، بعد از همان‌جا
+`-initramfs-recovery.itb` را از بوت‌لودر بالا بیاور تا یک سیستم موقت داشته باشی، بعد از همان‌جا
 تصویر sysupgrade را بنویس.
 
 نشانی پیش‌فرض `10.0.0.1`، کاربر `root`، گذرواژه `password`. در نخستین ورود تغییرش بده.
@@ -101,7 +108,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## پرسش‌های متداول
 
-**کد منبع کجاست؟** درخت LEDE خصوصی است. این مخزن خط تولید، دارایی‌های برند و آزمون‌ها را دارد.
+**کد منبع کجاست؟** RG-X60 New از [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) و x86_64 از [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede) ساخته می‌شود. این مخزن خط تولید، دارایی‌های برند و آزمون‌ها را دارد.
 
 **چرا تصویر `factory` نیست؟** این بردها از صفحهٔ بازیابی بوت‌لودر نصب می‌شوند که تصویر sysupgrade را مستقیم می‌پذیرد.
 

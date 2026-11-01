@@ -2,7 +2,8 @@
 
 欢迎提 Issue 和 PR。先说清楚这个仓库**不是**什么，能省你不少时间：
 
-> 这里没有 OpenWrt 源码。LEDE 源码树是私有仓库，由 GitHub Secrets 提供，只有维护者能在 Actions 里拉取。
+> 这里没有 OpenWrt 源码。源码树是两份公开仓库（MT7986 用 ImmortalWrt，x86_64 用 LEDE），
+> Actions 里直接匿名 clone，不需要配置源码 Secret。
 > 这个仓库装的是**构建流水线本身**：`scripts/`、`tests/`、品牌素材 `assets/`，以及触发它们的 workflow。
 
 所以大部分改动是 Python，能在你自己的机器上几分钟内验证完；**完整的固件编译不需要也不应该在你本地跑**。
@@ -62,8 +63,8 @@ class MyPatchTest(TempTreeTest):
         self.assertIn("ZeroWrt", util.read_text(self.root / "include" / "version.mk"))
 ```
 
-用 `self.write()` 造最小输入，**不要依赖真实 LEDE 树**（私有且巨大）。现有的 `CorePatchesTest`、
-`DeviceLookupTest`、`FeedConflictTest` 都是这个套路，照着抄最快。
+用 `self.write()` 造最小输入，**不要依赖真实源码树**（几十万个文件，而且每次构建都可能变）。现有的
+`ImmortalWrtPatchesTest`、`LedePatchesTest`、`DeviceLookupTest`、`FeedConflictTest` 都是这个套路，照着抄最快。
 
 ## 关于 `package/new`
 
@@ -91,7 +92,8 @@ feeds 里的同名包会依据这份清单自动被删掉，漏登记会让 buil
 | 改了什么 | 还要动哪里 |
 | --- | --- |
 | 选装包列表 | `docs/BUILD.md` 的定制表 + `README.md` 的 Features |
-| 新增 / 移除设备 | `build.yml` 与 `toolchain.yml` 的 `device.options`、`README.md` 的设备表 |
+| 新增 / 移除设备 | `scripts/zerowrt_core/profiles.py` + `build.yml` 与 `toolchain.yml` 的 `device.options` + `README.md` 的设备表 |
+| 换源码树 / 分支 | `profiles.py` 的 `SOURCES`，并重跑该设备的 toolchain 缓存 |
 | `assets/` 素材 | `docs/BUILD.md` 的品牌化章节 |
 | 值得用户知道的变更 | `CHANGELOG.md` 的 Unreleased 段 |
 
@@ -100,7 +102,8 @@ feeds 里的同名包会依据这份清单自动被删掉，漏登记会让 buil
 提交信息用 Conventional Commits，仓库已经在用：
 
 ```
-build: switch the PassWall core from Sing-Box to Xray
+build: switch the PassWall core from Xray to sing-box
+build: build the RG-X60 New from ImmortalWrt
 fix: resolve x86_64 device from the source tree
 docs: describe the package/new layout
 ```

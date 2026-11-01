@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### Firmware kustom berbasis LEDE, dengan pembaruan online sekali klik.
+### Firmware kustom berbasis ImmortalWrt / LEDE, dengan pembaruan online sekali klik.
 
 **Satu perintah mem-build, satu klik memperbarui.**
 
 [![Build](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![Kernel](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![Kernel](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Target](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -30,10 +30,12 @@
 
 ---
 
-ZeroWrt adalah firmware kustom kecil untuk router kelas OpenWrt, dibangun dari pohon LEDE
-privat lewat GitHub Actions. Setiap build dihasilkan dari kode sumber, diterbitkan bersama
-`SHA256SUMS` dan `BUILD_INFO.txt`, lalu dicatat dalam indeks pembaruan sehingga perangkat
-dapat memperbarui dirinya sendiri dari LuCI.
+ZeroWrt adalah firmware kustom kecil untuk router kelas OpenWrt, dibangun dari dua pohon
+publik lewat GitHub Actions: [ImmortalWrt
+24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) untuk papan MT7986
+dan [LEDE](https://github.com/coolsnowwolf/lede) untuk x86_64. Setiap build dihasilkan dari
+kode sumber, diterbitkan bersama `SHA256SUMS` dan `BUILD_INFO.txt`, lalu dicatat dalam
+indeks pembaruan sehingga perangkat dapat memperbarui dirinya sendiri dari LuCI.
 
 Yang menarik bukan daftar paket lain, tetapi siklusnya: build
 menerbitkan image dan indeks, dan router melihat versi baru saat pemeriksaan berikutnya.
@@ -44,15 +46,19 @@ menerbitkan image dan indeks, dan router melihat versi baru saat pemeriksaan ber
 - **Perbandingan versi yang jujur** — stempel waktu build menentukan "lebih baru", jika tidak ada baru membandingkan string versi; tanggal yang tidak diketahui ditampilkan sebagai tidak diketahui, bukan dikarang.
 - **Konfigurasi dari workflow** — IP LAN, hostname, serta tiga SSID dan sandi Wi-Fi adalah input build, bukan berkas yang diedit manual.
 - **Branding Argon 3** — latar, logo login, favicon, dan palet (`#2E9D72` / `#4CAF86`) diganti saat build.
-- **Tumpukan proxy disertakan** — PassWall (hanya Xray) dan OpenClash, disinkronkan oleh skrip build.
-- **Pipeline berpenjaga** — `ruff` dan 18 unit test pada setiap pull request.
+- **Tumpukan proxy disertakan** — PassWall (inti sing-box, tanpa Xray dan SmartDNS) dan OpenClash, disinkronkan oleh skrip build.
+- **Pipeline berpenjaga** — `ruff` dan 44 unit test pada setiap pull request.
 
 ## Perangkat yang didukung
 
-| Perangkat | Target | Image |
-| --- | --- | --- |
-| Ruijie RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin`, `-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI dan BIOS lama |
+| Perangkat | Sumber | Tata letak | Image |
+| --- | --- | --- | --- |
+| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI dan BIOS lama | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
+
+> **Pindah dari build LEDE:** image RG-X60 New berubah dari tata letak pabrik ke
+> **ubootmod**. Flash dari halaman pemulihan U-Boot dan jangan pertahankan konfigurasi;
+> image lama dan yang ini tidak bisa saling tukar.
 
 Tag release adalah nama perangkat (`ruijie_rg-x60-new`, `x86_64`). Setiap perangkat punya
 release sendiri, jadi indeks dan halaman unduhan dapat menampilkannya berdampingan.
@@ -64,13 +70,13 @@ release sendiri, jadi indeks dan halaman unduhan dapat menampilkannya berdamping
 - **Di perangkat** — *Sistem → Pembaruan online* melakukan hal yang sama tanpa unduh di browser.
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## Flash
 
 **A. Dari OpenWrt atau ImmortalWrt**
-*Sistem → Cadangan / Flash firmware*, unggah `-squashfs-sysupgrade.bin`, dan jangan
+*Sistem → Cadangan / Flash firmware*, unggah `-squashfs-sysupgrade.itb`, dan jangan
 pertahankan konfigurasi saat berpindah versi mayor.
 
 **B. Dari firmware pabrik**
@@ -78,7 +84,7 @@ Pasang halaman pemulihan bootloader lebih dulu (di papan ini umumnya halaman web
 lalu unggah image yang sama di sana. Jangan flash dari antarmuka pabrik.
 
 **C. Pemulihan**
-Boot `-initramfs-kernel.bin` dari bootloader untuk mendapat sistem sementara, lalu tulis
+Boot `-initramfs-recovery.itb` dari bootloader untuk mendapat sistem sementara, lalu tulis
 image sysupgrade dari sana.
 
 Alamat bawaan `10.0.0.1`, pengguna `root`, sandi `password`. Ganti saat login pertama.
@@ -102,7 +108,7 @@ Build dijalankan manual dari *Actions → Build ZeroWrt → Run workflow*. Tidak
 
 ## FAQ
 
-**Di mana kode sumbernya?** Pohon LEDE bersifat privat. Repositori ini berisi pipeline, aset branding, dan tes.
+**Di mana kode sumbernya?** RG-X60 New dibangun dari [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly), x86_64 dari [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). Repositori ini berisi pipeline, aset branding, dan tes.
 
 **Mengapa tidak ada image `factory`?** Papan ini di-flash lewat halaman pemulihan bootloader yang menerima image sysupgrade secara langsung.
 

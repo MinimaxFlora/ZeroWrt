@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### Custom firmware built from LEDE, with one-click online updates.
+### Custom firmware built from ImmortalWrt and LEDE, with one-click online updates.
 
 **One command builds it, one click updates it.**
 
 [![Build](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![Kernel](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![Kernel](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Target](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -30,10 +30,12 @@
 
 ---
 
-ZeroWrt is a small custom firmware for OpenWrt-class routers, compiled from a
-private LEDE tree by GitHub Actions. Every build is produced from source,
-published with `SHA256SUMS` and `BUILD_INFO.txt`, and listed in an update index
-so the device can upgrade itself from LuCI.
+ZeroWrt is a small custom firmware for OpenWrt-class routers, compiled from two
+public trees by GitHub Actions: [ImmortalWrt
+24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) for the
+MT7986 board and [LEDE](https://github.com/coolsnowwolf/lede) for x86_64. Every
+build is produced from source, published with `SHA256SUMS` and `BUILD_INFO.txt`,
+and listed in an update index so the device can upgrade itself from LuCI.
 
 The interesting part is not another package list — it is the loop: the build
 publishes the image and the index, and the router sees the new version the next
@@ -45,18 +47,23 @@ time it checks.
 - **Honest version checks** — the build timestamp decides "newer", with a version-string fallback; a date that cannot be determined is shown as unknown instead of being invented.
 - **Configuration from the workflow** — LAN IP, hostname and the three Wi-Fi SSIDs and passwords are inputs, not hand-edited files.
 - **Argon 3 branding** — background, login logo, favicon and palette (`#2E9D72` / `#4CAF86`) are replaced at build time, together with the login banner in `assets/banner`.
-- **Proxy stack included** — PassWall (Xray core) and OpenClash, vendored from [openwrt_helloworld](https://github.com/MinimaxFlora/openwrt_helloworld) so the build depends on one checkout instead of four upstream repositories.
-- **Gated pipeline** — `ruff` and 30 unit tests run on every pull request.
+- **Proxy stack included** — PassWall with the sing-box core (no Xray, no SmartDNS) and OpenClash, vendored from [openwrt_helloworld](https://github.com/MinimaxFlora/openwrt_helloworld) so the build depends on one checkout instead of four upstream repositories.
+- **Gated pipeline** — `ruff` and the unit tests run on every pull request.
 
 ## Supported devices
 
-| Device | Target | Images |
-| --- | --- | --- |
-| Ruijie RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin`, `-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI and legacy BIOS builds |
+| Device | Source | Layout | Images |
+| --- | --- | --- | --- |
+| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI and legacy BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
 
 Release tags are the device name (`ruijie_rg-x60-new`, `x86_64`). Each device
 keeps its own release, so the index and the download page can list them side by side.
+
+> **Moving from the LEDE-based builds:** the RG-X60 New image switched from the
+> stock partition layout to **ubootmod**. Flash it from the U-Boot recovery page
+> and do not keep the configuration; the old sysupgrade image and this one are
+> not interchangeable.
 
 ## Download
 
@@ -65,21 +72,22 @@ keeps its own release, so the index and the download page can list them side by 
 - **On the device** — *System → Online upgrade* does the same thing without a browser download.
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## Flashing
 
-**A. From OpenWrt or ImmortalWrt**
-*System → Backup / Flash firmware*, upload the `-squashfs-sysupgrade.bin`, and do
+**A. From OpenWrt or ImmortalWrt** (ubootmod layout already installed)
+*System → Backup / Flash firmware*, upload the `-squashfs-sysupgrade.itb`, and do
 not keep the configuration when you cross a major version.
 
-**B. From stock firmware**
-Install the bootloader recovery first (the usual U-Boot web page for this board),
-then upload the same image there. Do not flash the stock web UI.
+**B. From stock firmware or from the previous LEDE-based ZeroWrt**
+Install the U-Boot (ubootmod) bootloader through the bootloader recovery page
+first, then upload the `-squashfs-sysupgrade.itb` there. Do not flash the stock
+web UI, and keep the configuration only when the partition layout matches.
 
 **C. Recovery**
-Boot the `-initramfs-kernel.bin` from the bootloader to get a temporary system,
+Boot the `-initramfs-recovery.itb` from the bootloader to get a temporary system,
 then flash the sysupgrade image from it.
 
 Default address `10.0.0.1`, user `root`, password `password`. Change it on first login.
@@ -100,12 +108,13 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 ```
 
 Builds are started by hand: *Actions → Build ZeroWrt → Run workflow*. There is no
-`push` trigger, so merging code never starts a six-hour compile. The pipeline is
-documented in [docs/BUILD.md](docs/BUILD.md): secrets, inputs, the toolchain cache and every step.
+`push` trigger, so merging code never starts a six-hour compile. Both source trees
+are public, so no repository secret is needed; the pipeline is documented in
+[docs/BUILD.md](docs/BUILD.md): inputs, the toolchain cache and every step.
 
 ## FAQ
 
-**Where is the source?** The LEDE tree is private. This repository holds the pipeline, the branding assets and the tests.
+**Where is the source?** The MT7986 image is built from [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) and x86_64 from [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). This repository holds the pipeline, the branding assets and the tests.
 
 **Why is there no `factory` image?** These boards are flashed through their bootloader recovery page, which accepts the sysupgrade image directly.
 

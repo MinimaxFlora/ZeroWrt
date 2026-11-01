@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### Собственная прошивка на базе LEDE с обновлением в один клик из веб-интерфейса.
+### Собственная прошивка на базе ImmortalWrt / LEDE с обновлением в один клик из веб-интерфейса.
 
 **Одна команда собирает, один клик обновляет.**
 
 [![Сборка](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![Ядро](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![Ядро](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Платформа](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -30,10 +30,12 @@
 
 ---
 
-ZeroWrt — небольшая собственная прошивка для роутеров класса OpenWrt. Она собирается из
-приватного дерева LEDE через GitHub Actions. Каждая сборка создаётся из исходников,
-публикуется вместе с `SHA256SUMS` и `BUILD_INFO.txt` и попадает в индекс обновлений,
-поэтому устройство может обновить себя прямо из LuCI.
+ZeroWrt — небольшая собственная прошивка для роутеров класса OpenWrt. Она собирается через
+GitHub Actions из двух публичных деревьев: [ImmortalWrt
+24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) для платы MT7986 и
+[LEDE](https://github.com/coolsnowwolf/lede) для x86_64. Каждая сборка создаётся из
+исходников, публикуется вместе с `SHA256SUMS` и `BUILD_INFO.txt` и попадает в индекс
+обновлений, поэтому устройство может обновить себя прямо из LuCI.
 
 Интересен здесь не очередной список пакетов, а цикл: сборка
 публикует образ и индекс, а роутер при следующей проверке видит новую версию.
@@ -44,15 +46,19 @@ ZeroWrt — небольшая собственная прошивка для р
 - **Честная проверка версий** — «новее» решает метка времени сборки, иначе сравниваются строки версий; неизвестную дату так и показываем, не выдумываем.
 - **Настройки из workflow** — IP в LAN, имя хоста и три SSID с паролями Wi-Fi задаются входными параметрами, а не правятся в файлах.
 - **Брендинг Argon 3** — фон, логотип входа, favicon и палитра (`#2E9D72` / `#4CAF86`) подменяются при сборке.
-- **Прокси-стек включён** — PassWall (только Xray) и OpenClash, синхронизируются скриптами сборки.
-- **Проверяемый конвейер** — `ruff` и 18 юнит-тестов на каждом pull request.
+- **Прокси-стек включён** — PassWall (ядро sing-box, без Xray и SmartDNS) и OpenClash, синхронизируются скриптами сборки.
+- **Проверяемый конвейер** — `ruff` и 44 юнит-тестов на каждом pull request.
 
 ## Поддерживаемые устройства
 
-| Устройство | Платформа | Образы |
-| --- | --- | --- |
-| Ruijie RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin`, `-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI и устаревший BIOS |
+| Устройство | Источник | Компоновка | Образы |
+| --- | --- | --- | --- |
+| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI и устаревший BIOS | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
+
+> **Переход со сборок LEDE:** образ RG-X60 New перешёл с заводской разметки на **ubootmod**.
+> Прошивайте со страницы восстановления U-Boot и не сохраняйте конфигурацию; старый и новый
+> образы не взаимозаменяемы.
 
 Тег release — это имя устройства (`ruijie_rg-x60-new`, `x86_64`). У каждого устройства
 свой release, поэтому индекс и страница загрузки показывают их рядом.
@@ -64,13 +70,13 @@ ZeroWrt — небольшая собственная прошивка для р
 - **На устройстве** — *Система → Обновление по сети* делает то же самое без загрузки в браузере.
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## Прошивка
 
 **A. Из OpenWrt или ImmortalWrt**
-*Система → Резервная копия / Прошить*, загрузите `-squashfs-sysupgrade.bin` и не
+*Система → Резервная копия / Прошить*, загрузите `-squashfs-sysupgrade.itb` и не
 сохраняйте конфигурацию при переходе на другую мажорную версию.
 
 **B. С заводской прошивки**
@@ -78,7 +84,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
 затем загрузите тот же образ там. Не прошивайте через заводскую веб-панель.
 
 **C. Восстановление**
-Загрузите `-initramfs-kernel.bin` из загрузчика, получите временную систему и прошейте
+Загрузите `-initramfs-recovery.itb` из загрузчика, получите временную систему и прошейте
 sysupgrade-образ уже из неё.
 
 Адрес по умолчанию `10.0.0.1`, пользователь `root`, пароль `password`. Смените его при первом входе.
@@ -102,7 +108,7 @@ gh workflow run build.yml -f device=ruijie_rg-x60-new
 
 ## FAQ
 
-**Где исходники?** Дерево LEDE приватное. Здесь лежит конвейер, материалы брендинга и тесты.
+**Где исходники?** RG-X60 New собирается из [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly), x86_64 — из [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). Здесь лежит конвейер, материалы брендинга и тесты.
 
 **Почему нет образа `factory`?** Эти платы прошиваются со страницы восстановления загрузчика, которая принимает sysupgrade-образ напрямую.
 

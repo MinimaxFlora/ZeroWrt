@@ -6,12 +6,12 @@
 
 # ZeroWrt
 
-### Firmware tùy biến dựa trên LEDE, cập nhật trực tuyến chỉ bằng một cú nhấp.
+### Firmware tùy biến dựa trên ImmortalWrt / LEDE, cập nhật trực tuyến chỉ bằng một cú nhấp.
 
 **Một lệnh để build, một cú nhấp để cập nhật.**
 
 [![Build](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![Nhân](https://img.shields.io/badge/kernel-6.18-1793d1?style=flat-square)
+![Nhân](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
 ![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Nền tảng](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
@@ -30,10 +30,12 @@
 
 ---
 
-ZeroWrt là firmware tùy biến nhỏ gọn cho các router dòng OpenWrt, được GitHub Actions
-biên dịch từ một cây LEDE riêng. Mỗi bản build đều sinh ra từ mã nguồn, phát hành kèm
-`SHA256SUMS` và `BUILD_INFO.txt`, đồng thời ghi vào chỉ mục cập nhật để thiết bị có thể tự
-nâng cấp ngay trong LuCI.
+ZeroWrt là firmware tùy biến nhỏ gọn cho các router dòng OpenWrt, được GitHub Actions biên
+dịch từ hai cây công khai: [ImmortalWrt
+24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) cho bo mạch MT7986
+và [LEDE](https://github.com/coolsnowwolf/lede) cho x86_64. Mỗi bản build đều sinh ra từ mã
+nguồn, phát hành kèm `SHA256SUMS` và `BUILD_INFO.txt`, đồng thời ghi vào chỉ mục cập nhật để
+thiết bị có thể tự nâng cấp ngay trong LuCI.
 
 Điểm đáng nói không phải một danh sách gói khác, mà là vòng lặp: build phát hành ảnh và chỉ mục, router thấy phiên bản mới ở lần kiểm tra kế tiếp.
 
@@ -43,15 +45,19 @@ nâng cấp ngay trong LuCI.
 - **So sánh phiên bản trung thực** — mốc thời gian build quyết định "mới hơn", nếu không có thì so chuỗi phiên bản; ngày không xác định được hiển thị là không rõ, không bịa ra.
 - **Cấu hình do workflow truyền vào** — IP LAN, tên máy và ba SSID/mật khẩu Wi-Fi là tham số build, không phải sửa tay trong tệp.
 - **Thương hiệu Argon 3** — ảnh nền, logo đăng nhập, favicon và bảng màu (`#2E9D72` / `#4CAF86`) được thay khi build.
-- **Kèm bộ proxy** — PassWall (chỉ Xray) và OpenClash, được script build đồng bộ.
-- **Quy trình có kiểm soát** — `ruff` và 18 bài kiểm thử đơn vị cho mỗi pull request.
+- **Kèm bộ proxy** — PassWall (nhân sing-box, không Xray, không SmartDNS) và OpenClash, được script build đồng bộ.
+- **Quy trình có kiểm soát** — `ruff` và 44 bài kiểm thử đơn vị cho mỗi pull request.
 
 ## Thiết bị hỗ trợ
 
-| Thiết bị | Nền tảng | Ảnh |
-| --- | --- | --- |
-| Ruijie RG-X60 New | `mediatek/filogic` | `-squashfs-sysupgrade.bin`, `-initramfs-kernel.bin` |
-| x86_64 | `x86/64` | EFI và BIOS cũ |
+| Thiết bị | Nguồn | Bố cục | Ảnh |
+| --- | --- | --- | --- |
+| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
+| x86_64 | LEDE (`master`) | EFI và BIOS cũ | `-squashfs-combined*.img.gz`, `-generic-ext4-combined*.img.gz` |
+
+> **Chuyển từ các bản LEDE:** ảnh RG-X60 New đổi từ phân vùng của hãng sang **ubootmod**.
+> Nạp từ trang phục hồi U-Boot và đừng giữ cấu hình; ảnh cũ và ảnh này không thay thế được
+> cho nhau.
 
 Thẻ release chính là tên thiết bị (`ruijie_rg-x60-new`, `x86_64`). Mỗi thiết bị giữ release
 riêng nên chỉ mục và trang tải xuống có thể liệt kê song song.
@@ -63,13 +69,13 @@ riêng nên chỉ mục và trang tải xuống có thể liệt kê song song.
 - **Ngay trên thiết bị** — *Hệ thống → Cập nhật trực tuyến* làm điều tương tự, không cần tải bằng trình duyệt.
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
 ## Nạp firmware
 
 **A. Từ OpenWrt hoặc ImmortalWrt**
-*Hệ thống → Sao lưu / Nạp firmware*, tải lên `-squashfs-sysupgrade.bin` và đừng giữ cấu
+*Hệ thống → Sao lưu / Nạp firmware*, tải lên `-squashfs-sysupgrade.itb` và đừng giữ cấu
 hình khi nhảy phiên bản lớn.
 
 **B. Từ firmware hãng**
@@ -77,7 +83,7 @@ Cài trang phục hồi của bootloader trước (bo mạch này thường là 
 cùng ảnh đó lên đó. Đừng nạp trực tiếp từ giao diện của hãng.
 
 **C. Cứu máy**
-Khởi động `-initramfs-kernel.bin` từ bootloader để có hệ thống tạm, rồi nạp ảnh sysupgrade
+Khởi động `-initramfs-recovery.itb` từ bootloader để có hệ thống tạm, rồi nạp ảnh sysupgrade
 từ trong đó.
 
 Địa chỉ mặc định `10.0.0.1`, người dùng `root`, mật khẩu `password`. Đổi ngay sau lần đăng nhập đầu.
@@ -101,7 +107,7 @@ Build được khởi chạy thủ công: *Actions → Build ZeroWrt → Run wor
 
 ## FAQ
 
-**Mã nguồn ở đâu?** Cây LEDE là riêng tư. Kho này chứa quy trình, tài nguyên thương hiệu và kiểm thử.
+**Mã nguồn ở đâu?** RG-X60 New được build từ [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly), x86_64 từ [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede). Kho này chứa quy trình, tài nguyên thương hiệu và kiểm thử.
 
 **Vì sao không có ảnh `factory`?** Bo mạch này được nạp qua trang phục hồi của bootloader, trang đó nhận thẳng ảnh sysupgrade.
 

@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from zerowrt_core import build, configgen, packages, settings, source, sysops, util  # noqa: E402
 
-DEFAULT_TREE = Path(os.environ.get("LEDE_DIR") or "/builder/lede")
+DEFAULT_TREE = Path(os.environ.get("ZEROWRT_SOURCE_DIR") or "/builder/source")
 DEFAULT_ASSETS = Path(__file__).resolve().parent.parent / "assets"
 
 
@@ -44,13 +44,14 @@ def cmd_system_install_llvm(args: argparse.Namespace) -> None:
 
 
 def cmd_source_clone(args: argparse.Namespace) -> None:
-    ref = (args.ref or os.environ.get("LEDE_REF") or source.DEFAULT_REF).strip()
-    sha = source.clone_lede(Path(args.dest), ref=ref)
+    device = args.device or settings.BuildSettings.from_environment().device
+    info = source.clone_source(Path(args.dest), device=device, ref=args.ref)
     github_env = os.environ.get("GITHUB_ENV")
     if github_env:
         with open(github_env, "a", encoding="utf-8") as handle:
-            handle.write(f"LEDE_COMMIT={sha}\n")
-            handle.write(f"LEDE_REF={ref}\n")
+            handle.write(f"ZEROWRT_SOURCE_REPO={info['repo']}\n")
+            handle.write(f"ZEROWRT_SOURCE_REF={info['ref']}\n")
+            handle.write(f"ZEROWRT_SOURCE_COMMIT={info['commit']}\n")
 
 
 def cmd_source_feeds(args: argparse.Namespace) -> None:
@@ -73,8 +74,13 @@ def cmd_source_customize(args: argparse.Namespace) -> None:
 
 
 def cmd_packages_add(args: argparse.Namespace) -> None:
-    packages.add_external_packages(Path(args.tree))
+    device = args.device or settings.BuildSettings.from_environment().device
+    packages.add_external_packages(Path(args.tree), device)
     packages.apply_argon_branding(Path(args.tree), Path(args.assets))
+
+
+def cmd_packages_ota(args: argparse.Namespace) -> None:
+    packages.add_ota_app(Path(args.tree))
 
 
 def cmd_config_generate(args: argparse.Namespace) -> None:
@@ -124,12 +130,17 @@ def build_parser() -> argparse.ArgumentParser:
     llvm.add_argument("--strict", action="store_true", help="fail when the download fails")
     llvm.set_defaults(func=cmd_system_install_llvm)
 
-    src = sub.add_parser("source", help="LEDE source tree operations")
+    src = sub.add_parser("source", help="upstream source tree operations (clone, feeds, customise)")
     src_sub = src.add_subparsers(dest="source_command", required=True)
 
-    clone = src_sub.add_parser("clone", help="clone the private LEDE tree")
+    clone = src_sub.add_parser("clone", help="clone the source tree for a device")
     clone.add_argument("--dest", default=str(DEFAULT_TREE))
-    clone.add_argument("--ref", default=None)
+    clone.add_argument(
+        "--device",
+        default=None,
+        help="device profile that selects the repository (default: ZEROWRT_DEVICE)",
+    )
+    clone.add_argument("--ref", default=None, help="branch/tag override")
     clone.set_defaults(func=cmd_source_clone)
 
     feeds = src_sub.add_parser("feeds", help="update feeds and drop conflicting packages")
@@ -153,7 +164,12 @@ def build_parser() -> argparse.ArgumentParser:
     add = pkg_sub.add_parser("add", help="clone Argon, PassWall and OpenClash")
     add.add_argument("--tree", default=str(DEFAULT_TREE))
     add.add_argument("--assets", default=str(DEFAULT_ASSETS))
+    add.add_argument("--device", default=None, help="device profile (default: ZEROWRT_DEVICE)")
     add.set_defaults(func=cmd_packages_add)
+
+    ota = pkg_sub.add_parser("ota", help="clone luci-app-ota and patch its index generator")
+    ota.add_argument("--tree", default=str(DEFAULT_TREE))
+    ota.set_defaults(func=cmd_packages_ota)
 
     config = sub.add_parser("config", help="generate .config")
     config_sub = config.add_subparsers(dest="config_command", required=True)

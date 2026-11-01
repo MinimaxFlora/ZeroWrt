@@ -136,8 +136,9 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
     collected.append(checksum_file)
 
     build_info = out_dir / "BUILD_INFO.txt"
-    ref = os.environ.get("LEDE_REF", "")
-    commit = os.environ.get("LEDE_COMMIT", "")
+    repo = os.environ.get("ZEROWRT_SOURCE_REPO") or info.get("source_repo", "")
+    ref = os.environ.get("ZEROWRT_SOURCE_REF") or info.get("source_ref", "")
+    commit = os.environ.get("ZEROWRT_SOURCE_COMMIT", "")
     lines = [
         "ZeroWrt firmware",
         f"built: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}",
@@ -145,6 +146,12 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
         f"device: {device} ({info.get('device_vendor', '')} {info.get('device_model', '')})".strip(),
         f"version: {version}",
     ]
+    if info.get("artifact"):
+        lines.append(f"profile: {info['artifact']}")
+    if info.get("layout"):
+        lines.append(f"layout: {info['layout']}")
+    if repo:
+        lines.append(f"source repo: {repo}")
     if ref:
         lines.append(f"source ref: {ref}")
     if commit:

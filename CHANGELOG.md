@@ -58,6 +58,11 @@
   `uboot` 的镜像全部排除，正好命中了 `-squashfs-sysupgrade.itb`；同时它没有规则阻止选中
   `preloader.bin`。现在 `packages ota` 在克隆后把 `BAD_TOKENS` 里的 `"uboot"` 换成
   `"preloader"` / `"bl31"`，只排除引导文件，上游布局变了会直接失败。
+- **Argon 的 `wget-any` 警告**：`luci-theme-argon` 的 `LUCI_DEPENDS` 同时写了
+  `+USE_APK:wget-any` 和 `+!USE_APK:wget`。OpenWrt 的包元数据扫描先按 `:` 切分再校验依赖名，
+  两条都会被检查，而 `wget-any` 只在 apk 世界里由 `uclient-fetch` 提供，24.10 / LEDE 中不存在，
+  于是每次构建都打印 `has a dependency on 'wget-any', which does not exist`。`packages.py`
+  现在把它改成 `+wget-ssl`（主题的 rpcd 脚本要用 `wget` 访问 https），警告消失。
 
 ### Changed
 

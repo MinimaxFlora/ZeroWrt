@@ -661,6 +661,33 @@ BAD_TOKENS = (
             packages.patch_ota_index(tree / "package" / "new" / "luci-app-ota")
 
 
+class ArgonWgetTest(TempTreeTest):
+    """Argon's apk-only wget-any must not reach the opkg-only trees."""
+
+    def test_apk_only_dependency_is_replaced(self) -> None:
+        makefile = self.write(
+            "theme/Makefile",
+            "LUCI_DEPENDS:=+luci-base +USE_APK:wget-any +!USE_APK:wget +flock\n",
+        )
+        packages._fix_argon_wget_dep(self.root / "theme")
+
+        text = util.read_text(makefile)
+        self.assertNotIn("wget-any", text)
+        self.assertNotIn("USE_APK", text)
+        self.assertIn("+wget-ssl", text)
+        self.assertIn("+flock", text)
+
+    def test_already_single_dependency_is_left_alone(self) -> None:
+        makefile = self.write("theme/Makefile", "LUCI_DEPENDS:=+luci-base +wget-ssl +flock\n")
+        packages._fix_argon_wget_dep(self.root / "theme")
+        self.assertEqual(util.read_text(makefile), "LUCI_DEPENDS:=+luci-base +wget-ssl +flock\n")
+
+    def test_unexpected_layout_fails_loudly(self) -> None:
+        self.write("theme/Makefile", "LUCI_DEPENDS:=+USE_APK:wget-any\n")
+        with self.assertRaises(util.BuildError):
+            packages._fix_argon_wget_dep(self.root / "theme")
+
+
 class ImageTest(unittest.TestCase):
     def test_png_size_and_ico(self) -> None:
         logo = (REPO_ROOT / "assets" / "logo.png").read_bytes()

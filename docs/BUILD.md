@@ -158,6 +158,27 @@ option online_wallpaper 'none'
 `package/base-files/files/etc/banner`；改这个文件即可，不必改代码。校验步骤会比对两侧内容，
 不一致就判定失败。
 
+### 关于 wget 依赖
+
+`luci-theme-argon` 的 `LUCI_DEPENDS` 同时声明了 apk 和 opkg 两套依赖：
+
+```make
++USE_APK:wget-any +!USE_APK:wget
+```
+
+OpenWrt 扫描包元数据时（`scripts/package-metadata.pl`）会**先按第一个冒号切分、再去校验依赖名是否存在**，
+两边都会被查一遍；而 `wget-any` 这个虚拟包只在 apk 世界（25.12 以后）由 `uclient-fetch` 提供，
+24.10 和 LEDE 里没有任何包 provide 它，于是每次构建都会打印：
+
+```
+WARNING: Makefile 'package/new/luci-theme-argon/Makefile' has a dependency on 'wget-any', which does not exist
+```
+
+它只是一条警告（那条依赖会被丢掉，构建继续），但说明主题的依赖声明和当前包管理器不匹配。
+`packages.py` 在克隆后把这一串改成 `+wget-ssl`：两棵树都是 opkg，且主题的 rpcd 脚本
+（`luci.argon_update`、`luci.argon_wallpaper`）用 `wget` 访问 https，`/usr/bin/wget` 由
+`wget-ssl` 的 alternatives 提供。上游把这一行改成别的写法时脚本会直接报错，而不是继续刷警告。
+
 ## 五、设备
 
 设备由 Actions 的 `device` 参数选择，名字同时就是 Release tag。对应关系集中在

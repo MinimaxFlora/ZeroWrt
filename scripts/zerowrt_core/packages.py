@@ -24,6 +24,11 @@ ARGON_THEME_REPO = "jerrykuku/luci-theme-argon"
 ARGON_THEME_REF = "master"
 ARGON_CONFIG_REPO = "jerrykuku/luci-app-argon-config"
 ARGON_CONFIG_REF = "master"
+# luci-theme-argon declares its wget dependency for both packaging worlds. The
+# two trees ZeroWrt builds are opkg-only, and "wget-any" has no provider there,
+# so the dependency is rewritten to the TLS package the theme actually needs.
+ARGON_WGET_OLD = "+USE_APK:wget-any +!USE_APK:wget"
+ARGON_WGET_NEW = "+wget-ssl"
 # One repository carries the PassWall toolchain (sing-box core), its two LuCI
 # front ends and OpenClash, so a build only needs a single checkout and
 # upstream breakage can be fixed in one place.
@@ -184,6 +189,8 @@ def add_external_packages(tree: Path, device: str | None = None) -> None:
     if not (theme_dir / "Makefile").exists():
         raise util.BuildError(f"Argon theme checkout is missing a Makefile: {theme_dir}")
 
+    _fix_argon_wget_dep(theme_dir)
+
     integrated = theme_is_integrated(theme_dir)
     if integrated:
         # Argon 3.x ships the settings app inside the theme. Keep the tree
@@ -285,6 +292,37 @@ def _wants_mosdns(device: str | None) -> bool:
     if profile is None:
         return True
     return MOSDNS_PACKAGE in profile.packages
+
+
+def _fix_argon_wget_dep(theme_dir: Path) -> None:
+    """Replace Argon's apk-only ``wget-any`` dependency with the opkg package.
+
+    luci-theme-argon master targets both packaging worlds and declares
+
+        +USE_APK:wget-any +!USE_APK:wget
+
+    OpenWrt's metadata scanner validates *both* sides of a conditional
+    dependency (package-metadata.pl splits on the colon before looking the name
+    up), and no package in the 24.10 or LEDE trees provides the virtual name
+    ``wget-any`` -- it only exists in the apk world, where uclient-fetch
+    provides it. Every build therefore printed
+
+        WARNING: Makefile 'package/new/luci-theme-argon/Makefile' has a
+        dependency on 'wget-any', which does not exist
+
+    and dropped that half of the dependency. Both trees are opkg-only, so pin
+    the dependency to the TLS variant the theme's rpcd scripts need for their
+    https requests (``wget`` in PATH comes from wget-ssl's alternatives).
+    """
+    makefile = Path(theme_dir) / "Makefile"
+    text = util.read_text(makefile)
+    if "wget-any" not in text:
+        util.log("argon: wget dependency already uses a single opkg package")
+        return
+    if ARGON_WGET_OLD not in text:
+        raise util.BuildError(f"{makefile}: unexpected wget dependency, expected {ARGON_WGET_OLD!r}")
+    util.write_text(makefile, text.replace(ARGON_WGET_OLD, ARGON_WGET_NEW, 1))
+    util.log("argon: apk-only wget-any dependency replaced with wget-ssl")
 
 
 def _fix_openclash(helloworld_dir: Path) -> None:

@@ -30,9 +30,11 @@ HEAVY_DIRECTORIES = [
     "/usr/lib/clang-16",
     "/usr/lib/clang-17",
     "/usr/lib/clang-18",
+    "/usr/lib/clang-19",
     "/usr/lib/llvm-16",
     "/usr/lib/llvm-17",
     "/usr/lib/llvm-18",
+    "/usr/lib/llvm-19",
     "/usr/local/aws",
     "/usr/local/aws-cli",
     "/usr/local/julia",
@@ -353,6 +355,7 @@ APT_GROUPS = [
         "haveged",
         "jq",
         "time",
+        "ccache",
     ],
     [
         "libncurses-dev",
@@ -373,10 +376,12 @@ APT_GROUPS = [
         "python3-ply",
         "python3-pyelftools",
         "python3-pil",
+        "device-tree-compiler",
     ],
     [
         "curl",
         "wget",
+        "openssl",
         "xz-utils",
         "bzip2",
         "unzip",
@@ -450,14 +455,14 @@ def install_deps(*, docker: bool = False) -> None:
     util.log("build dependencies installed")
 
 
-CLANG_VERSION = "23.0.1"
+CLANG_VERSION = os.environ.get("ZEROWRT_CLANG_VERSION", "23.0.1")
 CLANG_URL = (
     "https://github.com/sbwml/openwrt-llvm-toolchain/releases/download/"
     f"{CLANG_VERSION}/clang-{CLANG_VERSION}-x86_64-unknown-linux-gnu.tar.xz"
 )
 
 
-def install_llvm(*, version: str = CLANG_VERSION, url: str = CLANG_URL, strict: bool = False) -> None:
+def install_llvm(*, version: str = CLANG_VERSION, url: str | None = None, strict: bool = False) -> None:
     util.header(f"Installing LLVM/Clang {version}")
     clang = Path("/opt/clang/bin/clang")
     if clang.exists():
@@ -465,7 +470,7 @@ def install_llvm(*, version: str = CLANG_VERSION, url: str = CLANG_URL, strict: 
     else:
         archive = Path(f"/tmp/clang-{version}.tar.xz")
         try:
-            util.download(url, archive, timeout=300)
+            util.download(url or CLANG_URL, archive, timeout=300)
             util.sudo_run(["mkdir", "-p", "/opt/clang"])
             util.sudo_run(["tar", "--strip-components=1", "-C", "/opt/clang", "-xf", str(archive)])
             archive.unlink(missing_ok=True)

@@ -1,12 +1,14 @@
 """Shared helpers for the ZeroWrt build tooling.
 
-Only the Python standard library is used here so that the scripts can run
-before any build dependency has been installed on the runner.
+Only the Python standard library is used here so the CLI can run on a bare
+GitHub Actions runner before any build dependency has been installed.
 """
 
 from __future__ import annotations
 
 import base64
+import hashlib
+import json
 import os
 import re
 import shlex
@@ -50,6 +52,19 @@ def read_text(path: Path) -> str:
 def write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8", newline="\n")
+
+
+def read_json(path: Path, default=None):
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise BuildError(f"cannot read JSON from {path}: {exc}") from exc
+
+
+def write_json(path: Path, data) -> None:
+    write_text(path, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
 
 
 def replace_text(path: Path, old: str, new: str, *, required: bool = False) -> int:
@@ -103,19 +118,20 @@ def run(
     log_path=None,
     display=None,
     timeout=None,
+    input_text: str | None = None,
 ):
     """Run a command.
 
     ``display`` replaces the command in the log, which is used for commands
-    that contain values we never want to print (private repository names,
-    tokens, ...).
+    containing values that must not be printed (tokens, passwords, ...).
+    ``input_text`` is fed to stdin and is never echoed.
     """
     cmd = [str(part) for part in cmd]
     shown = display or " ".join(shlex.quote(part) for part in cmd)
     if not quiet:
         log(f"$ {shown}")
 
-    if capture:
+    if capture or input_text is not None:
         proc = subprocess.run(
             cmd,
             cwd=str(cwd) if cwd else None,
@@ -123,6 +139,7 @@ def run(
             text=True,
             encoding="utf-8",
             errors="replace",
+            input=input_text,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             timeout=timeout,
@@ -159,10 +176,19 @@ def run(
             if log_file is not None:
                 log_file.write(line)
         code = proc.wait(timeout=timeout)
+        proc.stdout.close()
 
     if check and code != 0:
         raise BuildError(f"command failed ({code}): {shown}")
     return code, ""
+
+
+def capture(cmd, **kwargs) -> str:
+    kwargs.setdefault("quiet", True)
+    code, output = run(cmd, capture=True, **kwargs)
+    if code != 0:
+        raise BuildError(f"command failed: {' '.join(str(part) for part in cmd)}")
+    return output.strip()
 
 
 def sudo_run(cmd, **kwargs):
@@ -186,7 +212,7 @@ def download(url: str, dest: Path, *, retries: int = 3, timeout: int = 120) -> P
     for attempt in range(1, retries + 1):
         try:
             log(f"downloading {url} (attempt {attempt}/{retries})")
-            request = urllib.request.Request(url, headers={"User-Agent": "ZeroWrt-Builder/1.0"})
+            request = urllib.request.Request(url, headers={"User-Agent": "ZeroWrt-Builder/2.0"})
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 total = int(response.headers.get("Content-Length") or 0)
                 written = 0
@@ -205,6 +231,14 @@ def download(url: str, dest: Path, *, retries: int = 3, timeout: int = 120) -> P
             warn(f"download failed: {exc}")
             time.sleep(2 * attempt)
     raise BuildError(f"unable to download {url}: {last_error}")
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def git_environment(token: str | None) -> dict:
@@ -269,3 +303,12 @@ def clone(
     )
     _, sha = run(["git", "-C", str(dest), "rev-parse", "HEAD"], capture=True, quiet=True)
     return sha.strip()
+
+
+def git_head(path: Path) -> str:
+    code, output = run(["git", "-C", str(path), "rev-parse", "HEAD"], capture=True, quiet=True, check=False)
+    return output.strip() if code == 0 else ""
+
+
+def is_git_repo(path: Path) -> bool:
+    return (Path(path) / ".git").exists()

@@ -1,19 +1,22 @@
-"""Device profile and the upstream tree it is built from.
+"""Device profiles and the upstream tree they are built from.
 
-ZeroWrt builds one device: the Ruijie RG-X60 New (MT7986), from the ImmortalWrt
-24.10 fork that carries the padavanonly MTK wireless driver. The repository is
-public, so the workflow needs no source token.
+The firmware is built from a public MT798x tree. One profile is shipped, the
+Ruijie RG-X60 New in the MTK U-Boot (mtkuboot) layout; the configuration file
+under ``configs/`` is the authoritative package selection.
 
-The profile indirection stays so the upstream branch and the ``Device/`` name
-are resolved in one place and the profile name (which doubles as the release
-tag) never follows an upstream rename.
+The profile name doubles as the GitHub release tag and is deliberately kept
+independent from the upstream ``Device/`` name: upstream may rename the device
+without changing the update-index key our users already have.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from . import util
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 @dataclass(frozen=True)
@@ -28,36 +31,45 @@ class Source:
 
 @dataclass(frozen=True)
 class DeviceProfile:
-    """A buildable device: target and the source tree it comes from."""
+    """A buildable device: config file, target and the source tree it comes from."""
 
     name: str
+    config: str
     source: str
     board: str
     subtarget: str
     device: str
+    dt_model: str
+    vendor: str
+    model: str
     layout: str = ""
+
+    @property
+    def release_tag(self) -> str:
+        return self.name
 
 
 SOURCES: dict[str, Source] = {
-    "immortalwrt": Source(
-        key="immortalwrt",
-        repo="Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly",
-        ref="openwrt-24.10-6.6",
-        label="ImmortalWrt 24.10 (MT798x, padavanonly)",
+    "immortalwrt-mtk": Source(
+        key="immortalwrt-mtk",
+        repo="chasey-dev/immortalwrt-mt798x-rebase",
+        ref="25.12",
+        label="ImmortalWrt 25.12 (MT798x rebase, MTK wireless)",
     ),
 }
 
 PROFILES: dict[str, DeviceProfile] = {
-    # The profile name stays "ruijie_rg-x60-new" so the release tag and the OTA
-    # index entry survive upstream renames; the firmware itself is the U-Boot
-    # layout (ubootmod) build.
     "ruijie_rg-x60-new": DeviceProfile(
         name="ruijie_rg-x60-new",
-        source="immortalwrt",
+        config="configs/ruijie-rg-x60-new.config",
+        source="immortalwrt-mtk",
         board="mediatek",
         subtarget="filogic",
-        device="ruijie_rg-x60-new-ubootmod",
-        layout="OpenWrt U-Boot layout (ubootmod)",
+        device="ruijie_rg-x60-new-mtkuboot",
+        dt_model="ruijie,rg-x60-new-mtkuboot",
+        vendor="Ruijie",
+        model="RG-X60 New",
+        layout="MTK U-Boot layout (mtkuboot)",
     ),
 }
 
@@ -69,7 +81,6 @@ def names() -> list[str]:
 
 
 def find(name: str | None) -> DeviceProfile | None:
-    """Return the profile for *name*, or None when it is not a profile."""
     return PROFILES.get(name or "")
 
 
@@ -81,5 +92,9 @@ def require(name: str) -> DeviceProfile:
 
 
 def source(profile: DeviceProfile) -> Source:
-    """Upstream tree for *profile*."""
     return SOURCES[profile.source]
+
+
+def config_path(profile: DeviceProfile, root: Path | None = None) -> Path:
+    base = Path(root) if root is not None else PROJECT_ROOT
+    return base / profile.config

@@ -1,144 +1,218 @@
 <div align="center">
 
-**English** · [简体中文](docs/readme/README_zh-CN.md) · [繁體中文](docs/readme/README_zh-TW.md) · [日本語](docs/readme/README_ja.md) · [한국어](docs/readme/README_ko.md) · [Türkçe](docs/readme/README_tr.md) · [Русский](docs/readme/README_ru.md) · [Tiếng Việt](docs/readme/README_vi.md) · [ไทย](docs/readme/README_th.md) · [Deutsch](docs/readme/README_de.md) · [Español](docs/readme/README_es.md) · [Français](docs/readme/README_fr.md) · [Українська](docs/readme/README_uk.md) · [Polski](docs/readme/README_pl.md) · [Português (Brasil)](docs/readme/README_pt-BR.md) · [العربية](docs/readme/README_ar.md) · [فارسی](docs/readme/README_fa.md) · [Bahasa Indonesia](docs/readme/README_id.md) · [Italiano](docs/readme/README_it.md) · [Ελληνικά](docs/readme/README_el.md) · [മലയാളം](docs/readme/README_ml.md)
-
 <img src="assets/logo.png" width="88" alt="ZeroWrt" />
 
 # ZeroWrt
 
-### Custom firmware built from ImmortalWrt, with one-click online updates.
+### MT798x 固件构建流水线，一条命令编译，一键在线升级。
 
-**One command builds it, one click updates it.**
-
-[![Build](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/MinimaxFlora/ZeroWrt/actions/workflows/build.yml)
-![Kernel](https://img.shields.io/badge/kernel-6.6%20%2F%206.18-1793d1?style=flat-square)
-![LuCI](https://img.shields.io/badge/LuCI-openwrt--25.12-E45A1B?style=flat-square)
 ![Target](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
-![License](https://img.shields.io/badge/license-GPL--2.0-4c9c2f?style=flat-square)
+![Source](https://img.shields.io/badge/source-ImmortalWrt%2025.12-1793d1?style=flat-square)
+![Device](https://img.shields.io/badge/device-Ruijie%20RG--X60%20New-E45A1B?style=flat-square)
+![License](https://img.shields.io/badge/license-GPL--3.0-4c9c2f?style=flat-square)
 
-[Download page](https://ota.tatalvpai.vip/) · [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) · [Build logs](https://github.com/MinimaxFlora/ZeroWrt/actions) · [Issues](https://github.com/MinimaxFlora/ZeroWrt/issues)
-
-<code>System → Online upgrade → Check for updates</code>
+[Releases](../../releases) · [Issues](../../issues) · [构建说明](docs/BUILD.md)
 
 </div>
 
 > [!IMPORTANT]
-> **Official sources only.** Firmware is published in this repository's
-> [Releases](https://github.com/MinimaxFlora/ZeroWrt/releases) and on
-> [ota.tatalvpai.vip](https://ota.tatalvpai.vip/). A similar repository name or a
-> copied README does not make a build official.
+> 本仓库是 **ZeroWrt 的 Python 重写版**。设备配置、补丁和固件定制流程来自
+> [OpenWrt_MediaTek_Builder](https://github.com/MinimaxFlora/OpenWrt_MediaTek_Builder)，
+> 构建依赖、LLVM、并行编译和工具链缓存来自
+> [ZeroWrt](https://github.com/MinimaxFlora/ZeroWrt)。
+> 构建时不再执行仓库里的 shell 脚本，所有步骤都由 `scripts/zerowrt.py` 完成。
 
 ---
 
-ZeroWrt is a small custom firmware for the Ruijie RG-X60 New (MT7986), compiled
-from [ImmortalWrt
-24.10](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) by
-GitHub Actions. Every build is produced from source, published with
-`SHA256SUMS` and `BUILD_INFO.txt`, and listed in an update index so the device
-can upgrade itself from LuCI.
+## 这是什么
 
-The interesting part is not another package list — it is the loop: the build
-publishes the image and the index, and the router sees the new version the next
-time it checks.
+ZeroWrt 是一套面向 MT798x 路由器的自建固件流水线。源码来自公开的
+[`chasey-dev/immortalwrt-mt798x-rebase`](https://github.com/chasey-dev/immortalwrt-mt798x-rebase)
+`25.12` 分支，设备配置沿用 MediaTek Builder 的
+[`configs/ruijie-rg-x60-new.config`](configs/ruijie-rg-x60-new.config)，
+并在其中加入 **luci-app-ota**，让设备可以在 LuCI 里检查、下载、校验并安装新固件。
 
-## Features
-
-- **One-click updates** — LuCI reads the index, downloads with resume and progress, verifies SHA256 and the image with `sysupgrade -T`, then flashes and reboots.
-- **Honest version checks** — the build timestamp decides "newer", with a version-string fallback; a date that cannot be determined is shown as unknown instead of being invented.
-- **Configuration from the workflow** — LAN IP, hostname and the three Wi-Fi SSIDs and passwords are inputs, not hand-edited files.
-- **Argon 3 branding** — background, login logo, favicon and palette (`#2E9D72` / `#4CAF86`) are replaced at build time, together with the login banner in `assets/banner`.
-- **Proxy stack included** — PassWall with the sing-box core (no Xray, no SmartDNS) and OpenClash, vendored from [openwrt_helloworld](https://github.com/MinimaxFlora/openwrt_helloworld) so the build depends on one checkout instead of four upstream repositories.
-- **Gated pipeline** — `ruff` and the unit tests run on every pull request.
-
-## Supported devices
-
-| Device | Source | Layout | Images |
-| --- | --- | --- | --- |
-| Ruijie RG-X60 New | ImmortalWrt 24.10 (`openwrt-24.10-6.6`) | OpenWrt U-Boot (ubootmod) | `-squashfs-sysupgrade.itb`, `preloader.bin`, `bl31-uboot.fip` |
-
-The release tag is the device name (`ruijie_rg-x60-new`); the index and the
-download page list that one entry.
-
-> **Moving from the LEDE-based builds:** the RG-X60 New image switched from the
-> stock partition layout to **ubootmod**. Flash it from the U-Boot recovery page
-> and do not keep the configuration; the old sysupgrade image and this one are
-> not interchangeable.
-
-## Download
-
-- **Download page** — <https://ota.tatalvpai.vip/> shows the current build, the changelog and the SHA256.
-- **GitHub Releases** — <https://github.com/MinimaxFlora/ZeroWrt/releases> holds the images and `SHA256SUMS`.
-- **On the device** — *System → Online upgrade* does the same thing without a browser download.
+一次完整构建在 GitHub Actions 上大约 30–60 分钟（首次没有工具链缓存时更久），
+产物包括：
 
 ```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-mtkuboot-squashfs-sysupgrade.bin
+Packages.tar.gz
+build.config
+BUILD_INFO.txt
+SHA256SUMS
+ota.json
 ```
 
-## Flashing
+Release tag 使用设备 profile 名 `ruijie_rg-x60-new`。同一 tag 再次构建会覆盖旧资产，
+OTA 索引则按 `build_date` 判断新旧。
 
-**A. From OpenWrt or ImmortalWrt** (ubootmod layout already installed)
-*System → Backup / Flash firmware*, upload the `-squashfs-sysupgrade.itb`, and do
-not keep the configuration when you cross a major version.
+## 支持设备
 
-**B. From stock firmware or from the previous LEDE-based ZeroWrt**
-Install the U-Boot (ubootmod) bootloader through the bootloader recovery page
-first, then upload the `-squashfs-sysupgrade.itb` there. Do not flash the stock
-web UI, and keep the configuration only when the partition layout matches.
+| 设备 | 源码 | 布局 | OTA key |
+| --- | --- | --- | --- |
+| 锐捷 RG-X60 New | immortalwrt-mt798x-rebase `25.12` | MTK U-Boot（mtkuboot） | `ruijie_rg-x60-new-mtkuboot` |
 
-**C. Recovery**
-Boot the `-initramfs-recovery.itb` from the bootloader to get a temporary system,
-then flash the sysupgrade image from it.
+> **从旧 ZeroWrt 升级前请先确认分区布局。** 旧 ZeroWrt 使用 `ubootmod`，
+> 这里使用 `mtkuboot`，两者镜像不能直接互刷。请从 U-Boot 恢复页按对应布局刷入，
+> 第一次切换时不要保留配置。
 
-Default address `10.0.0.1`, user `root`, password `password`. Change it on first login.
+## 功能
 
-## Online upgrade
+- **配置来自 `configs/`**：`ruijie-rg-x60-new.config` 原样保留，Python 只追加 OTA
+  必需项并检查 `defconfig` 有没有丢掉关键包。
+- **完整设备定制**：LAN IP、root 密码、WiFi SSID/密码、bash、ttyd 免登录、
+  登录 banner、版本字符串、MTK WiFi 默认值。
+- **补丁已刷新**：`0001`–`0005` 重新基于 `immortalwrt/luci` `openwrt-25.12`
+  生成，`0006` 为 GCC 16 工具链补丁，两个 `900-*` 包补丁已对照
+  libwebsockets 4.4.1 / elfutils 0.192 验证。
+- **LLVM + GCC 16**：预装 Clang 工具链，主工具链使用配置选择的 GCC 16。
+- **编译策略**：`nproc + 1` 并行、按可用内存限流、`IGNORE_ERRORS="n m"`，
+  失败后自动串行 `V=s` 重试。
+- **工具链缓存**：可从 `toolchain` Release 恢复 `build_dir/dl/staging_dir/tmp`，
+  跳过最耗时的工具链编译。
+- **OTA 更新**：构建时写入 `/etc/ota/build.json`，发布时生成
+  `ota.json`/`history.json` 到 `gh-pages`，设备端使用 `luci-app-ota` 一键升级。
+- **纯 Python**：workflow 只调用 CLI，不再维护大段 `sed`/`curl` shell。
 
-The firmware ships with `luci-app-ota`:
+## 快速开始
 
-- the index defaults to `https://ota.tatalvpai.vip/ota.json` and can be changed under *System → Online upgrade → Configuration*;
-- the SHA256 is mandatory: an entry without one is rejected, and a mismatch deletes the download;
-- plain `http` is refused unless *allow insecure connections* is enabled;
-- the device key is resolved from `/etc/ota/build.json`, the device tree model, `board_name` and the architecture, in that order, and both spellings of a board name (`vendor,device` and `vendor_device`) are accepted.
+进入 **Actions → Build ZeroWrt → Run workflow**，填写：
 
-## Building
+| 输入 | 默认值 | 说明 |
+| --- | --- | --- |
+| `device` | `ruijie_rg-x60-new` | 设备 profile |
+| `lan_ip` | `10.0.0.1` | 管理地址 / LAN IP |
+| `root_password` | `password` | root 密码，至少 8 位；**首次登录请立即修改** |
+| `wifi_name` | `ZeroWrt` | SSID 前缀，自动追加 `-2.4G` / `-5G` / `-6G` |
+| `wifi_password` | `1234567890` | WiFi 密码，8–63 位安全字符 |
+| `ota_url` | 空 | 留空时使用 `https://<owner>.github.io/<repo>/ota.json` |
+| `ota_cname` | 空 | 自定义下载页域名，写入 `gh-pages` 的 `CNAME` |
+| `cache_toolchain` | `true` | 有缓存时恢复工具链 |
+
+构建成功后会自动：
+
+1. 上传 Artifact（保留 14 天）；
+2. 创建/更新 tag 为 `ruijie_rg-x60-new` 的 Release；
+3. 把 `ota.json`、`history.json` 和下载页推送到 `gh-pages`。
+
+### 启用 GitHub Pages
+
+仓库 **Settings → Pages** 选择 **Deploy from a branch**，分支 `gh-pages`、目录 `/`。
+如果 `ota_url` 留空，固件会检查：
+
+```text
+https://<owner>.github.io/<repo>/ota.json
+```
+
+使用自定义域名时，把域名填到 `ota_cname`，并在 DNS 添加指向
+`<owner>.github.io` 的 CNAME（Cloudflare 请设为 DNS only）。
+
+## 在设备上升级
+
+固件内置 `luci-app-ota`：
+
+**系统 → 在线升级 → 检查更新**，然后下载并安装。索引地址、是否允许不安全连接、
+是否保留配置等都在 **在线升级 → 配置** 里。
+
+安全策略：
+
+- 索引必须是 `https`（除非显式允许不安全连接）；
+- 索引条目必须带 SHA256，缺失直接拒绝；
+- 下载完成后校验 SHA256，并用 `sysupgrade -T` 预检镜像；
+- 校验失败的文件会被删除。
+
+## 本地构建
+
+构建依赖和编译步骤只支持 Linux（GitHub Actions 使用 Ubuntu 24.04）。
+在 Linux 上：
 
 ```bash
-gh workflow run build.yml -f device=ruijie_rg-x60-new
+export ZEROWRT_SOURCE_DIR=/builder/source
+export ZEROWRT_DEVICE=ruijie_rg-x60-new
+
+python3 scripts/zerowrt.py system free-disk --build-dir /builder
+python3 scripts/zerowrt.py system install-deps
+python3 scripts/zerowrt.py system install-llvm
+python3 scripts/zerowrt.py source clone --dest "$ZEROWRT_SOURCE_DIR"
+python3 scripts/zerowrt.py source feeds-update --tree "$ZEROWRT_SOURCE_DIR"
+python3 scripts/zerowrt.py source feeds-install --tree "$ZEROWRT_SOURCE_DIR"
+python3 scripts/zerowrt.py packages add --tree "$ZEROWRT_SOURCE_DIR"
+python3 scripts/zerowrt.py source customize --tree "$ZEROWRT_SOURCE_DIR"
+python3 scripts/zerowrt.py patches apply --tree "$ZEROWRT_SOURCE_DIR"
+python3 scripts/zerowrt.py config apply --tree "$ZEROWRT_SOURCE_DIR"
+python3 scripts/zerowrt.py ota embed --tree "$ZEROWRT_SOURCE_DIR" --api-url https://example.com/ota.json
+python3 scripts/zerowrt.py build download --tree "$ZEROWRT_SOURCE_DIR" --jobs "$(nproc)"
+python3 scripts/zerowrt.py build compile --tree "$ZEROWRT_SOURCE_DIR" --jobs "$(nproc)"
+python3 scripts/zerowrt.py build collect --tree "$ZEROWRT_SOURCE_DIR" --out dist
+python3 scripts/zerowrt.py ota index --tree "$ZEROWRT_SOURCE_DIR" --dist dist \
+  --repo <owner>/<repo> --tag ruijie_rg-x60-new
 ```
 
-Builds are started by hand: *Actions → Build ZeroWrt → Run workflow*. There is no
-`push` trigger, so merging code never starts a six-hour compile. Both source trees
-are public, so no repository secret is needed; the pipeline is documented in
-[docs/BUILD.md](docs/BUILD.md): inputs, the toolchain cache and every step.
+完整参数、目录说明和补丁刷新方法见 [docs/BUILD.md](docs/BUILD.md)。
 
-## FAQ
+## 目录结构
 
-**Where is the source?** The image is built from [Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly). This repository holds the pipeline, the branding assets and the tests.
+```text
+.
+├── configs/ruijie-rg-x60-new.config   # 设备 .config（MediaTek Builder 原文件）
+├── assets/                            # banner、logo
+├── scripts/
+│   ├── zerowrt.py                     # CLI 入口
+│   ├── zerowrt_core/                  # sysops/source/packages/customize/config/
+│   │                                  # patches/build/ota/cache/state
+│   └── 000*.patch, 900-*.patch        # 已刷新/已验证的补丁
+├── tests/                             # 不联网的单元测试
+├── docs/BUILD.md                      # 构建与维护文档
+└── .github/workflows/                 # build / toolchain / quality
+```
 
-**Why is there no `factory` image?** These boards are flashed through their bootloader recovery page, which accepts the sysupgrade image directly.
+## 补丁说明
 
-**Can I point it at my own index?** Yes — set `api_url` to any compatible JSON and host it wherever you like.
+| 补丁 | 作用 | 基线 |
+| --- | --- | --- |
+| `0001` | 状态页帮助/反馈按钮 | luci `openwrt-25.12` |
+| `0002` | 帮助链接中文翻译 | luci `openwrt-25.12` |
+| `0003` | 防火墙移除 flow offloading 设置 | luci `openwrt-25.12` |
+| `0004` | 重启确认弹窗 | luci `openwrt-25.12` |
+| `0005` | 状态页网络速率 | luci `openwrt-25.12` |
+| `0006` | GCC 16 工具链支持 | rebase `25.12` |
+| `900-fix-build-for-gcc-16` | libwebsockets 4.4.1 GCC 16 修复 | 包源码 |
+| `900-fix-gcc16-null-dereference-with-lto` | elfutils 0.192 LTO 空指针修复 | 包源码 |
 
-## Credits
+`0001`–`0005` 的 `index` 行和行号已按当前 LuCI 基线重新生成，应用时偏移为 0。
+上游更新后如果补丁失效，构建会在 `patches apply` 阶段直接失败并打印 `git apply`
+的上下文，而不是带着旧代码继续编译。
 
-| [OpenWrt](https://github.com/openwrt) | [coolsnowwolf](https://github.com/coolsnowwolf) | [hanwckf](https://github.com/hanwckf) | [Yuzhii0718](https://github.com/Yuzhii0718) |
-| :-: | :-: | :-: | :-: |
-| <img width="100" src="https://avatars.githubusercontent.com/u/2528830"/> | <img width="100" src="https://avatars.githubusercontent.com/u/31687149"/> | <img width="100" src="https://avatars.githubusercontent.com/u/27666983"/> | <img width="100" src="https://avatars.githubusercontent.com/u/107190140"/> |
-| [sbwml](https://github.com/sbwml) | [jerrykuku](https://github.com/jerrykuku) | [Openwrt-Passwall](https://github.com/Openwrt-Passwall) | [vernesong](https://github.com/vernesong) |
-| <img width="100" src="https://avatars.githubusercontent.com/u/16485166"/> | <img width="100" src="https://avatars.githubusercontent.com/u/9485680"/> | <img width="100" src="https://avatars.githubusercontent.com/u/253070042"/> | <img width="100" src="https://avatars.githubusercontent.com/u/42875168"/> |
+## 常见问题
 
-## License
+**为什么不用 `scripts/feeds update -a` 再跑一次？**
+补丁应用后再 `update` 会 `git pull`，可能覆盖补丁或因为本地修改失败。本流水线只在
+最前面 update 一次，最后只 `install -a`，再清理与 `package/new` 重名的 feed 包。
 
-The scripts, branding assets and documentation in this repository are released under **GPL-2.0** — see [LICENSE](LICENSE).
+**为什么 Docker 包被克隆了却没有进固件？**
+`configs/ruijie-rg-x60-new.config` 没有选中 Docker。保留克隆是为了需要时只改一行
+配置即可启用，不会增加默认镜像体积。
 
-The firmware itself bundles OpenWrt, ImmortalWrt and many other upstream components, each under its own licence. Redistributing an image means honouring those licences too; GPL-2.0 in particular requires you to make the corresponding source available.
+**工具链缓存什么时候需要重建？**
+目标架构、libc 或 GCC 大版本变化后。缓存文件名带 `gcc-<major>`，但不同小版本仍可能
+不兼容；换 GCC 后请重新运行 **Build Toolchain Cache**。
 
-## Disclaimer
+**OTA 检查提示“索引中没有适用于此设备的固件”？**
+索引 key 是 `ruijie_rg-x60-new-mtkuboot`。确认 `ota.json` 的 `devices` 里存在该 key，
+以及固件内 `/etc/ota/build.json` 的 `device` 与之一致。
 
-Flashing firmware can brick a device. Back up the stock firmware and your
-configuration, and understand the recovery path before you start. The firmware
-is provided as is, without warranty.
+## 致谢
 
----
+设备配置、补丁和定制流程来自
+[OpenWrt_MediaTek_Builder](https://github.com/MinimaxFlora/OpenWrt_MediaTek_Builder)；
+Python 架构、依赖安装、LLVM、编译与 OTA 思路来自
+[ZeroWrt](https://github.com/MinimaxFlora/ZeroWrt)；
+源码来自 [chasey-dev](https://github.com/chasey-dev/immortalwrt-mt798x-rebase)、
+[ImmortalWrt](https://github.com/immortalwrt)、
+[OpenWrt](https://github.com/openwrt) 及各自上游。
 
-Maintainer notes: [docs/BUILD.md](docs/BUILD.md) · Other languages: [docs/readme](docs/readme) · [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Changelog](CHANGELOG.md)
+## 许可
+
+本项目以 **GPL-3.0** 发布，见 [LICENSE](LICENSE)。固件本身包含 OpenWrt、
+ImmortalWrt 及大量第三方组件， redistributing 镜像时请同时遵守它们的许可证。

@@ -1,21 +1,20 @@
-# Build outputs
-/dist/
-/bin/
-/build_dir/
-/staging_dir/
-/tmp/
-/dl/
-/logs/
-
-# LEDE tree (only ever created on CI)
-/lede/
-
 # Python
 __pycache__/
 *.py[cod]
+.venv/
+.ruff_cache/
+.pytest_cache/
 
-# Local logs
-*.log
+# Build outputs
+/dist/
+/ota-meta.json
+/toolchain-cache/
+/build/
+/.config
+/.zerowrt-info.json
 
-# ccache dir created for CI cache bind mount
-.ccache/
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

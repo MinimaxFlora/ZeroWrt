@@ -1,20 +1,50 @@
-"""Building and collecting the firmware."""
+"""Downloading, compiling and collecting the firmware.
+
+The compile policy follows the ZeroWrt builder: one more job than the CPU
+count, capped by available memory, ``IGNORE_ERRORS="n m"`` for the two optional
+package classes, and a serial ``V=s`` retry when the parallel build fails. The
+retry is what turns "failed to build" into a readable compiler error.
+"""
 
 from __future__ import annotations
 
-import hashlib
-import json
 import os
 import re
 import shutil
-from datetime import UTC, datetime
+import tarfile
 from pathlib import Path
 
-from . import util
+from . import state, util
+
+GIB = 1024**3
 
 
-def download_sources(tree: Path, jobs: int) -> None:
+def _available_memory_gb() -> float:
+    meminfo = Path("/proc/meminfo")
+    if not meminfo.exists():
+        return 0.0
+    for line in util.read_text(meminfo).splitlines():
+        if line.startswith("MemAvailable:"):
+            try:
+                return int(line.split()[1]) / (1024**2)
+            except (IndexError, ValueError):
+                return 0.0
+    return 0.0
+
+
+def compile_jobs(requested: int | None = None) -> int:
+    """Parallelism for ``make``: ``nproc + 1``, capped at 1.5 GiB per job."""
+    base = max(1, int(requested or os.cpu_count() or 2))
+    jobs = base + 1
+    memory = _available_memory_gb()
+    if memory > 0:
+        jobs = min(jobs, max(1, int(memory // 1.5)))
+    return max(1, jobs)
+
+
+def download_sources(tree: Path, jobs: int | None = None) -> None:
     tree = Path(tree)
+    jobs = max(1, int(jobs or os.cpu_count() or 2))
     util.header("Downloading source archives")
     log = tree / "download.log"
     code, _ = util.run(["make", f"-j{jobs}", "download"], cwd=tree, log_path=log, check=False)
@@ -23,11 +53,9 @@ def download_sources(tree: Path, jobs: int) -> None:
         util.run(["make", "-j1", "download"], cwd=tree, log_path=log, check=True)
 
 
-def compile_firmware(tree: Path, jobs: int) -> None:
+def compile_firmware(tree: Path, jobs: int | None = None) -> None:
     tree = Path(tree)
-    # Same as the sbwml builder: one more job than CPUs, and ignore the
-    # optional n/m package errors so unrelated failures do not abort the world.
-    cores = jobs + 1
+    cores = compile_jobs(jobs)
     log = tree / "build.log"
 
     util.header(f'Compiling ZeroWrt (make -j{cores} IGNORE_ERRORS="n m")')
@@ -53,62 +81,26 @@ def compile_firmware(tree: Path, jobs: int) -> None:
     util.log("firmware compiled after the verbose retry")
 
 
-def _version_from_tree(tree: Path, info: dict) -> str:
-    version = info.get("version") or ""
-    if version:
-        return version
-    version_mk = Path(tree) / "include" / "version.mk"
-    if version_mk.exists():
-        text = util.read_text(version_mk)
-        match = re.search(
-            r"VERSION_NUMBER:=\$\(if \$\(VERSION_NUMBER\),\$\(VERSION_NUMBER\),([^)\s]+)\)",
-            text,
-        )
-        if match:
-            return match.group(1)
-        match = re.search(r"^VERSION_NUMBER:=([0-9]{8})\s*$", text, re.M)
-        if match:
-            return match.group(1)
-    return "unknown"
-
-
-def collect(tree: Path, out_dir: Path) -> list[Path]:
-    tree = Path(tree)
-    out_dir = Path(out_dir)
-    info = {}
-    info_path = tree / ".zerowrt-info.json"
-    if info_path.exists():
-        info = json.loads(util.read_text(info_path))
-
+def _target_dir(tree: Path, info: dict) -> Path:
+    targets = tree / "bin" / "targets"
     board = info.get("board", "")
     subtarget = info.get("subtarget", "")
-    device = info.get("device", "")
-    version = _version_from_tree(tree, info)
-
-    targets = tree / "bin" / "targets"
-    candidates = []
-    if board and subtarget:
-        candidates.append(targets / board / subtarget)
-    candidates.extend(sorted(p for p in targets.glob("*/*") if p.is_dir()))
-
-    source_dir = next((p for p in candidates if p.exists()), None)
-    if source_dir is None:
+    if board and subtarget and (targets / board / subtarget).is_dir():
+        return targets / board / subtarget
+    candidates = sorted(path for path in targets.glob("*/*") if path.is_dir())
+    if not candidates:
         raise util.BuildError(f"no build output found under {targets}")
+    if len(candidates) > 1:
+        util.warn(f"several target directories found; using {candidates[0]}")
+    return candidates[0]
 
-    util.header(f"Collecting artifacts from {source_dir.relative_to(tree)}")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    collected: list[Path] = []
 
+def _collect_files(source_dir: Path, out_dir: Path) -> list[Path]:
     patterns = [
         "*.bin",
         "*.itb",
         "*.img",
         "*.img.gz",
-        "*.iso",
-        "*.efi",
-        "*.vmdk",
-        "*.vhdx",
-        "*.qcow2",
         "*.tar",
         "*.manifest",
         "*.buildinfo",
@@ -116,9 +108,9 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
     files: list[Path] = []
     for pattern in patterns:
         files.extend(sorted(source_dir.glob(pattern)))
-    # Keep only real files (ignore symlinks to nowhere).
-    files = [p for p in files if p.is_file()]
+    files = [path for path in files if path.is_file()]
 
+    collected: list[Path] = []
     for path in files:
         destination = out_dir / path.name
         if destination.exists():
@@ -126,41 +118,102 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
         shutil.copy2(path, destination)
         collected.append(destination)
         util.log(f"collected {destination.name}")
+    return collected
+
+
+def _packages_archive(tree: Path, out_dir: Path) -> Path | None:
+    packages = tree / "bin" / "packages"
+    if not packages.is_dir():
+        return None
+    suffix = ".apk" if any(packages.rglob("*.apk")) else ".ipk"
+    members = [path for path in sorted(packages.rglob(f"*{suffix}")) if path.is_file()]
+    if not members:
+        return None
+    destination = out_dir / "Packages.tar.gz"
+    with tarfile.open(destination, "w:gz") as archive:
+        for path in members:
+            archive.add(path, arcname=f"packages/{path.relative_to(packages).as_posix()}")
+    util.log(f"collected {destination.name} ({len(members)} package(s))")
+    return destination
+
+
+def _kernel_version(source_dir: Path) -> str:
+    manifests = sorted(source_dir.glob("*.manifest"))
+    for manifest in manifests:
+        for line in util.read_text(manifest).splitlines():
+            match = re.match(r"^kernel\s+-\s+(\S+)", line)
+            if match:
+                return match.group(1)
+    return ""
+
+
+def _build_info(info: dict, *, kernel: str) -> str:
+    built = state.iso_for(state.build_date(info))
+    device = str(info.get("device", ""))
+    vendor = str(info.get("device_vendor", "")).strip()
+    model = str(info.get("device_model", "")).strip()
+    product = " ".join(part for part in (vendor, model) if part)
+    device_line = f"device: {device}" + (f" ({product})" if product else "")
+    lines = [
+        f"{info.get('dist', 'ZeroWrt')} firmware",
+        f"built: {built}",
+        f"tree: {info.get('board', '')}/{info.get('subtarget', '')}",
+        device_line,
+        f"version: {info.get('version', '')}",
+    ]
+    for key, label in (
+        ("artifact", "profile"),
+        ("layout", "layout"),
+        ("source_repo", "source repo"),
+        ("source_ref", "source ref"),
+        ("source_commit", "source commit"),
+        ("config", "config"),
+    ):
+        value = info.get(key)
+        if value:
+            lines.append(f"{label}: {value}")
+    if kernel:
+        lines.append(f"kernel: {kernel}")
+    run_id = os.environ.get("GITHUB_RUN_ID", "")
+    if run_id:
+        lines.append(f"workflow run: {run_id}")
+    return "\n".join(lines) + "\n"
+
+
+def collect(tree: Path, out_dir: Path) -> list[Path]:
+    tree = Path(tree)
+    out_dir = Path(out_dir)
+    info = state.read(tree)
+    source_dir = _target_dir(tree, info)
+
+    util.header(f"Collecting artifacts from {source_dir.relative_to(tree)}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    collected = _collect_files(source_dir, out_dir)
+
+    config = tree / ".config"
+    if config.exists():
+        shutil.copyfile(config, out_dir / "build.config")
+        collected.append(out_dir / "build.config")
+
+    packages = _packages_archive(tree, out_dir)
+    if packages is not None:
+        collected.append(packages)
+
+    kernel = _kernel_version(source_dir)
+    build_info = out_dir / "BUILD_INFO.txt"
+    util.write_text(build_info, _build_info(info, kernel=kernel))
+    collected.append(build_info)
 
     checksum_file = out_dir / "SHA256SUMS"
-    lines = []
-    for path in sorted(collected):
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        lines.append(f"{digest}  {path.name}")
+    lines = [f"{util.sha256_file(path)}  {path.name}" for path in sorted(collected)]
     util.write_text(checksum_file, "\n".join(lines) + "\n")
     collected.append(checksum_file)
 
-    build_info = out_dir / "BUILD_INFO.txt"
-    repo = os.environ.get("ZEROWRT_SOURCE_REPO") or info.get("source_repo", "")
-    ref = os.environ.get("ZEROWRT_SOURCE_REF") or info.get("source_ref", "")
-    commit = os.environ.get("ZEROWRT_SOURCE_COMMIT", "")
-    lines = [
-        "ZeroWrt firmware",
-        f"built: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}",
-        f"tree: {board}/{subtarget}",
-        f"device: {device} ({info.get('device_vendor', '')} {info.get('device_model', '')})".strip(),
-        f"version: {version}",
-    ]
-    if info.get("artifact"):
-        lines.append(f"profile: {info['artifact']}")
-    if info.get("layout"):
-        lines.append(f"layout: {info['layout']}")
-    if repo:
-        lines.append(f"source repo: {repo}")
-    if ref:
-        lines.append(f"source ref: {ref}")
-    if commit:
-        lines.append(f"source commit: {commit}")
-    lines.append(f"workflow run: {os.environ.get('GITHUB_RUN_ID', '')}")
-    util.write_text(build_info, "\n".join(lines) + "\n")
-    collected.append(build_info)
-
-    if not any(p.suffix in {".bin", ".itb", ".tar", ".gz"} for p in collected):
+    has_image = any(
+        path.suffix in {".bin", ".itb", ".img", ".tar"} or path.name.endswith(".img.gz")
+        for path in collected
+    )
+    if not has_image:
         raise util.BuildError("no firmware image was produced")
     util.log(f"collected {len(collected)} file(s) in {out_dir}")
     return collected

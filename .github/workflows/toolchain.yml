@@ -1,12 +1,9 @@
 name: Build Toolchain Cache
 
-# Compiles the OpenWrt toolchain once and publishes it as a compressed archive
-# in the "toolchain" release. The firmware build restores that archive and skips
-# the toolchain compile entirely.
-#
-# The archive name follows sbwml/r4s_build_script:
-#   toolchain_<libc>_<arch>_gcc-<major>.tar.zst
-# and is derived from the staging_dir/toolchain-* directory name.
+# Compiles the cross toolchain once and publishes it as a compressed archive in
+# the "toolchain" release. The firmware build restores it and skips the
+# toolchain compile. Regenerate this cache after changing the target, the libc
+# or the GCC version (the config selects GCC 16).
 
 on:
   workflow_dispatch:
@@ -23,6 +20,7 @@ env:
   BUILD_ROOT: /builder
   ZEROWRT_SOURCE_DIR: /builder/source
   ZEROWRT_DEVICE: ruijie_rg-x60-new
+  ZEROWRT_DIST: ZeroWrt
 
 jobs:
   toolchain:
@@ -50,43 +48,32 @@ jobs:
       - name: Install LLVM
         run: python3 scripts/zerowrt.py system install-llvm
 
-      # The profile table in scripts/zerowrt_core/profiles.py points at the
-      # ImmortalWrt tree; it is public, so no repository secret is involved.
       - name: Clone build source
         run: |
           python3 scripts/zerowrt.py source clone \
-            --dest "$ZEROWRT_SOURCE_DIR"
+            --dest "$ZEROWRT_SOURCE_DIR" \
+            --device "$ZEROWRT_DEVICE"
 
       - name: Update feeds
-        run: python3 scripts/zerowrt.py source feeds --tree "$ZEROWRT_SOURCE_DIR"
+        run: python3 scripts/zerowrt.py source feeds-update --tree "$ZEROWRT_SOURCE_DIR"
+
+      - name: Install feeds
+        run: python3 scripts/zerowrt.py source feeds-install --tree "$ZEROWRT_SOURCE_DIR"
+
+      - name: Add external packages
+        run: python3 scripts/zerowrt.py packages add --tree "$ZEROWRT_SOURCE_DIR"
 
       - name: Apply core customisations
-        env:
-          ZEROWRT_IP: 10.0.0.1
-          ZEROWRT_WIFI_NAME: ZeroWrt
         run: |
           python3 scripts/zerowrt.py source customize \
             --tree "$ZEROWRT_SOURCE_DIR" \
-            --ip "$ZEROWRT_IP" \
-            --wifi-name "$ZEROWRT_WIFI_NAME" \
             --assets "$GITHUB_WORKSPACE/assets"
 
-      - name: Add external packages and branding
-        run: |
-          python3 scripts/zerowrt.py packages add \
-            --tree "$ZEROWRT_SOURCE_DIR" \
-            --assets "$GITHUB_WORKSPACE/assets"
+      - name: Apply patches
+        run: python3 scripts/zerowrt.py patches apply --tree "$ZEROWRT_SOURCE_DIR"
 
-      # Clones luci-app-ota and patches its index generator so the ubootmod
-      # image is published (and preloader.bin is not).
-      - name: Add luci-app-ota
-        run: |
-          python3 scripts/zerowrt.py packages ota --tree "$ZEROWRT_SOURCE_DIR"
-
-      - name: Generate .config
-        run: |
-          python3 scripts/zerowrt.py config generate \
-            --tree "$ZEROWRT_SOURCE_DIR"
+      - name: Apply device .config
+        run: python3 scripts/zerowrt.py config apply --tree "$ZEROWRT_SOURCE_DIR"
 
       - name: Build toolchain
         env:
@@ -94,41 +81,12 @@ jobs:
         run: |
           mkdir -p "$TMPDIR"
           cd "$ZEROWRT_SOURCE_DIR"
-          make -j"$(nproc)" toolchain/compile ||
-            make -j"$(nproc)" toolchain/compile V=s
+          make -j"$(nproc)" toolchain/compile || make -j1 toolchain/compile V=s
 
-      - name: Package the toolchain
+      - name: Publish toolchain cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd "$ZEROWRT_SOURCE_DIR"
-          mkdir -p toolchain-cache
-
-          # staging_dir/toolchain-aarch64_generic_gcc-14.3.0_musl
-          dir=$(basename "$(ls -d staging_dir/toolchain-* | head -n1)")
-          arch=$(echo "$dir" | sed -E 's/^toolchain-//; s/_gcc-.*//')
-          gcc=$(echo "$dir" | sed -E 's/.*_gcc-([0-9]+)\..*/\1/')
-          libc=$(echo "$dir" | sed -E 's/.*_gcc-[0-9.]+_//')
-
-          asset="toolchain_${libc}_${arch}_gcc-${gcc}.tar.zst"
-          echo "packaging $asset (from $dir)"
-          tar -I "zstd -19 -T$(nproc --all)" -cf "toolchain-cache/$asset" ./{build_dir,dl,staging_dir,tmp}
-          ls -lh "toolchain-cache/$asset"
-          # Absolute path: the release action resolves "files" against the
-          # workspace, not against $ZEROWRT_SOURCE_DIR.
-          echo "TOOLCHAIN_ASSET=$PWD/toolchain-cache/$asset" >> "$GITHUB_ENV"
-
-      - name: Publish the toolchain release
-        uses: softprops/action-gh-release@v3.0.3
-        with:
-          tag_name: toolchain
-          name: Toolchain_Cache
-          body: |
-            Toolchain cache for ZeroWrt (`${{ env.ZEROWRT_DEVICE }}`), built from
-            `${{ github.sha }}`.
-
-            Restored by the firmware build before compilation; regenerate it when
-            the target, the libc or the GCC version changes.
-          files: ${{ env.TOOLCHAIN_ASSET }}
-          fail_on_unmatched_files: true
-          draft: false
-          prerelease: false
-          overwrite_files: true
+          python3 scripts/zerowrt.py cache save \
+            --tree "$ZEROWRT_SOURCE_DIR" \
+            --repo "$GITHUB_REPOSITORY"

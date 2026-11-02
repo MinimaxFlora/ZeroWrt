@@ -1,1 +1,3 @@
-"""ZeroWrt build tooling (private package)."""
+"""ZeroWrt build tooling."""
+
+__version__ = "2.0.0"

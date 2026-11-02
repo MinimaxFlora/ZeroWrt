@@ -17,6 +17,11 @@ from . import profiles, state, util
 EXTRA_SELECTIONS = {
     "CONFIG_PACKAGE_luci-app-ota": "y",
     "CONFIG_PACKAGE_luci-i18n-ota-zh-cn": "y",
+    # openwrt_package's sing-box currently declares an optional libcronet
+    # dependency, but no libcronet package exists in the tree. Keep the
+    # NaiveProxy outbound off so the image neither warns nor links -lcronet.
+    "CONFIG_SING_BOX_BUILD_NAIVE_OUTBOUND": None,
+    "CONFIG_SING_BOX_TINY_BUILD_NAIVE_OUTBOUND": None,
 }
 
 REQUIRED_SELECTIONS = [
@@ -27,6 +32,11 @@ REQUIRED_SELECTIONS = [
     "CONFIG_PACKAGE_luci-app-openclash=y",
     "CONFIG_PACKAGE_bash=y",
     "CONFIG_PACKAGE_ttyd=y",
+]
+
+FORBIDDEN_SELECTIONS = [
+    "CONFIG_SING_BOX_BUILD_NAIVE_OUTBOUND=y",
+    "CONFIG_SING_BOX_TINY_BUILD_NAIVE_OUTBOUND=y",
 ]
 
 DEVICE_BLOCK_RE = re.compile(r"^define\s+Device/(?P<name>\S+)\s*$", re.M)
@@ -150,6 +160,13 @@ def apply(
             + "\n  - ".join(missing)
             + "\n\nLast defconfig output:\n"
             + tail
+        )
+
+    stale = [item for item in FORBIDDEN_SELECTIONS if item in resolved]
+    if stale:
+        raise util.BuildError(
+            "the optional sing-box NaiveProxy outbound needs a libcronet package, "
+            "which this tree does not provide:\n  - " + "\n  - ".join(stale)
         )
 
     info = state.read(tree)

@@ -24,9 +24,13 @@ from . import util
 HELLOWORLD_REPO = "MinimaxFlora/openwrt_package"
 HELLOWORLD_REF = "master"
 
-# The Go/Rust versions the 25.12 tree expects are newer than the feed copies.
-GOLANG_REPO = "sbwml/packages_lang_golang"
-GOLANG_REF = "27.x"
+# The Go/Rust versions the 25.12 tree expects come from the feeds. Do not
+# replace `feeds/packages/lang/golang`: 25.12 ships the versioned `golang1.27`
+# package that cloudflared/tailscale/telegraf build-depend on, while the
+# sbwml repository only provides the unversioned `golang` package. Replacing
+# the directory therefore removes golang1.27 and produces "build dependency on
+# golang1.27/host, which does not exist" warnings.
+GOLANG_SYMBOL = "golang1.27"
 RUST_REPO = "sbwml/packages_lang_rust"
 RUST_REF = "main"
 
@@ -158,7 +162,6 @@ def _ensure_feed_links(tree: Path) -> None:
     that did not exist in the feed index would otherwise never be scanned.
     """
     links = {
-        Path("package/feeds/packages/golang"): Path("feeds/packages/lang/golang"),
         Path("package/feeds/packages/rust"): Path("feeds/packages/lang/rust"),
         Path("package/feeds/luci/luci-app-dockerman"): Path("feeds/luci/applications/luci-app-dockerman"),
     }
@@ -173,6 +176,61 @@ def _ensure_feed_links(tree: Path) -> None:
         link_path.symlink_to(os.path.relpath(target_path, link_path.parent))
 
 
+def _libcronet_provider(tree: Path) -> Path | None:
+    """Locate a ``libcronet`` package, if the tree carries one."""
+    candidates = [
+        Path("package/new/helloworld/libcronet/Makefile"),
+        Path("package/new/libcronet/Makefile"),
+        Path("package/libs/libcronet/Makefile"),
+        Path("feeds/packages/libs/libcronet/Makefile"),
+        Path("feeds/packages/net/libcronet/Makefile"),
+    ]
+    for relative in candidates:
+        path = Path(tree) / relative
+        if path.is_file():
+            return path
+    return None
+
+
+def _fix_sing_box_cronet(tree: Path, helloworld: Path) -> None:
+    """Drop the optional libcronet dependency when no provider exists.
+
+    ``openwrt_package`` added ``+SING_BOX_BUILD_NAIVE_OUTBOUND:libcronet`` to
+    both sing-box variants, but the package repository does not ship a
+    ``libcronet`` package yet. OpenWrt's metadata scanner warns for every
+    conditional dependency even when the symbol is disabled, and enabling the
+    default ``y`` option would also add ``-lcronet`` to the link. Remove the
+    optional dependency so the image builds without NaiveProxy outbound until
+    the provider lands upstream.
+    """
+    makefile = Path(helloworld) / "sing-box" / "Makefile"
+    if not makefile.exists():
+        return
+    text = util.read_text(makefile)
+    if "libcronet" not in text:
+        return
+    if _libcronet_provider(tree) is not None:
+        util.log("sing-box: libcronet provider found; keeping NaiveProxy support")
+        return
+
+    replacements = {
+        " +SING_BOX_BUILD_NAIVE_OUTBOUND:libcronet": "",
+        " +SING_BOX_TINY_BUILD_NAIVE_OUTBOUND:libcronet": "",
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    if "libcronet" in text:
+        raise util.BuildError(
+            f"{makefile}: unexpected libcronet references remain; "
+            "cannot build without a libcronet provider"
+        )
+    util.write_text(makefile, text)
+    util.warn(
+        "sing-box: no libcronet package in the tree; removed the optional "
+        "NaiveProxy outbound dependency (CONFIG_SING_BOX_BUILD_NAIVE_OUTBOUND must be off)"
+    )
+
+
 def add_external_packages(tree: Path) -> None:
     """Clone the package set used by the device config into the source tree."""
     tree = Path(tree)
@@ -180,8 +238,8 @@ def add_external_packages(tree: Path) -> None:
     new_dir.mkdir(parents=True, exist_ok=True)
 
     helloworld = _add_helloworld(tree)
+    _fix_sing_box_cronet(tree, helloworld)
 
-    _replace_feed_dir(tree, Path("feeds/packages/lang/golang"), GOLANG_REPO, GOLANG_REF)
     _replace_feed_dir(tree, Path("feeds/packages/lang/rust"), RUST_REPO, RUST_REF)
 
     _replace_feed_dir(

@@ -16,6 +16,10 @@ Python rewrite of the ZeroWrt/MediaTek builder pipeline.
 - Added `SHA256SUMS`, `BUILD_INFO.txt`, `Packages.tar.gz` and
   `build.config` to the release artifacts.
 - Added a memory-aware `nproc + 1` compile policy with serial `V=s` fallback.
+- Keep the feed's versioned `golang1.27` instead of replacing it with the
+  unversioned sbwml checkout (fixes `golang1.27/host` build-dependency warnings).
+- Disable sing-box NaiveProxy outbound until a `libcronet` provider exists
+  (the current `openwrt_package` Makefile references a package it does not ship).
 - Added an optional toolchain cache in the `toolchain` release and a
   `Build Toolchain Cache` workflow.
 - Unit tests and Ruff checks run on every pull request.

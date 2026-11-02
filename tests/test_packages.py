@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zerowrt_core import packages
+from zerowrt_core import packages, util
 
 
 class PackagesTest(unittest.TestCase):
@@ -55,6 +55,44 @@ class PackagesTest(unittest.TestCase):
         self._make("feeds/packages/net/v2ray-geodata/Makefile", "PKG_NAME:=v2ray-geodata\n")
         packages.prune_feed_conflicts(self.tree)
         self.assertFalse((self.tree / "feeds/packages/net/v2ray-geodata").exists())
+
+
+class SingBoxCronetTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.tree = Path(self.tmp.name)
+        self.helloworld = self.tree / "package" / "new" / "helloworld"
+        self.makefile = self.helloworld / "sing-box" / "Makefile"
+        self.makefile.parent.mkdir(parents=True)
+        self.makefile.write_text(
+            "DEPENDS:=+ca-bundle\n"
+            "DEPENDS+= +kmod-netlink-diag +kmod-tun +SING_BOX_BUILD_NAIVE_OUTBOUND:libcronet\n"
+            "DEPENDS+= +SING_BOX_TINY_BUILD_NAIVE_OUTBOUND:libcronet\n",
+            encoding="utf-8",
+        )
+
+    def test_optional_dependency_is_removed_without_provider(self) -> None:
+        packages._fix_sing_box_cronet(self.tree, self.helloworld)
+        text = self.makefile.read_text(encoding="utf-8")
+        self.assertNotIn("libcronet", text)
+        self.assertIn("+kmod-tun", text)
+
+    def test_provider_keeps_dependency(self) -> None:
+        provider = self.tree / "package" / "new" / "libcronet" / "Makefile"
+        provider.parent.mkdir(parents=True)
+        provider.write_text("PKG_NAME:=libcronet\n", encoding="utf-8")
+        packages._fix_sing_box_cronet(self.tree, self.helloworld)
+        self.assertIn("libcronet", self.makefile.read_text(encoding="utf-8"))
+
+    def test_unexpected_reference_fails(self) -> None:
+        self.makefile.write_text(
+            "DEPENDS+= +SING_BOX_BUILD_NAIVE_OUTBOUND:libcronet\n"
+            "TARGET_LDFLAGS += -lother-libcronet\n",
+            encoding="utf-8",
+        )
+        with self.assertRaises(util.BuildError):
+            packages._fix_sing_box_cronet(self.tree, self.helloworld)
 
 
 if __name__ == "__main__":

@@ -41,12 +41,18 @@
    `ttyd` 已安装。必须在克隆外部包之前执行，之后的替换会复用这些符号链接。
 7. **packages add**：
    - `MinimaxFlora/openwrt_package` → `package/new/helloworld`（移除 `autocore`）；
-   - `sbwml/packages_lang_golang` `27.x`；
    - `sbwml/packages_lang_rust`；
    - `luci-app-dockerman` + Docker 四个包（默认配置未选中，保留）；
    - `MinimaxFlora/luci-app-ota` → `package/new/luci-app-ota`；
    - 扫描 `package/new` 的 `PKG_NAME`/`BuildPackage`，删除 `feeds/` 与
      `package/feeds/` 里同名包。
+   - **不再替换 `feeds/packages/lang/golang`**：25.12 feed 自带版本化的
+     `golang1.27`，而 sbwml 的 `packages_lang_golang` 只有未版本化的 `golang`；
+     替换后会删掉 `golang1.27`，导致 cloudflared/tailscale/telegraf 的
+     `golang1.27/host` 构建依赖告警。
+   - `openwrt_package` 当前版本的 sing-box 声明了可选 `libcronet`，但树里没有
+     该包；流水线会移除这条可选依赖，并在 `.config` 中关闭 NaiveProxy outbound
+     （详见“已知限制”）。
 8. **source customize**：版本、发行字符串、IP、主机名、banner、root 密码、
    bash、profile、ttyd、MTK WiFi 默认值。
 9. **patches apply**：
@@ -255,7 +261,51 @@ python -m ruff check scripts tests
 定制幂等性、feed 冲突清理、补丁重复应用、产物收集、OTA 索引/历史/发布、
 工具链资产名。
 
-## 9. 从旧仓库迁移
+## 9. 已知限制
+
+### 9.1 Go 版本包
+
+`openwrt-25.12` 的 `feeds/packages/lang/golang` 同时提供 `golang` 和
+`golang1.27`。cloudflared、tailscale、telegraf 等 Makefile 依赖
+`golang1.27/host`，因此**不要**用 sbwml 的 `packages_lang_golang` 覆盖该目录：
+该仓库只提供未版本化的 `golang`，覆盖后 `golang1.27` 消失，就会看到：
+
+```text
+WARNING: Makefile 'package/feeds/packages/cloudflared/Makefile' has a build
+dependency on 'golang1.27/host', which does not exist
+```
+
+`source.install_feeds` 现在会显式检查 `package/feeds/packages/golang1.27`。
+
+### 9.2 sing-box / libcronet
+
+`openwrt_package` 在 2026-11 的 sing-box 1.14.3 更新中加入了：
+
+```make
++SING_BOX_BUILD_NAIVE_OUTBOUND:libcronet
++CONFIG_SING_BOX_TINY_BUILD_NAIVE_OUTBOUND:libcronet
+```
+
+但整个源码树和 feed 里都没有 `libcronet` 包。OpenWrt 的 metadata 扫描器即使
+在选项关闭时也会对条件依赖打印：
+
+```text
+WARNING: Makefile 'package/new/helloworld/sing-box/Makefile' has a dependency
+on 'libcronet', which does not exist
+```
+
+如果保持默认 `y`，编译还会加上 `-lcronet`，链接阶段会失败。流水线当前的策略：
+
+- `packages.add` 在没有 `libcronet` 提供者时删除这两条可选依赖；
+- `config.apply` 写入
+  `# CONFIG_SING_BOX_BUILD_NAIVE_OUTBOUND is not set` 和
+  `# CONFIG_SING_BOX_TINY_BUILD_NAIVE_OUTBOUND is not set`；
+- `config.apply` 会拒绝 defconfig 后仍为 `=y` 的情况。
+
+等上游补上 `libcronet` 包后，删除 `packages._fix_sing_box_cronet` 的移除逻辑和
+`config.EXTRA_SELECTIONS` 里的两个关闭项，即可恢复 NaiveProxy outbound。
+
+## 10. 从旧仓库迁移
 
 - MediaTek Builder 的 `diy-script.sh` 已逐项翻译进
   `scripts/zerowrt_core/customize.py` 和 `packages.py`；

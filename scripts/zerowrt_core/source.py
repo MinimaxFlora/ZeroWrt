@@ -119,6 +119,9 @@ def install_feeds(tree: Path) -> None:
         "luci-compat": tree / "package" / "feeds" / "luci" / "luci-compat",
         "lyaml": tree / "package" / "feeds" / "packages" / "lyaml",
         "ttyd": tree / "package" / "feeds" / "packages" / "ttyd",
+        # cloudflared/tailscale/telegraf build-depend on this versioned Go
+        # package; it comes from the 25.12 feed and must not be replaced.
+        "golang1.27": tree / "package" / "feeds" / "packages" / "golang1.27",
     }
     missing = [name for name, path in required.items() if not path.exists()]
     if missing:

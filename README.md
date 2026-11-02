@@ -202,6 +202,13 @@ python3 scripts/zerowrt.py ota index --tree "$ZEROWRT_SOURCE_DIR" --dist dist \
 索引 key 是 `ruijie_rg-x60-new-mtkuboot`。确认 `ota.json` 的 `devices` 里存在该 key，
 以及固件内 `/etc/ota/build.json` 的 `device` 与之一致。
 
+**为什么会出现 `golang1.27/host` 或 `libcronet` 的 WARNING？**
+`25.12` feed 自带版本化的 `golang1.27`，不能用 sbwml 的未版本化 `golang` 覆盖它，
+否则 cloudflared/tailscale/telegraf 会报 `golang1.27/host` 不存在。
+`openwrt_package` 当前的 sing-box 还声明了可选的 `libcronet`，但源码树里没有这个包；
+流水线会移除该可选依赖并关闭 NaiveProxy outbound，避免 metadata 告警和 `-lcronet`
+链接失败。详见 [docs/BUILD.md](docs/BUILD.md) §9。
+
 ## 致谢
 
 设备配置、补丁和定制流程来自

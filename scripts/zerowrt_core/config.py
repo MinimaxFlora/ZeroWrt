@@ -281,12 +281,48 @@ def _record_config(
     return info
 
 
-def generate_all(tree: Path, out_dir: Path | None = None) -> list[Path]:
-    """Generate a full post-defconfig ``.config`` for every supported device.
+def _run_defconfig(tree: Path, profile: profiles.DeviceProfile, *, log_name: str) -> str:
+    log_path = tree / log_name
+    code, _ = util.run(
+        ["make", "defconfig"],
+        cwd=tree,
+        log_path=log_path,
+        check=False,
+    )
+    if code != 0:
+        tail = "\n".join(util.read_text(log_path).splitlines()[-80:]) if log_path.exists() else ""
+        raise util.BuildError(f"make defconfig failed for {profile.name} ({code})\n{tail}")
+    resolved = util.read_text(tree / ".config")
+    problems = _check_resolved(resolved, profile)
+    if problems:
+        tail = "\n".join(util.read_text(log_path).splitlines()[-60:]) if log_path.exists() else ""
+        raise util.BuildError(
+            f"{profile.name}: generated config is invalid:\n  - "
+            + "\n  - ".join(dict.fromkeys(problems))
+            + "\n\nLast defconfig output:\n"
+            + tail
+        )
+    return resolved
 
-    This is the maintenance command used to refresh ``configs/*.config``.
-    Normal builds only copy the checked-in file; they do not run defconfig.
-    """
+
+def _diffconfig(tree: Path) -> str:
+    script = tree / "scripts" / "diffconfig.sh"
+    if not script.is_file():
+        raise util.BuildError(f"diffconfig script not found: {script}")
+    code, output = util.run(
+        ["bash", str(script)],
+        cwd=tree,
+        capture=True,
+        quiet=True,
+        check=False,
+    )
+    if code != 0 or not output.strip():
+        raise util.BuildError(f"diffconfig.sh failed ({code})")
+    return output.rstrip() + "\n"
+
+
+def generate_all(tree: Path, out_dir: Path | None = None) -> list[Path]:
+    """Generate a minimal ``diffconfig.sh`` fragment for every device."""
     tree = Path(tree)
     out_dir = Path(out_dir) if out_dir is not None else CONFIGS_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -295,26 +331,14 @@ def generate_all(tree: Path, out_dir: Path | None = None) -> list[Path]:
         profile = profiles.require(name)
         util.header(f"Generating {config_filename(profile)}")
         util.write_text(tree / ".config", preview(tree, device=name))
-        log_path = tree / f"defconfig-{profile.name}.log"
-        code, _ = util.run(
-            ["make", "defconfig"],
-            cwd=tree,
-            log_path=log_path,
-            check=False,
-        )
-        if code != 0:
-            tail = "\n".join(util.read_text(log_path).splitlines()[-80:]) if log_path.exists() else ""
-            raise util.BuildError(f"make defconfig failed for {profile.name} ({code})\n{tail}")
-        resolved = util.read_text(tree / ".config")
-        problems = _check_resolved(resolved, profile)
-        if problems:
-            raise util.BuildError(
-                f"{profile.name}: generated config is invalid:\n  - " + "\n  - ".join(dict.fromkeys(problems))
-            )
+        _run_defconfig(tree, profile, log_name=f"defconfig-{profile.name}.log")
+        # Store only the delta from Kconfig defaults.  Build restores it and
+        # runs defconfig again, which is much smaller than 9000+ lines/device.
+        fragment = _diffconfig(tree)
         destination = out_dir / config_filename(profile)
-        util.write_text(destination, resolved)
+        util.write_text(destination, fragment)
         generated.append(destination)
-        util.log(f"generated {destination} ({len(resolved.splitlines())} lines)")
+        util.log(f"generated {destination} ({len(fragment.splitlines())} lines)")
     return generated
 
 
@@ -332,13 +356,14 @@ def apply(
 
     util.header("Installing device .config")
     text = util.read_text(source)
-    problems = _check_resolved(text, profile)
-    if problems:
-        raise util.BuildError(
-            f"{source} is stale or selects another device:\n  - " + "\n  - ".join(dict.fromkeys(problems))
-        )
+    target = f"{target_symbol(profile.device)}=y"
+    if target not in text:
+        raise util.BuildError(f"{source} does not select {profile.device}")
     shutil.copyfile(source, tree / ".config")
-    util.log(f"{source} -> {tree / '.config'} (no defconfig needed)")
+
+    util.header("Expanding diffconfig (make defconfig)")
+    resolved = _run_defconfig(tree, profile, log_name="defconfig.log")
+    util.log(f"{source} -> {tree / '.config'} ({len(resolved.splitlines())} lines after defconfig)")
     info = _record_config(tree, profile, dist_name=dist_name, source=source)
     util.log(f"configuration ready: {profile.target} device={profile.device} version={info['version']}")
     return info

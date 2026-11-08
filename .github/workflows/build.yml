@@ -129,7 +129,7 @@ jobs:
             --tree "$ZEROWRT_SOURCE_DIR" \
             --assets "$GITHUB_WORKSPACE/assets"
 
-      - name: Apply device .config
+      - name: Apply device diffconfig
         run: |
           python3 scripts/zerowrt.py config apply \
             --tree "$ZEROWRT_SOURCE_DIR" \

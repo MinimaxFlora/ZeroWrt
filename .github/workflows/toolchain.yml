@@ -63,7 +63,7 @@ jobs:
       - name: Add external packages
         run: python3 scripts/zerowrt.py packages add --tree "$ZEROWRT_SOURCE_DIR"
 
-      - name: Apply device .config
+      - name: Apply device diffconfig
         run: |
           python3 scripts/zerowrt.py config apply \
             --tree "$ZEROWRT_SOURCE_DIR" \

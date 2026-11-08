@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from zerowrt_core import config, profiles, state
 
@@ -165,6 +166,8 @@ class ConfigTest(unittest.TestCase):
                 if line.startswith("CONFIG_TARGET_DEVICE_") and line.endswith("=y") and "PACKAGES" not in line
             ]
             self.assertEqual(devices, [target], path.name)
+            # diffconfig.sh output is a small delta, not a 9000-line .config.
+            self.assertLess(len(text.splitlines()), 3000, path.name)
 
     def test_apply_copies_static_config(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -178,8 +181,9 @@ class ConfigTest(unittest.TestCase):
                     "profile": "netcore_n60-pro",
                 },
             )
-            info = config.apply(tree, device="netcore_n60-pro")
             expected = config.static_path(profiles.require("netcore_n60-pro")).read_text(encoding="utf-8")
+            with mock.patch.object(config, "_run_defconfig", return_value=expected):
+                info = config.apply(tree, device="netcore_n60-pro")
             self.assertEqual((tree / ".config").read_text(encoding="utf-8"), expected)
             self.assertEqual(info["device"], "netcore_n60-pro")
             self.assertEqual(info["version"], "20261109")

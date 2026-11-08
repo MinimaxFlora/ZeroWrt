@@ -23,8 +23,8 @@
   主色 `#EC4899`，暗色主色 `#BE185D`。
 - OTA 默认索引 `https://ota.tatalvpai.vip/ota.json`，下载页域名
   `ota.tatalvpai.vip`。
-- 12 个设备各生成一份完整 `configs/<device>.config`（已 `make defconfig`）；
-  `config apply` 直接复制，不再每次执行 `make defconfig`。
+- 12 个设备各生成一份 `configs/<device>.config`（`diffconfig.sh` 差异配置）；
+  `config apply` 复制后执行 `make defconfig` 展开，不再手工填配置。
 - Release tag / Release 名统一为 `mediatek_filogic`；Release 只上传固件。
 - 工具链缓存保留：tag `toolchain`，Release 名 `Toolchain_Cache`。
 - 新增不联网单元测试与 Ruff 检查。

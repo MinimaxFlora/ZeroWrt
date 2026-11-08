@@ -11,7 +11,7 @@
 | 分支 | `openwrt-24.10-6.6` |
 | 目标 | `mediatek/filogic` |
 | 内核 | 6.6 |
-| 设备配置 | `configs/<device>.config`（已执行 `make defconfig`） |
+| 设备配置 | `configs/<device>.config`（`diffconfig.sh` 差异配置） |
 | 重新生成 | `scripts/zerowrt_core/config.py` 的 `config generate` |
 | Release tag | `mediatek_filogic` |
 
@@ -36,8 +36,8 @@
    `luci.mk` 和 feed 符号链接已经存在。
 8. **source customize**：删除 `files/etc`、版本、IP、banner、root 密码、WiFi、
    Argon。见第 4 节。
-9. **config apply**：把 `configs/<device>.config` 复制为源码树 `.config`，
-   校验唯一设备和关键包；不再执行 `make defconfig`。见第 5 节。
+9. **config apply**：复制 `configs/<device>.config`（diffconfig）为源码树 `.config`，
+   执行 `make defconfig` 展开默认值并校验唯一设备/关键包。见第 5 节。
 10. **ota embed**：写 `/etc/ota/build.json`、`/etc/uci-defaults/90-luci-app-ota`
     和 `version.date`。
 11. **cache restore**（可选）：从 `toolchain` Release 恢复
@@ -215,7 +215,7 @@ option dark_primary_mode 'custom'
 
 ### 5.1 已生成配置
 
-`configs/` 下每个设备一份 **已经执行过 `make defconfig` 的完整 `.config`**：
+`configs/` 下每个设备一份 **`./scripts/diffconfig.sh` 差异配置**，约 380 行：
 
 ```text
 configs/netcore-n60-pro.config
@@ -232,13 +232,14 @@ configs/supergateway-s20m.config
 configs/supergateway-s20p.config
 ```
 
-`config apply` 只做复制和校验：
+`config apply` 先复制再展开：
 
 ```text
 configs/<device>.config  ->  源码树/.config
+make defconfig           ->  展开为 9000+ 行的完整配置
 ```
 
-不再执行 `make defconfig`，所以 Workflow 不需要每次重新展开几百个依赖。
+这样仓库里不用存 12 份 9000 多行的 `.config`，只需要维护差异项。
 
 ### 5.2 生成方式
 
@@ -251,7 +252,7 @@ configs/<device>.config  ->  源码树/.config
   → 追加 ZeroWrt 插件、WireGuard、PassWall Xray、DDNS
   → make defconfig
   → 校验唯一设备/关键包
-  → 写入 configs/<device>.config
+  → ./scripts/diffconfig.sh > configs/<device>.config
 ```
 
 模板本身提供 MTK WiFi、HNAT、TurboACC 等高功率配置，但也默认选中：
@@ -313,7 +314,7 @@ DDNS 使用 feed 中的实际包名
 
 ### 5.4 config apply 校验
 
-复制前检查：
+复制 diffconfig 并执行 `make defconfig` 后检查：
 
 - 文件中只有当前设备这一行 `CONFIG_TARGET_DEVICE_*_DEVICE_*=y`；
 - `mediatek/filogic` 目标和 `CONFIG_TARGET_MULTI_PROFILE` /

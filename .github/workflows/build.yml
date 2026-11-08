@@ -4,15 +4,26 @@ on:
   workflow_dispatch:
     inputs:
       device:
-        description: "Device profile"
+        description: "Device profile (one image per run)"
         required: true
         type: choice
-        default: ruijie_rg-x60-new
+        default: netcore_n60-pro
         options:
+          - netcore_n60-pro
+          - ruijie_ew-6000gx-pro-expand
+          - ruijie_ew-6000gx-pro
+          - ruijie_ew-6000gx-pro-stock
+          - ruijie_ew-6000gx-pro-ubootmod
+          - ruijie_rg-x60-new-expand
           - ruijie_rg-x60-new
+          - ruijie_rg-x60-new-stock
+          - ruijie_rg-x60-new-ubootmod
+          - supergateway_s20l
+          - supergateway_s20m
+          - supergateway_s20p
       lan_ip:
-        description: "LAN IP (management address)"
-        required: true
+        description: "LAN IP; default 10.0.0.1 for every device"
+        required: false
         type: string
         default: "10.0.0.1"
       root_password:
@@ -21,7 +32,7 @@ on:
         type: string
         default: "password"
       wifi_name:
-        description: "WiFi name prefix; -2.4G / -5G / -6G is appended"
+        description: "WiFi name prefix; -2.4G / -5G is appended"
         required: true
         type: string
         default: "ZeroWrt"
@@ -31,15 +42,15 @@ on:
         type: string
         default: "1234567890"
       ota_url:
-        description: "OTA index URL (empty = GitHub Pages for this repository)"
+        description: "OTA index URL (default: https://ota.tatalvpai.vip/ota.json)"
         required: false
         type: string
-        default: ""
+        default: "https://ota.tatalvpai.vip/ota.json"
       ota_cname:
-        description: "Optional custom domain for the OTA download page"
+        description: "Custom domain for the OTA download page"
         required: false
         type: string
-        default: ""
+        default: "ota.tatalvpai.vip"
       cache_toolchain:
         description: "Restore the toolchain cache when available"
         required: true
@@ -50,20 +61,20 @@ permissions:
   contents: write
 
 concurrency:
-  group: zerowrt-${{ github.ref }}
+  group: zerowrt-mediatek-filogic
   cancel-in-progress: false
 
 env:
   PYTHONUNBUFFERED: "1"
   BUILD_ROOT: /builder
   ZEROWRT_SOURCE_DIR: /builder/source
-  ZEROWRT_DEVICE: ${{ inputs.device }}
+  ZEROWRT_DEVICE: ${{ github.event.inputs.device }}
   ZEROWRT_DIST: ZeroWrt
   TZ: Asia/Shanghai
 
 jobs:
   build:
-    name: Compile ZeroWrt
+    name: Compile ${{ inputs.device }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
 
@@ -105,13 +116,11 @@ jobs:
         run: python3 scripts/zerowrt.py source feeds-install --tree "$ZEROWRT_SOURCE_DIR"
 
       - name: Add external packages
-        run: |
-          python3 scripts/zerowrt.py packages add \
-            --tree "$ZEROWRT_SOURCE_DIR"
+        run: python3 scripts/zerowrt.py packages add --tree "$ZEROWRT_SOURCE_DIR"
 
       - name: Apply core customisations
         env:
-          ZEROWRT_IP: ${{ inputs.lan_ip }}
+          ZEROWRT_LAN_IP: ${{ inputs.lan_ip }}
           ZEROWRT_ROOT_PASSWORD: ${{ inputs.root_password }}
           ZEROWRT_WIFI_NAME: ${{ inputs.wifi_name }}
           ZEROWRT_WIFI_PASSWORD: ${{ inputs.wifi_password }}
@@ -119,9 +128,6 @@ jobs:
           python3 scripts/zerowrt.py source customize \
             --tree "$ZEROWRT_SOURCE_DIR" \
             --assets "$GITHUB_WORKSPACE/assets"
-
-      - name: Apply patches
-        run: python3 scripts/zerowrt.py patches apply --tree "$ZEROWRT_SOURCE_DIR"
 
       - name: Apply device .config
         run: |
@@ -172,57 +178,49 @@ jobs:
             --tree "$ZEROWRT_SOURCE_DIR" \
             --jobs "$(nproc)"
 
-      - name: Collect artifacts
+      - name: Collect firmware only
         run: |
           python3 scripts/zerowrt.py build collect \
             --tree "$ZEROWRT_SOURCE_DIR" \
             --out dist
 
-      - name: Generate OTA index
-        run: |
-          python3 scripts/zerowrt.py ota index \
-            --tree "$ZEROWRT_SOURCE_DIR" \
-            --dist dist \
-            --repo "$GITHUB_REPOSITORY" \
-            --tag "$ZEROWRT_DEVICE"
-
       - name: Build summary
         if: success()
         run: |
           {
-            echo "## ZeroWrt build"
-            echo '```'
-            cat dist/BUILD_INFO.txt
-            echo
-            ls -lh dist
-            echo '```'
+            echo "## ZeroWrt ${{ inputs.device }}"
+            echo ""
+            echo "| File | Size |"
+            echo "| --- | ---: |"
+            find dist -maxdepth 1 -type f -printf '| %f | %s bytes |\n' | sort
+            echo ""
             echo "### SHA256"
             echo '```'
-            cat dist/SHA256SUMS
+            sha256sum dist/* | sed 's#  dist/#  #'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload firmware
+      - name: Upload firmware artifact
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: ${{ env.ZEROWRT_DEVICE }}
+          name: ${{ inputs.device }}
           path: dist/*
           if-no-files-found: error
           retention-days: 14
 
-      - name: Publish device release
+      - name: Publish firmware release
         if: success()
         uses: softprops/action-gh-release@v3.0.3
         with:
-          tag_name: ${{ env.ZEROWRT_DEVICE }}
-          name: ${{ env.ZEROWRT_DEVICE }}
+          tag_name: mediatek_filogic
+          name: mediatek_filogic
           target_commitish: ${{ github.sha }}
-          body_path: dist/BUILD_INFO.txt
+          body_path: docs/release-notes/mediatek_filogic.md
           files: dist/*
           draft: false
           prerelease: false
           overwrite_files: true
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true
 
       - name: Publish OTA page
         if: success()
@@ -234,7 +232,7 @@ jobs:
             --tree "$ZEROWRT_SOURCE_DIR" \
             --dist dist \
             --repo "$GITHUB_REPOSITORY" \
-            --tag "$ZEROWRT_DEVICE" \
+            --tag mediatek_filogic \
             --branch gh-pages \
             --site "$ZEROWRT_SOURCE_DIR/package/new/luci-app-ota/site" \
             --cname "$OTA_CNAME"
@@ -243,7 +241,7 @@ jobs:
         if: failure()
         run: |
           mkdir -p dist
-          for log in build download defconfig feeds-update feeds-install toolchain; do
+          for log in build download defconfig feeds-update feeds-install; do
             if [ -f "/builder/source/$log.log" ]; then
               tail -n 3000 "/builder/source/$log.log" > "dist/$log-tail.log"
             fi
@@ -253,7 +251,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: ${{ env.ZEROWRT_DEVICE }}-logs
+          name: ${{ inputs.device }}-logs
           path: dist/*-tail.log
           if-no-files-found: ignore
           retention-days: 7

@@ -77,9 +77,7 @@ def select_image(dist: Path) -> Path:
             continue
         candidates.append(path)
     if not candidates:
-        raise util.BuildError(
-            f"no OTA image found in {dist}; expected a sysupgrade .bin/.itb/.img file"
-        )
+        raise util.BuildError(f"no OTA image found in {dist}; expected a sysupgrade .bin/.itb/.img file")
 
     def score(path: Path) -> tuple[int, int, str]:
         name = path.name.lower()
@@ -222,7 +220,13 @@ def generate_index(
         raise util.BuildError("OTA index needs a device name; .zerowrt-info.json is missing it")
     target = str(info.get("target") or build_info.get("tree", ""))
     label = " ".join(
-        part for part in (info.get("device_vendor", ""), info.get("device_model", "")) if part
+        part
+        for part in (
+            info.get("device_vendor", ""),
+            info.get("device_model", ""),
+            info.get("device_variant", ""),
+        )
+        if part
     ).strip()
     digest = checksums.get(image.name) or util.sha256_file(image)
     size = image.stat().st_size
@@ -285,9 +289,7 @@ def embed(
     if not device:
         raise util.BuildError("cannot embed OTA metadata without a device name")
     target = f"{info.get('board', '')}/{info.get('subtarget', '')}".strip("/")
-    product = " ".join(
-        part for part in (info.get("device_vendor", ""), info.get("device_model", "")) if part
-    ).strip()
+    product = " ".join(part for part in (info.get("device_vendor", ""), info.get("device_model", "")) if part).strip()
 
     metadata = {
         "dist": str(info.get("dist") or "ZeroWrt"),
@@ -310,14 +312,11 @@ def embed(
             "#!/bin/sh",
             "# Fill in the default index URL when the user has not configured one.",
             "[ -f /etc/config/ota ] || exit 0",
-            (
-                "[ -n \"$(uci -q get ota.config.api_url)\" ] || "
-                f"uci -q set ota.config.api_url={_shell_quote(api_url)}"
-            ),
+            (f'[ -n "$(uci -q get ota.config.api_url)" ] || uci -q set ota.config.api_url={_shell_quote(api_url)}'),
         ]
         if download_proxy:
             lines.append(
-                "[ -n \"$(uci -q get ota.config.download_proxy)\" ] || "
+                '[ -n "$(uci -q get ota.config.download_proxy)" ] || '
                 f"uci -q set ota.config.download_proxy={_shell_quote(download_proxy)}"
             )
         lines.extend(["uci -q commit ota", "exit 0", ""])

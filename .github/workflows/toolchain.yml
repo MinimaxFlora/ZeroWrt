@@ -1,9 +1,8 @@
 name: Build Toolchain Cache
 
 # Compiles the cross toolchain once and publishes it as a compressed archive in
-# the "toolchain" release. The firmware build restores it and skips the
-# toolchain compile. Regenerate this cache after changing the target, the libc
-# or the GCC version (the config selects GCC 16).
+# the "toolchain" release (release title: Toolchain_Cache).  Build ZeroWrt
+# restores it with `cache restore` and skips the toolchain compile.
 
 on:
   workflow_dispatch:
@@ -12,15 +11,16 @@ permissions:
   contents: write
 
 concurrency:
-  group: zerowrt-toolchain-${{ github.ref }}
+  group: zerowrt-toolchain
   cancel-in-progress: false
 
 env:
   PYTHONUNBUFFERED: "1"
   BUILD_ROOT: /builder
   ZEROWRT_SOURCE_DIR: /builder/source
-  ZEROWRT_DEVICE: ruijie_rg-x60-new
+  ZEROWRT_DEVICE: netcore_n60-pro
   ZEROWRT_DIST: ZeroWrt
+  TZ: Asia/Shanghai
 
 jobs:
   toolchain:
@@ -63,17 +63,11 @@ jobs:
       - name: Add external packages
         run: python3 scripts/zerowrt.py packages add --tree "$ZEROWRT_SOURCE_DIR"
 
-      - name: Apply core customisations
-        run: |
-          python3 scripts/zerowrt.py source customize \
-            --tree "$ZEROWRT_SOURCE_DIR" \
-            --assets "$GITHUB_WORKSPACE/assets"
-
-      - name: Apply patches
-        run: python3 scripts/zerowrt.py patches apply --tree "$ZEROWRT_SOURCE_DIR"
-
       - name: Apply device .config
-        run: python3 scripts/zerowrt.py config apply --tree "$ZEROWRT_SOURCE_DIR"
+        run: |
+          python3 scripts/zerowrt.py config apply \
+            --tree "$ZEROWRT_SOURCE_DIR" \
+            --device "$ZEROWRT_DEVICE"
 
       - name: Build toolchain
         env:

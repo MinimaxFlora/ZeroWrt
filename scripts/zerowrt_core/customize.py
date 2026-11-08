@@ -1,14 +1,14 @@
-"""In-tree customisation: branding, default address, password, shell, ttyd, WiFi.
+"""In-tree firmware customisation.
 
-This is the Python replacement for the vendor ``diy-script.sh``. Every edit is
-anchored on a small, named pattern and verified afterwards; a silently missed
-``sed`` expression is how a firmware ships with the wrong default IP or an open
-WiFi network.
+Every change is anchored on a named upstream line and verified afterwards.  A
+silently missed replacement is how a firmware ships with the wrong LAN address,
+an open WiFi network or the upstream ImmortalWrt banner.
 """
 
 from __future__ import annotations
 
-import json
+import base64
+import io
 import re
 import shutil
 from pathlib import Path
@@ -22,25 +22,18 @@ OPENWRT_RELEASE = Path("package/base-files/files/etc/openwrt_release")
 OS_RELEASE = Path("package/base-files/files/usr/lib/os-release")
 BANNER = Path("package/base-files/files/etc/banner")
 SHADOW = Path("package/base-files/files/etc/shadow")
-PASSWD = Path("package/base-files/files/etc/passwd")
-PROFILE = Path("package/base-files/files/etc/profile")
-TTYD_CONFIG = Path("feeds/packages/utils/ttyd/files/ttyd.config")
-TTYD_INIT = Path("feeds/packages/utils/ttyd/files/ttyd.init")
-TTYD_MENU = Path("feeds/luci/applications/luci-app-ttyd/root/usr/share/luci/menu.d/luci-app-ttyd.json")
-MTWIFI = Path("package/mtk/applications/mtwifi-cfg-ucode/files/lib/wifi/mtwifi.uc")
+MTWIFI = Path("package/mtk/applications/mtwifi-cfg/files/mtwifi.sh")
+ARGON_THEME = Path("package/new/luci-theme-argon")
 
-IPAD_RE = re.compile(r'ipad=\$\{ipaddr:-"[^"]*"\}')
-HOSTNAME_RE = re.compile(r"hostname='(?:LEDE|OpenWrt|ImmortalWrt|ZeroWrt)'")
-VERSION_VAR_RE = re.compile(
-    r"^(?P<var>VERSION_DIST|VERSION_MANUFACTURER):=\$\(if \$\((?P=var)\),\$\((?P=var)\),[^)\n]+\)",
+VERSION_DIST_RE = re.compile(
+    r"^(VERSION_DIST:=\$\(if \$\(VERSION_DIST\),\$\(VERSION_DIST\),)([^)\n]+)(\))$",
     re.M,
 )
-VERSION_NUMBER_BLOCK_RE = re.compile(
-    r"VERSION_NUMBER:=\$\(call qstrip,\$\(CONFIG_VERSION_NUMBER\)\)\s*\n"
-    r"VERSION_NUMBER:=\$\(if \$\(VERSION_NUMBER\),\$\(VERSION_NUMBER\),[^)\n]+\)"
+VERSION_MANUFACTURER_RE = re.compile(
+    r"^(VERSION_MANUFACTURER:=\$\(if \$\(VERSION_MANUFACTURER\),\$\(VERSION_MANUFACTURER\),)([^)\n]+)(\))$",
+    re.M,
 )
-
-PROMPT = r"""export PS1='\[\e[32;1m\][\u@\h\[\e[0m\] \[\033[01;34m\]\W\[\033[00m\]\[\e[32;1m\]]\[\e[0m\]\$ '"""
+HOSTNAME_RE = re.compile(r"hostname='(?:LEDE|OpenWrt|ImmortalWrt|ZeroWrt)'")
 
 
 def _tree(tree: Path) -> Path:
@@ -52,40 +45,33 @@ def _require(path: Path) -> None:
         raise util.BuildError(f"missing {path}; the source tree layout changed")
 
 
-def patch_version_mk(tree: Path, *, dist: str, version: str) -> None:
+def remove_vendor_overrides(tree: Path) -> None:
+    """Delete ``files/etc`` so it cannot override our banner/config_generate."""
+    tree = _tree(tree)
+    override = tree / "files" / "etc"
+    if override.exists():
+        util.remove_path(override)
+        util.log("removed files/etc (vendor overrides)")
+    files_dir = tree / "files"
+    if files_dir.is_dir() and not any(files_dir.iterdir()):
+        files_dir.rmdir()
+
+
+def patch_version_mk(tree: Path, *, dist: str) -> None:
     tree = _tree(tree)
     path = tree / VERSION_MK
     _require(path)
     util.header("Patching include/version.mk")
 
     text = util.read_text(path)
-    replacements = 0
-    for match in VERSION_VAR_RE.finditer(text):
-        variable = match.group("var")
-        text = text.replace(
-            match.group(0),
-            f"{variable}:=$(if $({variable}),$({variable}),{dist})",
-        )
-        replacements += 1
-    if replacements != 2:
-        raise util.BuildError(f"{VERSION_MK}: VERSION_DIST/VERSION_MANUFACTURER defaults were not found")
-
-    if f"VERSION_NUMBER:={version}" in text:
-        count = 1
-    else:
-        text, count = VERSION_NUMBER_BLOCK_RE.subn(f"VERSION_NUMBER:={version}", text)
-        if count != 1:
-            # A slightly different upstream layout still has the second line.
-            text, count = re.subn(
-                r"^(VERSION_NUMBER:=\$\(if \$\(VERSION_NUMBER\),\$\(VERSION_NUMBER\),)[^)\n]+(\))",
-                rf"\g<1>{version}\g<2>",
-                text,
-                flags=re.M,
-            )
-    if count != 1:
-        raise util.BuildError(f"{VERSION_MK}: VERSION_NUMBER definition was not found")
+    text, dist_count = VERSION_DIST_RE.subn(rf"\g<1>{dist}\g<3>", text)
+    text, manufacturer_count = VERSION_MANUFACTURER_RE.subn(rf"\g<1>{dist}\g<3>", text)
+    if dist_count != 1:
+        raise util.BuildError(f"{VERSION_MK}: VERSION_DIST default was not found")
+    if manufacturer_count != 1:
+        raise util.BuildError(f"{VERSION_MK}: VERSION_MANUFACTURER default was not found")
     util.write_text(path, text)
-    util.log(f"VERSION_DIST/MANUFACTURER -> {dist}; VERSION_NUMBER -> {version}")
+    util.log(f"VERSION_DIST/VERSION_MANUFACTURER -> {dist}")
 
 
 def patch_release_files(tree: Path, *, dist: str, version: str) -> None:
@@ -98,13 +84,13 @@ def patch_release_files(tree: Path, *, dist: str, version: str) -> None:
 
     text = util.read_text(release)
     text, description = re.subn(
-        r"^DISTRIB_DESCRIPTION=.*$",
+        r"^DISTRIB_DESCRIPTION='[^']*'$",
         f"DISTRIB_DESCRIPTION='{dist}-{version}'",
         text,
         flags=re.M,
     )
     text, revision = re.subn(
-        r"^DISTRIB_REVISION=.*$",
+        r"^DISTRIB_REVISION='[^']*'$",
         "DISTRIB_REVISION=' By MinimaxFlora'",
         text,
         flags=re.M,
@@ -122,21 +108,40 @@ def patch_release_files(tree: Path, *, dist: str, version: str) -> None:
     util.log(f"release strings -> {dist}-{version}")
 
 
-def patch_config_generate(tree: Path, *, ip: str, hostname: str) -> None:
+def patch_config_generate(tree: Path, *, hostname: str, ip: str) -> None:
+    """Set the hostname and unify both upstream LAN defaults.
+
+    The upstream file has two LAN branches: Ruijie boards get
+    ``192.168.110.1`` and every other board gets ``192.168.6.1``.  ZeroWrt uses
+    one configurable address for every device, default ``10.0.0.1``; both
+    upstream defaults are replaced, while the non-LAN
+    ``192.168.$((addr_offset++)).1`` fallback is left untouched.
+    """
     tree = _tree(tree)
     path = tree / CONFIG_GENERATE
     _require(path)
-    util.header("Patching config_generate (LAN IP / hostname)")
+    util.header("Patching config_generate (hostname / LAN IP)")
 
     text = util.read_text(path)
-    text, ip_count = IPAD_RE.subn(f'ipad=${{ipaddr:-"{ip}"}}', text)
     text, host_count = HOSTNAME_RE.subn(f"hostname='{hostname}'", text)
-    if ip_count == 0:
-        raise util.BuildError(f"{CONFIG_GENERATE}: no default LAN address was found")
-    if host_count == 0:
-        raise util.BuildError(f"{CONFIG_GENERATE}: no default hostname was found")
+    if host_count != 1:
+        raise util.BuildError(f"{CONFIG_GENERATE}: default hostname was not found")
+
+    replaced = 0
+    for expected in ("192.168.110.1", "192.168.6.1"):
+        old = f'ipad=${{ipaddr:-"{expected}"}}'
+        new = f'ipad=${{ipaddr:-"{ip}"}}'
+        count = text.count(old)
+        if count:
+            text = text.replace(old, new)
+            replaced += count
+
+    new_default = f'ipad=${{ipaddr:-"{ip}"}}'
+    if text.count(new_default) < 2:
+        raise util.BuildError(f"{CONFIG_GENERATE}: expected the Ruijie and non-Ruijie LAN defaults")
+
     util.write_text(path, text)
-    util.log(f"default LAN IP -> {ip}; hostname -> {hostname} ({ip_count} address defaults)")
+    util.log(f"LAN IP -> {ip} for both LAN defaults ({replaced} replaced)")
 
 
 def patch_banner(tree: Path, assets: Path) -> None:
@@ -167,6 +172,9 @@ def _openssl_hash(password: str) -> str:
 
 
 def patch_root_password(tree: Path, password: str) -> None:
+    if not password:
+        util.log("root password left unchanged")
+        return
     tree = _tree(tree)
     path = tree / SHADOW
     _require(path)
@@ -180,112 +188,6 @@ def patch_root_password(tree: Path, password: str) -> None:
     util.log("root password hash written to package/base-files/files/etc/shadow")
 
 
-def patch_profile(tree: Path, *, repo_root: Path, dist: str) -> None:
-    tree = _tree(tree)
-    path = tree / PROFILE
-    _require(path)
-    util.header("Patching the login shell profile")
-
-    text = util.read_text(path)
-    if ":/opt/usr/sbin" not in text:
-        text, count = re.subn(
-            r'^export PATH="%PATH%"$',
-            'export PATH="%PATH%:/opt/bin:/opt/sbin:/opt/usr/bin:/opt/usr/sbin"',
-            text,
-            flags=re.M,
-        )
-        if count != 1:
-            raise util.BuildError(f"{PROFILE}: PATH line was not found")
-    if PROMPT not in text:
-        text, count = re.subn(r"^export PS1='\\u@\\h:\\w\\\$ '$", lambda _m: PROMPT, text, flags=re.M)
-        if count != 1:
-            raise util.BuildError(f"{PROFILE}: default PS1 was not found")
-    if "export TERM=xterm-color" not in text:
-        text = text.replace("export ENV=/etc/shinit", "export TERM=xterm-color\nexport ENV=/etc/shinit", 1)
-    if "export HISTCONTROL=ignoredups" not in text:
-        text = text.replace(
-            "export ENV=/etc/shinit",
-            "export ENV=/etc/shinit\nexport HISTCONTROL=ignoredups",
-            1,
-        )
-    util.write_text(path, text)
-
-    passwd = tree / PASSWD
-    _require(passwd)
-    passwd_text = util.read_text(passwd)
-    passwd_text, count = re.subn(
-        r"^(root:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:)[^:\n]*$",
-        r"\g<1>/usr/bin/bash",
-        passwd_text,
-        count=1,
-        flags=re.M,
-    )
-    if count != 1:
-        raise util.BuildError(f"{PASSWD}: root shell entry was not found")
-    util.write_text(passwd, passwd_text)
-
-    for name in (".bashrc", ".bash_profile"):
-        source = Path(repo_root) / "scripts" / name
-        if not source.is_file():
-            raise util.BuildError(f"shell asset not found: {source}")
-        destination = tree / "package" / "base-files" / "files" / "root" / name
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, destination)
-    util.log(f"shell -> bash, prompt and {dist} PATH updated")
-
-
-def patch_ttyd(tree: Path) -> None:
-    tree = _tree(tree)
-    util.header("Patching ttyd (auto login, menu order, quiet init)")
-    changed = 0
-
-    config = tree / TTYD_CONFIG
-    if config.exists():
-        text = util.read_text(config)
-        if "option command '/bin/login -f root'" not in text:
-            text, count = re.subn(
-                r"^(\s*option\s+command\s+)'/bin/login'\s*$",
-                r"\g<1>'/bin/login -f root'",
-                text,
-                flags=re.M,
-            )
-            if count:
-                util.write_text(config, text)
-                changed += 1
-    else:
-        util.warn(f"missing {TTYD_CONFIG}; skipping ttyd config")
-
-    init = tree / TTYD_INIT
-    if init.exists():
-        text = util.read_text(init)
-        new = text.replace("procd_set_param stdout 1", "procd_set_param stdout 0")
-        new = new.replace("procd_set_param stderr 1", "procd_set_param stderr 0")
-        if new != text:
-            util.write_text(init, new)
-            changed += 1
-    else:
-        util.warn(f"missing {TTYD_INIT}; skipping ttyd init")
-
-    menu = tree / TTYD_MENU
-    if menu.exists():
-        data = json.loads(util.read_text(menu))
-        if isinstance(data, dict):
-            if "admin/services/ttyd" in data and "admin/system/ttyd" not in data:
-                data["admin/system/ttyd"] = data.pop("admin/services/ttyd")
-            entry = data.get("admin/system/ttyd")
-            if isinstance(entry, dict) and entry.get("order") != 50:
-                entry["order"] = 50
-                util.write_text(menu, json.dumps(data, indent="\t", ensure_ascii=False) + "\n")
-                changed += 1
-    else:
-        util.warn(f"missing {TTYD_MENU}; skipping ttyd menu")
-
-    if changed == 0:
-        util.log("ttyd configuration already up to date")
-    else:
-        util.log(f"ttyd customisations applied ({changed} file(s))")
-
-
 def patch_wifi(tree: Path, settings: BuildSettings) -> None:
     tree = _tree(tree)
     path = tree / MTWIFI
@@ -293,138 +195,291 @@ def patch_wifi(tree: Path, settings: BuildSettings) -> None:
     util.header("Patching default WiFi configuration")
 
     text = util.read_text(path)
-    expected = {band: settings.ssid(band) for band in ("2g", "5g", "6g")}
-    labels = {"2.4G": "2g", "5G": "5g", "6G": "6g"}
-    for label, band in labels.items():
-        text, count = re.subn(
-            rf'ssid: "ImmortalWrt-{re.escape(label)}"',
-            f'ssid: "{expected[band]}"',
-            text,
-        )
-        if count:
+    expected = {band: settings.ssid(band) for band in ("2g", "5g")}
+    for label, band in (("2.4G", "2g"), ("5G", "5g")):
+        old = f'ssid="ImmortalWrt-{label}"'
+        new = f'ssid="{expected[band]}"'
+        if new in text:
             continue
-        # An already patched file has the configured SSID; anything else is a
-        # layout we do not understand. The RG-X60 is dual-band, so a missing
-        # 6 GHz default is not fatal.
-        if f'ssid: "{expected[band]}"' in text:
-            continue
-        if band == "6g":
-            util.warn(f"{MTWIFI}: no 6 GHz default SSID; skipping that band")
-            continue
-        raise util.BuildError(f"{MTWIFI}: default {label} SSID was not found")
+        text, count = re.subn(re.escape(old), new, text)
+        if count != 1:
+            raise util.BuildError(f"{MTWIFI}: default {label} SSID was not found")
 
-    key = settings.wifi_password
-    if '"encryption": "psk2"' in text and f'"key": "{key}"' in text:
-        util.log("default WiFi configuration already up to date")
-    else:
-        text, count = re.subn(
-            r'(?P<indent>[ \t]*)"encryption": "none"',
-            lambda m: f'{m.group("indent")}"encryption": "psk2",\n{m.group("indent")}"key": "{key}"',
-            text,
-            count=1,
+    # Quote the SSID passed to UCI so spaces in the configured name cannot
+    # split the command.
+    text = text.replace(
+        "set wireless.default_${dev}.ssid=${ssid}",
+        "set wireless.default_${dev}.ssid='${ssid}'",
+    )
+
+    encryption_pattern = re.compile(
+        r"^(?P<indent>[ \t]*)set wireless\.default_\$\{dev\}\.encryption=none\s*$",
+        re.M,
+    )
+
+    def add_key(match: re.Match[str]) -> str:
+        indent = match.group("indent")
+        return (
+            f"{indent}set wireless.default_${{dev}}.encryption=psk2\n"
+            f"{indent}set wireless.default_${{dev}}.key='{settings.wifi_password}'"
         )
-        if count == 0:
-            text, count = re.subn(
-                r'(?P<indent>[ \t]*)"key": "[^"]*"',
-                lambda m: f'{m.group("indent")}"key": "{key}"',
+
+    text, count = encryption_pattern.subn(add_key, text)
+    if count == 0:
+        # Already patched (or a different layout): replace the key if present,
+        # and insert one after the encryption line if it is missing.
+        key_pattern = re.compile(r"^(?P<indent>[ \t]*)set wireless\.default_\$\{dev\}\.key=.*$", re.M)
+        if key_pattern.search(text):
+            text = key_pattern.sub(
+                lambda m: f"{m.group('indent')}set wireless.default_${{dev}}.key='{settings.wifi_password}'",
                 text,
                 count=1,
             )
-        if count == 0:
+        elif "set wireless.default_${dev}.encryption=psk2" in text:
+            text = text.replace(
+                "set wireless.default_${dev}.encryption=psk2",
+                "set wireless.default_${dev}.encryption=psk2\n"
+                f"\t\t\t\t\tset wireless.default_${{dev}}.key='{settings.wifi_password}'",
+                1,
+            )
+        else:
             raise util.BuildError(f"{MTWIFI}: open default WiFi network was not found")
-        util.write_text(path, text)
+    util.write_text(path, text)
 
     final = util.read_text(path)
     for _band, ssid in expected.items():
-        if f'ssid: "{ssid}"' not in final:
+        if f'ssid="{ssid}"' not in final:
             raise util.BuildError(f"{MTWIFI}: SSID {ssid} was not applied")
-    if '"encryption": "psk2"' not in final or f'"key": "{key}"' not in final:
+    if "encryption=psk2" not in final or f"key='{settings.wifi_password}'" not in final:
         raise util.BuildError(f"{MTWIFI}: WPA2 key was not applied")
     if "ImmortalWrt-" in final:
         raise util.BuildError(f"{MTWIFI}: an upstream SSID is still present")
-    util.log(f"SSIDs: {expected['2g']} / {expected['5g']} / {expected['6g']}")
+    util.log(
+        f"SSIDs: {expected['2g']} / {expected['5g']}; encryption: psk2; password: {'*' * len(settings.wifi_password)}"
+    )
 
 
-def apply(tree: Path, settings: BuildSettings, *, assets: Path, repo_root: Path) -> None:
+def _set_uci_option(text: str, name: str, value: str) -> str:
+    pattern = re.compile(rf"^(?P<indent>[ \t]*)option\s+{re.escape(name)}\s+.*$", re.M)
+    replacement = f"\\g<indent>option {name} '{value}'"
+    text, count = pattern.subn(replacement, text, count=1)
+    if count:
+        return text
+    text, count = re.subn(
+        r"(^config\s+global\s*$)",
+        rf"\1\n\toption {name} '{value}'",
+        text,
+        count=1,
+        flags=re.M,
+    )
+    if count != 1:
+        raise util.BuildError("Argon config: 'config global' section was not found")
+    return text
+
+
+def _open_favicon(path: Path):
+    try:
+        from PIL import Image
+    except ImportError as exc:  # pragma: no cover - runner installs python3-pil
+        raise util.BuildError("Pillow is required to convert assets/favicon.ico") from exc
+    if not path.is_file():
+        raise util.BuildError(f"favicon asset not found: {path}")
+    with Image.open(path) as opened:
+        return opened.convert("RGBA")
+
+
+def _save_png(image, destination: Path, size: int) -> None:
+    from PIL import Image
+
+    resampling = getattr(Image, "Resampling", Image).LANCZOS
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    resized = image.resize((size, size), resampling)
+    resized.save(destination, format="PNG", optimize=True)
+
+
+def _write_argon_svg(image, destination: Path) -> None:
+    from PIL import Image
+
+    resampling = getattr(Image, "Resampling", Image).LANCZOS
+    buffer = io.BytesIO()
+    image.resize((256, 256), resampling).save(buffer, format="PNG", optimize=True)
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    svg = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" '
+        'viewBox="0 0 256 256">\n'
+        f'  <image width="256" height="256" href="data:image/png;base64,{encoded}"/>\n'
+        "</svg>\n"
+    )
+    util.write_text(destination, svg)
+
+
+def patch_argon(tree: Path, assets: Path) -> None:
+    tree = _tree(tree)
+    theme = tree / ARGON_THEME
+    _require(theme / "Makefile")
+    htdocs = theme / "htdocs" / "luci-static" / "argon"
+    _require(htdocs / "img" / "bg1.webp")
+    _require(htdocs / "favicon.ico")
+    _require(theme / "root" / "etc" / "config" / "argon")
+    util.header("Patching Argon theme (background, logo, icons, light mode)")
+
+    background = Path(assets) / "bg1.webp"
+    favicon = Path(assets) / "favicon.ico"
+    if not background.is_file() or not favicon.is_file():
+        raise util.BuildError("assets/bg1.webp and assets/favicon.ico are required for Argon")
+    shutil.copyfile(background, htdocs / "img" / "bg1.webp")
+    shutil.copyfile(favicon, htdocs / "favicon.ico")
+
+    image = _open_favicon(favicon)
+    for size in (32, 16):
+        _save_png(image, htdocs / "icon" / f"favicon-{size}x{size}.png", size)
+    _save_png(image, htdocs / "icon" / "android-icon-192x192.png", 192)
+    _save_png(image, htdocs / "icon" / "apple-icon-144x144.png", 144)
+    _write_argon_svg(image, htdocs / "img" / "argon.svg")
+
+    config = theme / "root" / "etc" / "config" / "argon"
+    text = util.read_text(config)
+    for name, value in (
+        ("mode", "light"),
+        ("primary", "#EC4899"),
+        ("dark_primary", "#BE185D"),
+        ("dark_primary_mode", "custom"),
+    ):
+        text = _set_uci_option(text, name, value)
+    util.write_text(config, text)
+    util.log("Argon: bg1.webp / favicon / SVG logo / PNG icons / forced light mode / #EC4899")
+
+
+def _verify_argon(tree: Path, assets: Path) -> list[str]:
+    problems: list[str] = []
+    theme = tree / ARGON_THEME
+    htdocs = theme / "htdocs" / "luci-static" / "argon"
+    checks = {
+        "background": htdocs / "img" / "bg1.webp",
+        "favicon": htdocs / "favicon.ico",
+        "svg logo": htdocs / "img" / "argon.svg",
+        "android icon": htdocs / "icon" / "android-icon-192x192.png",
+        "apple icon": htdocs / "icon" / "apple-icon-144x144.png",
+        "favicon 16": htdocs / "icon" / "favicon-16x16.png",
+        "favicon 32": htdocs / "icon" / "favicon-32x32.png",
+    }
+    for label, path in checks.items():
+        if not path.is_file():
+            problems.append(f"Argon {label} is missing: {path.relative_to(tree)}")
+    if (htdocs / "img" / "bg1.webp").is_file() and (htdocs / "img" / "bg1.webp").read_bytes() != (
+        Path(assets) / "bg1.webp"
+    ).read_bytes():
+        problems.append("Argon background does not match assets/bg1.webp")
+    if (htdocs / "favicon.ico").is_file() and (htdocs / "favicon.ico").read_bytes() != (
+        Path(assets) / "favicon.ico"
+    ).read_bytes():
+        problems.append("Argon favicon does not match assets/favicon.ico")
+    if (htdocs / "img" / "argon.svg").is_file() and (
+        "data:image/png;base64," not in util.read_text(htdocs / "img" / "argon.svg")
+    ):
+        problems.append("Argon SVG logo was not generated from the favicon")
+    config_path = theme / "root" / "etc" / "config" / "argon"
+    if config_path.is_file():
+        config = util.read_text(config_path)
+        for needle in (
+            "option mode 'light'",
+            "option primary '#EC4899'",
+            "option dark_primary '#BE185D'",
+        ):
+            if needle not in config:
+                problems.append(f"Argon config is missing {needle!r}")
+    return problems
+
+
+def apply(
+    tree: Path,
+    settings: BuildSettings,
+    *,
+    assets: Path,
+    repo_root: Path,
+) -> None:
+    """Apply every requested firmware customisation."""
     tree = _tree(tree)
     info = state.read(tree)
     build_date = state.build_date(info)
     if build_date <= 0:
-        raise util.BuildError("build date is missing; run 'config apply' before customising")
-    version = info.get("version") or state.version_for(build_date)
+        raise util.BuildError("build date is missing; run 'source clone' before customising")
+    version = str(info.get("version") or state.version_for(build_date))
+    profile = settings.profile()
 
-    patch_version_mk(tree, dist=settings.dist_name, version=version)
+    remove_vendor_overrides(tree)
+    patch_version_mk(tree, dist=settings.dist_name)
     patch_release_files(tree, dist=settings.dist_name, version=version)
-    patch_config_generate(tree, ip=settings.ip, hostname=settings.dist_name)
+    patch_config_generate(
+        tree,
+        hostname=settings.dist_name,
+        ip=settings.effective_ip(),
+    )
     patch_banner(tree, assets)
     patch_root_password(tree, settings.root_password)
-    patch_profile(tree, repo_root=repo_root, dist=settings.dist_name)
-    patch_ttyd(tree)
     patch_wifi(tree, settings)
+    patch_argon(tree, assets)
     verify(tree, settings, assets=assets)
+    util.log(f"customisations applied for {profile.name} ({profile.target}, LAN {settings.effective_ip()})")
 
 
 def verify(tree: Path, settings: BuildSettings, *, assets: Path) -> None:
     tree = _tree(tree)
     util.header("Verifying customisations")
     problems: list[str] = []
+    version = str(state.read(tree).get("version") or "")
+    if not version:
+        problems.append("build version is missing from .zerowrt-info.json")
 
-    version = state.version_for(state.build_date(state.read(tree)))
     version_text = util.read_text(tree / VERSION_MK)
     if f"VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),{settings.dist_name})" not in version_text:
         problems.append("VERSION_DIST default is wrong")
     manufacturer = f"VERSION_MANUFACTURER:=$(if $(VERSION_MANUFACTURER),$(VERSION_MANUFACTURER),{settings.dist_name})"
     if manufacturer not in version_text:
         problems.append("VERSION_MANUFACTURER default is wrong")
-    if f"VERSION_NUMBER:={version}" not in version_text:
-        problems.append(f"VERSION_NUMBER is not {version}")
 
     release = util.read_text(tree / OPENWRT_RELEASE)
     if f"DISTRIB_DESCRIPTION='{settings.dist_name}-{version}'" not in release:
         problems.append("DISTRIB_DESCRIPTION is wrong")
     if "DISTRIB_REVISION=' By MinimaxFlora'" not in release:
         problems.append("DISTRIB_REVISION is wrong")
-    expected_release = (
-        f'OPENWRT_RELEASE="{settings.dist_name} 标准版 @R{version} BY MinimaxFlora"'
-    )
+    expected_release = f'OPENWRT_RELEASE="{settings.dist_name} 标准版 @R{version} BY MinimaxFlora"'
     if expected_release not in util.read_text(tree / OS_RELEASE):
         problems.append("OPENWRT_RELEASE is wrong")
 
     generate = util.read_text(tree / CONFIG_GENERATE)
-    addresses = set(re.findall(r'ipad=\$\{ipaddr:-"([^"]*)"\}', generate))
-    wrong = sorted(value for value in addresses if value != settings.ip)
-    if wrong:
-        problems.append(f"config_generate still defaults to {', '.join(wrong)}")
+    expected_ip = settings.effective_ip()
+    if generate.count(f'ipad=${{ipaddr:-"{expected_ip}"}}') < 2:
+        problems.append(f"config_generate does not use {expected_ip} for both LAN defaults")
+    for old in ("192.168.110.1", "192.168.6.1"):
+        if old in generate:
+            problems.append(f"config_generate still contains the old default {old}")
     if f"hostname='{settings.dist_name}'" not in generate:
         problems.append("config_generate hostname is wrong")
+
+    if (tree / "files" / "etc").exists():
+        problems.append("files/etc still exists and can override the base files")
 
     banner = tree / BANNER
     if not banner.exists() or banner.read_bytes() != (Path(assets) / "banner").read_bytes():
         problems.append("login banner does not match assets/banner")
 
-    shadow = util.read_text(tree / SHADOW)
-    if not re.search(r"^root:\$5\$", shadow, re.M):
-        problems.append("root password hash is not SHA-256 crypt")
-
-    passwd = util.read_text(tree / PASSWD)
-    if not re.search(r"^root:.*:/usr/bin/bash$", passwd, re.M):
-        problems.append("root shell is not bash")
-
-    profile = util.read_text(tree / PROFILE)
-    for needle in ("/opt/usr/sbin", "export TERM=xterm-color", "export HISTCONTROL=ignoredups"):
-        if needle not in profile:
-            problems.append(f"profile is missing {needle!r}")
-
-    ttyd = tree / TTYD_CONFIG
-    if ttyd.exists() and "option command '/bin/login -f root'" not in util.read_text(ttyd):
-        problems.append("ttyd auto login is not configured")
+    if settings.root_password:
+        shadow = util.read_text(tree / SHADOW)
+        if not re.search(r"^root:\$5\$", shadow, re.M):
+            problems.append("root password hash is not SHA-256 crypt")
 
     wifi = util.read_text(tree / MTWIFI)
     for band in ("2g", "5g"):
-        if f'ssid: "{settings.ssid(band)}"' not in wifi:
+        if f'ssid="{settings.ssid(band)}"' not in wifi:
             problems.append(f"WiFi SSID {settings.ssid(band)} is missing")
-    if '"encryption": "psk2"' not in wifi:
+    if "encryption=psk2" not in wifi:
         problems.append("WiFi encryption is not WPA2")
+    if f"key='{settings.wifi_password}'" not in wifi:
+        problems.append("WiFi key is missing")
+
+    problems.extend(_verify_argon(tree, assets))
 
     if problems:
         raise util.BuildError("customisation failed:\n  - " + "\n  - ".join(problems))

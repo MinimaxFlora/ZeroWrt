@@ -1,83 +1,84 @@
 from __future__ import annotations
 
-import tarfile
 import tempfile
-import time
 import unittest
-from datetime import UTC, datetime
 from pathlib import Path
 
 from zerowrt_core import build, state, util
 
 
-class CollectTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.tree = Path(self.tmp.name)
-        (self.tree / ".config").write_text("CONFIG_TARGET_mediatek=y\n", encoding="utf-8")
-        target = self.tree / "bin" / "targets" / "mediatek" / "filogic"
+class BuildTest(unittest.TestCase):
+    def _tree(self, files: list[str]) -> tuple[tempfile.TemporaryDirectory, Path]:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        tree = Path(tmp.name)
+        target = tree / "bin" / "targets" / "mediatek" / "filogic"
         target.mkdir(parents=True)
-        (target / "immortalwrt-mediatek-filogic-ruijie_rg-x60-new-mtkuboot-squashfs-sysupgrade.bin").write_bytes(
-            b"firmware"
-        )
-        (target / "immortalwrt-mediatek-filogic-ruijie_rg-x60-new-mtkuboot.manifest").write_text(
-            "kernel - 6.12.50\n", encoding="utf-8"
-        )
-        packages = self.tree / "bin" / "packages" / "aarch64_cortex-a53" / "base"
-        packages.mkdir(parents=True)
-        (packages / "foo-1.0.apk").write_bytes(b"apk")
+        for name in files:
+            (target / name).write_bytes(b"firmware")
         state.write(
-            self.tree,
+            tree,
             {
                 "board": "mediatek",
                 "subtarget": "filogic",
-                "target": "mediatek/filogic",
-                "device": "ruijie_rg-x60-new-mtkuboot",
-                "device_vendor": "Ruijie",
-                "device_model": "RG-X60 New",
-                "profile": "ruijie_rg-x60-new",
-                "artifact": "ruijie_rg-x60-new",
-                "version": "20261102",
-                "build_date": int(time.time()),
-                "source_repo": "chasey-dev/immortalwrt-mt798x-rebase",
-                "source_ref": "25.12",
-                "source_commit": "abc123",
-                "layout": "MTK U-Boot layout (mtkuboot)",
+                "device": "netcore_n60-pro",
+                "build_date": 1762524000,
+                "version": "20261107",
             },
         )
+        return tmp, tree
 
-    def test_collect_keeps_firmware_and_build_metadata(self) -> None:
-        out = self.tree / "dist"
-        build.collect(self.tree, out)
-        names = {path.name for path in out.iterdir()}
-        self.assertIn("immortalwrt-mediatek-filogic-ruijie_rg-x60-new-mtkuboot-squashfs-sysupgrade.bin", names)
-        self.assertIn("build.config", names)
-        self.assertIn("Packages.tar.gz", names)
-        self.assertIn("BUILD_INFO.txt", names)
-        self.assertIn("SHA256SUMS", names)
-        info = (out / "BUILD_INFO.txt").read_text(encoding="utf-8")
-        self.assertIn("kernel: 6.12.50", info)
-        self.assertIn("source commit: abc123", info)
-        checksums = (out / "SHA256SUMS").read_text(encoding="utf-8")
-        self.assertIn("immortalwrt-mediatek-filogic-ruijie_rg-x60-new-mtkuboot-squashfs-sysupgrade.bin", checksums)
-        with tarfile.open(out / "Packages.tar.gz", "r:gz") as archive:
-            self.assertTrue(any(name.endswith("foo-1.0.apk") for name in archive.getnames()))
+    def test_collect_only_firmware(self) -> None:
+        names = [
+            "zerowrt-mediatek-filogic-netcore_n60-pro-initramfs-kernel.bin",
+            "zerowrt-mediatek-filogic-netcore_n60-pro-squashfs-sysupgrade.bin",
+            "zerowrt-mediatek-filogic-netcore_n60-pro.manifest",
+            "config.buildinfo",
+            "feeds.buildinfo",
+            "profiles.json",
+            "sha256sums",
+            "version.buildinfo",
+            "mt7981-ram-ddr3-bl2.bin",
+            "mt7986-ram-ddr4-bl2.bin",
+        ]
+        _, tree = self._tree(names)
+        out = tree / "dist"
+        collected = build.collect(tree, out)
+        self.assertEqual(
+            {path.name for path in collected},
+            {
+                "zerowrt-mediatek-filogic-netcore_n60-pro-initramfs-kernel.bin",
+                "zerowrt-mediatek-filogic-netcore_n60-pro-squashfs-sysupgrade.bin",
+            },
+        )
+        self.assertEqual({path.name for path in out.iterdir()}, {path.name for path in collected})
 
-    def test_missing_target_raises(self) -> None:
-        (self.tree / "bin" / "targets").rename(self.tree / "bin" / "targets-moved")
+    def test_collect_ubootmod_files(self) -> None:
+        names = [
+            "zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-bl31-uboot.fip",
+            "zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-initramfs-recovery.itb",
+            "zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-preloader.bin",
+            "zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb",
+        ]
+        _, tree = self._tree(names)
+        collected = build.collect(tree, tree / "dist")
+        self.assertEqual({path.name for path in collected}, set(names))
+
+    def test_no_sysupgrade_fails(self) -> None:
+        _, tree = self._tree(["zerowrt-mediatek-filogic-netcore_n60-pro-initramfs-kernel.bin"])
         with self.assertRaises(util.BuildError):
-            build.collect(self.tree, self.tree / "dist")
+            build.collect(tree, tree / "dist")
 
-    def test_compile_jobs_is_positive(self) -> None:
-        self.assertGreaterEqual(build.compile_jobs(4), 1)
-        self.assertGreaterEqual(build.compile_jobs(1), 1)
+    def test_non_zerowrt_prefix_fails(self) -> None:
+        _, tree = self._tree(["openwrt-mediatek-filogic-netcore_n60-pro-squashfs-sysupgrade.bin"])
+        with self.assertRaises(util.BuildError):
+            build.collect(tree, tree / "dist")
 
-    def test_state_helpers(self) -> None:
-        data = state.read(self.tree)
-        expected = datetime.fromtimestamp(state.build_date(data), UTC).strftime("%Y%m%d")
-        self.assertEqual(state.version_for(state.build_date(data)), expected)
-        self.assertIn("ruijie_rg-x60-new", state.fingerprint(data))
+    def test_is_firmware(self) -> None:
+        self.assertTrue(build.is_firmware("zerowrt-mediatek-filogic-x-squashfs-sysupgrade.bin"))
+        self.assertTrue(build.is_firmware("zerowrt-mediatek-filogic-x-preloader.bin"))
+        self.assertFalse(build.is_firmware("profiles.json"))
+        self.assertFalse(build.is_firmware("config.buildinfo"))
 
 
 if __name__ == "__main__":

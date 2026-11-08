@@ -1,20 +1,9 @@
-# Python
 __pycache__/
 *.py[cod]
-.venv/
 .ruff_cache/
-.pytest_cache/
-
-# Build outputs
-/dist/
-/ota-meta.json
-/toolchain-cache/
-/build/
-/.config
-/.zerowrt-info.json
-
-# Editor / OS
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
+.venv/
+dist/
+_site/
+toolchain-cache/
+.zerowrt-info.json
+*.log

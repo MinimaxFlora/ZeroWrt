@@ -19,9 +19,7 @@ from pathlib import Path
 from . import util
 
 DEFAULT_RELEASE = "toolchain"
-TOOLCHAIN_RE = re.compile(
-    r"^toolchain-(?P<arch>.+)_gcc-(?P<gcc>[0-9]+)\.[^_]+_(?P<libc>[^_]+)$"
-)
+TOOLCHAIN_RE = re.compile(r"^toolchain-(?P<arch>.+)_gcc-(?P<gcc>[0-9]+)\.[^_]+_(?P<libc>[^_]+)$")
 
 
 def asset_name(staging_dir: Path) -> str:
@@ -99,18 +97,14 @@ def restore(tree: Path, *, repo: str, release: str = DEFAULT_RELEASE, optional: 
     matching = [
         asset
         for asset in assets
-        if str(asset.get("name", "")).startswith("toolchain_")
-        and str(asset.get("name", "")).endswith(".tar.zst")
+        if str(asset.get("name", "")).startswith("toolchain_") and str(asset.get("name", "")).endswith(".tar.zst")
     ]
     expected_gcc = _expected_gcc_major(tree)
     if expected_gcc:
-        matching = [
-            asset for asset in matching if f"_gcc-{expected_gcc}.tar.zst" in str(asset.get("name", ""))
-        ]
+        matching = [asset for asset in matching if f"_gcc-{expected_gcc}.tar.zst" in str(asset.get("name", ""))]
     if not matching:
-        message = (
-            f"release {release!r} has no toolchain_*.tar.zst asset"
-            + (f" for GCC {expected_gcc}" if expected_gcc else "")
+        message = f"release {release!r} has no toolchain_*.tar.zst asset" + (
+            f" for GCC {expected_gcc}" if expected_gcc else ""
         )
         if optional:
             util.warn(message)

@@ -1,9 +1,10 @@
-"""Apply the device ``.config`` and verify what defconfig kept.
+"""Build ``.config`` from the upstream high-power template, one device at a time.
 
-The package selection lives in ``configs/ruijie-rg-x60-new.config`` exactly as
-maintained by the MediaTek builder. This module only adds the few selections
-the rewritten pipeline requires (OTA app) and checks that defconfig did not
-silently drop the target or the applications the image is supposed to carry.
+The template ``defconfig/mt7975-ipailna-high-power.config`` is the base that
+provides the MTK WiFi / HNAT / TurboACC options.  It also selects a long list of
+unrelated devices.  This module removes every target/device selection, adds the
+one device requested by the workflow, then appends the ZeroWrt package set and
+runs ``make defconfig``.
 """
 
 from __future__ import annotations
@@ -14,30 +15,95 @@ from pathlib import Path
 
 from . import profiles, state, util
 
-EXTRA_SELECTIONS = {
+BASE_CONFIG = Path("defconfig/mt7975-ipailna-high-power.config")
+BOARD = profiles.BOARD
+SUBTARGET = profiles.SUBTARGET
+
+# Device/target selection lines only.  CONFIG_TARGET_ROOTFS_* and the other
+# image options must survive.
+TARGET_SELECTION_RE = re.compile(
+    r"^(?:# )?CONFIG_TARGET_"
+    r"(?:DEVICE[^\s=]*|MULTI_PROFILE[^\s=]*|PER_DEVICE_ROOTFS[^\s=]*|PROFILE[^\s=]*|"
+    r"BOARD[^\s=]*|SUBTARGET[^\s=]*|ARCH_PACKAGES[^\s=]*|mediatek[^\s=]*)"
+    r"(?:=.*| is not set)\s*$",
+    re.M,
+)
+
+PACKAGE_SELECTIONS: dict[str, str | None] = {
+    "CONFIG_PACKAGE_luci-app-3cat": "y",
+    "CONFIG_PACKAGE_luci-app-acme": "y",
+    "CONFIG_PACKAGE_luci-theme-argon": "y",
+    "CONFIG_PACKAGE_luci-app-arpbind": "y",
+    "CONFIG_PACKAGE_luci-app-commands": "y",
+    "CONFIG_PACKAGE_luci-app-ddns": "y",
+    "CONFIG_PACKAGE_luci-app-openclash": "y",
+    "CONFIG_PACKAGE_luci-app-passwall": "y",
+    "CONFIG_PACKAGE_luci-app-ramfree": "y",
+    "CONFIG_PACKAGE_luci-app-ttyd": "y",
+    "CONFIG_PACKAGE_luci-app-upnp": "y",
     "CONFIG_PACKAGE_luci-app-ota": "y",
     "CONFIG_PACKAGE_luci-i18n-ota-zh-cn": "y",
+    "CONFIG_PACKAGE_luci-proto-wireguard": "y",
+    "CONFIG_PACKAGE_wireguard-tools": "y",
+    "CONFIG_PACKAGE_kmod-wireguard": "y",
+    "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray": "y",
+    "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox": None,
+    "CONFIG_PACKAGE_sing-box": None,
+    "CONFIG_PACKAGE_ddns-scripts-aliyun": "y",
+    "CONFIG_PACKAGE_ddns-scripts-cloudflare": "y",
+    "CONFIG_PACKAGE_ddns-scripts-dnspod": "y",
+    "CONFIG_PACKAGE_ddns-scripts-freedns": "y",
+    "CONFIG_PACKAGE_ddns-scripts-godaddy": "y",
 }
 
 REQUIRED_SELECTIONS = [
-    "CONFIG_GCC_USE_VERSION_16=y",
-    "CONFIG_PACKAGE_luci-app-ota=y",
+    "CONFIG_TARGET_mediatek=y",
+    "CONFIG_TARGET_mediatek_filogic=y",
+    "CONFIG_TARGET_MULTI_PROFILE=y",
+    "CONFIG_TARGET_PER_DEVICE_ROOTFS=y",
+    "CONFIG_PACKAGE_luci-app-3cat=y",
+    "CONFIG_PACKAGE_luci-app-acme=y",
     "CONFIG_PACKAGE_luci-theme-argon=y",
-    "CONFIG_PACKAGE_luci-app-passwall=y",
+    "CONFIG_PACKAGE_luci-app-arpbind=y",
+    "CONFIG_PACKAGE_luci-app-commands=y",
+    "CONFIG_PACKAGE_luci-app-ddns=y",
     "CONFIG_PACKAGE_luci-app-openclash=y",
-    "CONFIG_PACKAGE_bash=y",
-    "CONFIG_PACKAGE_ttyd=y",
+    "CONFIG_PACKAGE_luci-app-passwall=y",
+    "CONFIG_PACKAGE_luci-app-ramfree=y",
+    "CONFIG_PACKAGE_luci-app-ttyd=y",
+    "CONFIG_PACKAGE_luci-app-upnp=y",
+    "CONFIG_PACKAGE_luci-app-ota=y",
+    "CONFIG_PACKAGE_luci-i18n-ota-zh-cn=y",
+    "CONFIG_PACKAGE_luci-proto-wireguard=y",
+    "CONFIG_PACKAGE_wireguard-tools=y",
+    "CONFIG_PACKAGE_kmod-wireguard=y",
+    "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y",
+    "CONFIG_PACKAGE_ddns-scripts-aliyun=y",
+    "CONFIG_PACKAGE_ddns-scripts-cloudflare=y",
+    "CONFIG_PACKAGE_ddns-scripts-dnspod=y",
+    "CONFIG_PACKAGE_ddns-scripts-freedns=y",
+    "CONFIG_PACKAGE_ddns-scripts-godaddy=y",
+    # The high-power template must keep the MTK acceleration stack.
+    "CONFIG_PACKAGE_kmod-mt_wifi=y",
+    "CONFIG_PACKAGE_kmod-mediatek_hnat=y",
+    "CONFIG_PACKAGE_luci-app-turboacc-mtk=y",
+    "CONFIG_PACKAGE_luci-app-mtwifi-cfg=y",
 ]
 
 DEVICE_BLOCK_RE = re.compile(r"^define\s+Device/(?P<name>\S+)\s*$", re.M)
+DEVICE_KEYS = ("DEVICE_VENDOR", "DEVICE_MODEL", "DEVICE_VARIANT", "DEVICE_DTS")
 
 
-def target_symbol(profile: profiles.DeviceProfile) -> str:
-    return f"CONFIG_TARGET_{profile.board}_{profile.subtarget}_DEVICE_{profile.device}"
+def target_symbol(device: str) -> str:
+    return f"CONFIG_TARGET_DEVICE_{BOARD}_{SUBTARGET}_DEVICE_{device}"
+
+
+def target_packages_symbol(device: str) -> str:
+    return f"CONFIG_TARGET_DEVICE_PACKAGES_{BOARD}_{SUBTARGET}_DEVICE_{device}"
 
 
 def set_option(text: str, name: str, value: str | None) -> str:
-    """Set a Kconfig symbol, replacing an existing assignment or ``not set``."""
+    """Set a Kconfig symbol, replacing an assignment or ``not set`` line."""
     pattern = re.compile(rf"^(?:# )?{re.escape(name)}(?:=.*| is not set)\s*$", re.M)
     text = pattern.sub("", text)
     text = text.rstrip("\n") + "\n"
@@ -48,10 +114,41 @@ def set_option(text: str, name: str, value: str | None) -> str:
     return text
 
 
-def _read_config(path: Path) -> str:
-    if not path.is_file():
-        raise util.BuildError(f"device config not found: {path}")
-    return util.read_text(path)
+def strip_target_selection(text: str) -> str:
+    """Remove all target/device choices while preserving image options."""
+    return TARGET_SELECTION_RE.sub("", text)
+
+
+def render_config(text: str, profile: profiles.DeviceProfile) -> str:
+    """Return *text* with exactly one selected target device and ZeroWrt apps."""
+    text = strip_target_selection(text)
+    text = text.rstrip("\n") + "\n\n"
+    text += "\n".join(
+        [
+            "CONFIG_TARGET_mediatek=y",
+            "CONFIG_TARGET_mediatek_filogic=y",
+            # These two expose the "Target Devices" menu and per-device rootfs;
+            # they do not select more than one device by themselves.
+            "CONFIG_TARGET_MULTI_PROFILE=y",
+            "CONFIG_TARGET_PER_DEVICE_ROOTFS=y",
+            f"{target_symbol(profile.device)}=y",
+            f'{target_packages_symbol(profile.device)}=""',
+        ]
+    )
+    text += "\n"
+    for name, value in PACKAGE_SELECTIONS.items():
+        text = set_option(text, name, value)
+    return text
+
+
+def preview(tree: Path, *, device: str) -> str:
+    """Return the pre-defconfig ``.config`` for *device* without running make."""
+    tree = Path(tree)
+    profile = profiles.require(device)
+    base = tree / BASE_CONFIG
+    if not base.is_file():
+        raise util.BuildError(f"high-power config template not found: {base}")
+    return render_config(util.read_text(base), profile)
 
 
 def _device_block(text: str, name: str) -> str | None:
@@ -65,127 +162,141 @@ def _device_block(text: str, name: str) -> str | None:
 
 
 def resolve_device(tree: Path, profile: profiles.DeviceProfile) -> dict:
-    """Read vendor/model/DTS for the profile from the target image Makefiles."""
+    """Read vendor/model/DTS from ``target/linux/mediatek/image/*.mk``."""
     tree = Path(tree)
-    board = tree / "target" / "linux" / profile.board
-    files = sorted(board.glob("image/*.mk")) + sorted((board / profile.subtarget).glob("image/*.mk"))
-    for makefile in files:
+    image_dir = tree / "target" / "linux" / "mediatek" / "image"
+    for makefile in sorted(image_dir.glob("*.mk")):
         text = util.read_text(makefile)
         block = _device_block(text, profile.device)
         if block is None:
             continue
-        values = {}
-        for key in ("DEVICE_VENDOR", "DEVICE_MODEL", "DEVICE_VARIANT", "DEVICE_DTS"):
+        values: dict[str, str] = {}
+        for key in DEVICE_KEYS:
             match = re.search(rf"^\s*{key}\s*:?=\s*(.+?)\s*$", block, re.M)
             if match:
                 values[key] = match.group(1).strip()
+        model = values.get("DEVICE_MODEL", profile.model)
+        variant = values.get("DEVICE_VARIANT", profile.variant)
+        if variant and variant in model:
+            variant = ""
         return {
             "device_vendor": values.get("DEVICE_VENDOR", profile.vendor),
-            "device_model": values.get("DEVICE_MODEL", profile.model),
-            "device_variant": values.get("DEVICE_VARIANT", ""),
+            "device_model": model,
+            "device_variant": variant,
             "device_dts": values.get("DEVICE_DTS", ""),
             "device_source": str(makefile.relative_to(tree)),
         }
     util.warn(
-        f"device {profile.device!r} was not found in {board}; "
-        "using the profile vendor/model for the OTA label"
+        f"device {profile.device!r} was not found in {image_dir}; using the profile vendor/model for the OTA label"
     )
     return {
         "device_vendor": profile.vendor,
         "device_model": profile.model,
-        "device_variant": "",
+        "device_variant": profile.variant,
         "device_dts": "",
         "device_source": "",
     }
 
 
-def render_config(
-    text: str,
-    profile: profiles.DeviceProfile,
-    *,
-    extra: dict[str, str | None] | None = None,
-) -> str:
-    """Return the device config with the pipeline's mandatory selections."""
-    target = target_symbol(profile)
-    if f"{target}=y" not in text:
-        raise util.BuildError(f"device config is missing {target}=y; wrong config for {profile.name}")
-    selections = dict(EXTRA_SELECTIONS)
-    if extra:
-        selections.update(extra)
-    for name, value in selections.items():
-        text = set_option(text, name, value)
-    return text
+def _check_resolved(resolved: str, profile: profiles.DeviceProfile) -> list[str]:
+    problems: list[str] = []
+    expected_target = f"{target_symbol(profile.device)}=y"
+    required = [expected_target, *REQUIRED_SELECTIONS]
+    for item in required:
+        if item not in resolved:
+            problems.append(item)
+
+    if "CONFIG_TARGET_mediatek_mt7986=y" in resolved:
+        problems.append("the old mediatek/mt7986 target is still selected")
+
+    for line in resolved.splitlines():
+        if (
+            line.startswith("CONFIG_TARGET_DEVICE_")
+            and line.endswith("=y")
+            and "_DEVICE_" in line
+            and "PACKAGES" not in line
+            and line != expected_target
+        ):
+            problems.append(f"another device is selected: {line}")
+
+    for name in (
+        "CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox",
+        "CONFIG_PACKAGE_sing-box",
+    ):
+        if f"{name}=y" in resolved:
+            problems.append(f"{name}=y is not allowed (MTK image size)")
+
+    return problems
 
 
 def apply(
     tree: Path,
     *,
     device: str,
-    config_path: Path | None = None,
-    extra: dict[str, str | None] | None = None,
     dist_name: str = "ZeroWrt",
 ) -> dict:
     tree = Path(tree)
     profile = profiles.require(device)
-    source = Path(config_path) if config_path else profiles.config_path(profile)
-    text = _read_config(source)
+    base = tree / BASE_CONFIG
+    if not base.is_file():
+        raise util.BuildError(f"high-power config template not found: {base}")
 
-    target = target_symbol(profile)
     util.header("Writing .config")
-    text = render_config(text, profile, extra=extra)
+    text = render_config(util.read_text(base), profile)
     util.write_text(tree / ".config", text)
-    util.log(f"{source} -> {tree / '.config'} (+{len(EXTRA_SELECTIONS)} pipeline selection(s))")
+    util.log(
+        f"{BASE_CONFIG} -> .config; target {profile.target}, "
+        f"device {profile.device}, {len(PACKAGE_SELECTIONS)} package selection(s)"
+    )
 
     util.header("Resolving configuration (make defconfig)")
     log_path = tree / "defconfig.log"
-    util.run(["make", "defconfig"], cwd=tree, log_path=log_path, check=True)
+    code, _ = util.run(
+        ["make", "defconfig"],
+        cwd=tree,
+        log_path=log_path,
+        check=False,
+    )
+    if code != 0:
+        tail = "\n".join(util.read_text(log_path).splitlines()[-80:]) if log_path.exists() else ""
+        raise util.BuildError(f"make defconfig failed ({code})\n{tail}")
 
     resolved = util.read_text(tree / ".config")
-    missing = [item for item in [f"{target}=y", *REQUIRED_SELECTIONS] if item not in resolved]
-    if missing:
+    problems = _check_resolved(resolved, profile)
+    if problems:
         tail = "\n".join(util.read_text(log_path).splitlines()[-60:]) if log_path.exists() else ""
         raise util.BuildError(
-            "the following selections were dropped by defconfig "
-            "(missing dependencies or a package name changed upstream):\n  - "
-            + "\n  - ".join(missing)
+            "the configuration is missing selections or still selects another device "
+            "(missing dependency, renamed package, or a stale template):\n  - "
+            + "\n  - ".join(dict.fromkeys(problems))
             + "\n\nLast defconfig output:\n"
             + tail
         )
 
     info = state.read(tree)
     build_date = state.build_date(info) or int(time.time())
-    version = info.get("version") or state.version_for(build_date)
-    resolved_version = re.search(r'^CONFIG_VERSION_NUMBER="?([^"\n]+)"?$', resolved, re.M)
-    if resolved_version and resolved_version.group(1) != version:
-        util.warn(
-            f"CONFIG_VERSION_NUMBER is {resolved_version.group(1)!r}, "
-            f"but include/version.mk is forced to {version!r}; the image name uses {version}"
-        )
-
+    version = str(info.get("version") or state.version_for(build_date))
     device_info = resolve_device(tree, profile)
     info.update(
         {
             "dist": dist_name,
             "profile": profile.name,
+            "artifact": profile.name,
             "board": profile.board,
             "subtarget": profile.subtarget,
-            "target": f"{profile.board}/{profile.subtarget}",
+            "target": profile.target,
             "device": profile.device,
-            "dt_model": profile.dt_model,
             "device_vendor": device_info["device_vendor"],
             "device_model": device_info["device_model"],
             "device_variant": device_info.get("device_variant", ""),
             "device_dts": device_info.get("device_dts", ""),
+            "device_source": device_info.get("device_source", ""),
             "layout": profile.layout,
-            "artifact": profile.name,
-            "config": str(source),
+            "default_lan_ip": profile.lan_ip,
             "build_date": build_date,
             "version": version,
         }
     )
     state.write(tree, info)
-    util.log(
-        f"configuration ready: {profile.board}/{profile.subtarget} "
-        f"device={profile.device} version={version}"
-    )
+    util.log(f"configuration ready: {profile.target} device={profile.device} version={version}")
     return info

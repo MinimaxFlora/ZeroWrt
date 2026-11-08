@@ -1,22 +1,30 @@
 """Downloading, compiling and collecting the firmware.
 
-The compile policy follows the ZeroWrt builder: one more job than the CPU
-count, capped by available memory, ``IGNORE_ERRORS="n m"`` for the two optional
-package classes, and a serial ``V=s`` retry when the parallel build fails. The
-retry is what turns "failed to build" into a readable compiler error.
+Only firmware images are collected.  The release must not receive
+``config.buildinfo``, ``feeds.buildinfo``, ``profiles.json``, manifests,
+``SHA256SUMS`` or the DDR bl2 blobs.
 """
 
 from __future__ import annotations
 
+import fnmatch
 import os
-import re
 import shutil
-import tarfile
 from pathlib import Path
 
 from . import state, util
 
 GIB = 1024**3
+
+FIRMWARE_PATTERNS = (
+    "*-initramfs-kernel.bin",
+    "*-squashfs-sysupgrade.bin",
+    "*-squashfs-sysupgrade.itb",
+    "*-initramfs-recovery.itb",
+    "*-bl31-uboot.fip",
+    "*-preloader.bin",
+)
+SYSUPGRADE_PATTERNS = ("*-squashfs-sysupgrade.bin", "*-squashfs-sysupgrade.itb")
 
 
 def _available_memory_gb() -> float:
@@ -95,89 +103,32 @@ def _target_dir(tree: Path, info: dict) -> Path:
     return candidates[0]
 
 
+def is_firmware(name: str) -> bool:
+    return any(fnmatch.fnmatch(name, pattern) for pattern in FIRMWARE_PATTERNS)
+
+
 def _collect_files(source_dir: Path, out_dir: Path) -> list[Path]:
-    patterns = [
-        "*.bin",
-        "*.itb",
-        "*.img",
-        "*.img.gz",
-        "*.tar",
-        "*.manifest",
-        "*.buildinfo",
-    ]
-    files: list[Path] = []
-    for pattern in patterns:
-        files.extend(sorted(source_dir.glob(pattern)))
-    files = [path for path in files if path.is_file()]
+    files = [path for path in sorted(source_dir.iterdir()) if path.is_file() and is_firmware(path.name)]
+    if not files:
+        raise util.BuildError(f"no firmware images matched {FIRMWARE_PATTERNS} under {source_dir}")
 
     collected: list[Path] = []
     for path in files:
+        if not path.name.startswith("zerowrt-"):
+            raise util.BuildError(
+                f"firmware {path.name!r} does not start with 'zerowrt-'; check VERSION_DIST in include/version.mk"
+            )
         destination = out_dir / path.name
         if destination.exists():
             destination.unlink()
         shutil.copy2(path, destination)
         collected.append(destination)
-        util.log(f"collected {destination.name}")
+        util.log(f"collected {destination.name} ({destination.stat().st_size // (1024**2)} MiB)")
     return collected
 
 
-def _packages_archive(tree: Path, out_dir: Path) -> Path | None:
-    packages = tree / "bin" / "packages"
-    if not packages.is_dir():
-        return None
-    suffix = ".apk" if any(packages.rglob("*.apk")) else ".ipk"
-    members = [path for path in sorted(packages.rglob(f"*{suffix}")) if path.is_file()]
-    if not members:
-        return None
-    destination = out_dir / "Packages.tar.gz"
-    with tarfile.open(destination, "w:gz") as archive:
-        for path in members:
-            archive.add(path, arcname=f"packages/{path.relative_to(packages).as_posix()}")
-    util.log(f"collected {destination.name} ({len(members)} package(s))")
-    return destination
-
-
-def _kernel_version(source_dir: Path) -> str:
-    manifests = sorted(source_dir.glob("*.manifest"))
-    for manifest in manifests:
-        for line in util.read_text(manifest).splitlines():
-            match = re.match(r"^kernel\s+-\s+(\S+)", line)
-            if match:
-                return match.group(1)
-    return ""
-
-
-def _build_info(info: dict, *, kernel: str) -> str:
-    built = state.iso_for(state.build_date(info))
-    device = str(info.get("device", ""))
-    vendor = str(info.get("device_vendor", "")).strip()
-    model = str(info.get("device_model", "")).strip()
-    product = " ".join(part for part in (vendor, model) if part)
-    device_line = f"device: {device}" + (f" ({product})" if product else "")
-    lines = [
-        f"{info.get('dist', 'ZeroWrt')} firmware",
-        f"built: {built}",
-        f"tree: {info.get('board', '')}/{info.get('subtarget', '')}",
-        device_line,
-        f"version: {info.get('version', '')}",
-    ]
-    for key, label in (
-        ("artifact", "profile"),
-        ("layout", "layout"),
-        ("source_repo", "source repo"),
-        ("source_ref", "source ref"),
-        ("source_commit", "source commit"),
-        ("config", "config"),
-    ):
-        value = info.get(key)
-        if value:
-            lines.append(f"{label}: {value}")
-    if kernel:
-        lines.append(f"kernel: {kernel}")
-    run_id = os.environ.get("GITHUB_RUN_ID", "")
-    if run_id:
-        lines.append(f"workflow run: {run_id}")
-    return "\n".join(lines) + "\n"
+def _has_sysupgrade(files: list[Path]) -> bool:
+    return any(any(fnmatch.fnmatch(path.name, pattern) for pattern in SYSUPGRADE_PATTERNS) for path in files)
 
 
 def collect(tree: Path, out_dir: Path) -> list[Path]:
@@ -186,34 +137,10 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
     info = state.read(tree)
     source_dir = _target_dir(tree, info)
 
-    util.header(f"Collecting artifacts from {source_dir.relative_to(tree)}")
+    util.header(f"Collecting firmware from {source_dir.relative_to(tree)}")
     out_dir.mkdir(parents=True, exist_ok=True)
     collected = _collect_files(source_dir, out_dir)
-
-    config = tree / ".config"
-    if config.exists():
-        shutil.copyfile(config, out_dir / "build.config")
-        collected.append(out_dir / "build.config")
-
-    packages = _packages_archive(tree, out_dir)
-    if packages is not None:
-        collected.append(packages)
-
-    kernel = _kernel_version(source_dir)
-    build_info = out_dir / "BUILD_INFO.txt"
-    util.write_text(build_info, _build_info(info, kernel=kernel))
-    collected.append(build_info)
-
-    checksum_file = out_dir / "SHA256SUMS"
-    lines = [f"{util.sha256_file(path)}  {path.name}" for path in sorted(collected)]
-    util.write_text(checksum_file, "\n".join(lines) + "\n")
-    collected.append(checksum_file)
-
-    has_image = any(
-        path.suffix in {".bin", ".itb", ".img", ".tar"} or path.name.endswith(".img.gz")
-        for path in collected
-    )
-    if not has_image:
-        raise util.BuildError("no firmware image was produced")
-    util.log(f"collected {len(collected)} file(s) in {out_dir}")
+    if not _has_sysupgrade(collected):
+        raise util.BuildError("no sysupgrade image was produced; refusing to publish only initramfs/loader files")
+    util.log(f"collected {len(collected)} firmware file(s) in {out_dir}")
     return collected

@@ -1,238 +1,416 @@
 # 构建与维护
 
-本文档面向维护者：每个构建步骤做什么、哪些文件承载定制、OTA 索引如何生成，以及
-补丁失效后如何刷新。
+本文档面向维护者：说明每个构建步骤、固件定制点、设备配置如何从高功率模板生成，
+以及 OTA 与工具链缓存的工作方式。
 
-## 1. 源码与设备
+## 1. 源码与目标
 
 | 项目 | 值 |
 | --- | --- |
-| 源码仓库 | `chasey-dev/immortalwrt-mt798x-rebase` |
-| 分支 | `25.12` |
-| 设备 profile | `ruijie_rg-x60-new` |
-| 上游 Device 名 | `ruijie_rg-x60-new-mtkuboot` |
+| 源码仓库 | `Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly` |
+| 分支 | `openwrt-24.10-6.6` |
 | 目标 | `mediatek/filogic` |
-| 布局 | MTK U-Boot（mtkuboot） |
-| 配置 | `configs/ruijie-rg-x60-new.config` |
+| 内核 | 6.6 |
+| 设备配置模板 | `defconfig/mt7975-ipailna-high-power.config` |
+| 配置生成 | `scripts/zerowrt_core/config.py` |
+| Release tag | `mediatek_filogic` |
 
-源码是公开仓库，不需要 `SOURCE_TOKEN`。需要写入权限的只有 `GITHUB_TOKEN`
-（Actions 自动提供）。
+源码是公开仓库，不需要 `SOURCE_TOKEN`。需要写权限的是 `GITHUB_TOKEN`
+（Actions 自动提供），用于 Release 和 `gh-pages`。
 
-新增设备时：在 `configs/` 放一份完整 `.config`，在
-`scripts/zerowrt_core/profiles.py` 的 `PROFILES` 里登记 `device`/`dt_model`，
-然后把设备名加到 `.github/workflows/build.yml` 的 `device` 选项。OTA key 会
-自动取 profile 里的 `device`，不需要再维护一份列表。
+## 2. 工作流顺序
 
-## 2. 工作流步骤
-
-`build.yml` 按下面的顺序调用 CLI。顺序不是随意的：补丁必须在 feed 安装前应用，
-`feeds install` 必须在替换 feed 目录前执行；`package/new` 在 `feeds install` 之后克隆，
-它的同名 feed 包会被清理。`.config` 必须在所有包就位后再 `defconfig`。
+`build.yml` 的顺序不是随意的：
 
 1. **free-disk**：删除 runner 上无用的 SDK，必要时用 LVM 合并 `/` 与 `/mnt`，
    创建 swap。根分区已经足够大时跳过清理。
 2. **install-deps**：安装 OpenWrt 编译依赖、`ccache`、`lvm2`、`xfsprogs`、
    Python/Pillow 等。
-3. **install-llvm**：下载 sbwml 的 Clang 23 到 `/opt/clang`，写入 `GITHUB_PATH`。
-4. **source clone**：按 profile 克隆源码，写入 `.zerowrt-info.json`
-   （仓库、分支、commit、构建时间、设备）。
+3. **install-llvm**：下载 sbwml 的 Clang 到 `/opt/clang`，写入 `GITHUB_PATH`。
+4. **source clone**：克隆源码，校验关键文件，写入 `.zerowrt-info.json`
+   （仓库、分支、commit、构建日期、设备）。
 5. **feeds update**：`./scripts/feeds update -a`，确认 `feeds/luci`、`feeds/packages`。
 6. **feeds install**：`./scripts/feeds install -a`，确认 `luci-compat`、`lyaml`、
-   `ttyd` 已安装。必须在克隆外部包之前执行，之后的替换会复用这些符号链接。
-7. **packages add**：
-   - `MinimaxFlora/openwrt_package` → `package/new/helloworld`（移除 `autocore`）；
-   - `sbwml/packages_lang_golang` `27.x`；
-   - `sbwml/packages_lang_rust`；
-   - `luci-app-dockerman` + Docker 四个包（默认配置未选中，保留）；
-   - `MinimaxFlora/luci-app-ota` → `package/new/luci-app-ota`；
-   - 扫描 `package/new` 的 `PKG_NAME`/`BuildPackage`，删除 `feeds/` 与
-     `package/feeds/` 里同名包。
-8. **source customize**：版本、发行字符串、IP、主机名、banner、root 密码、
-   bash、profile、ttyd、MTK WiFi 默认值。
-9. **patches apply**：
-   - `0001`–`0005` 应用到 `feeds/luci`；
-   - `0006` 应用到源码根（GCC 16）；
-   - 复制 `900-*` 到 elfutils / libwebsockets 的 `patches/`；
-   - 给 xl2tpd 加 `-std=gnu17`，给 bash 加 `no-lto`；
-   - 全部做反向检查，重复运行是 no-op。
-10. **config apply**：复制设备配置，追加 `luci-app-ota` 与中文语言包，
-    `make defconfig`，校验 target、OTA、Argon、PassWall、OpenClash、bash、ttyd。
-11. **ota embed**：写 `/etc/ota/build.json`、`version.date`、首次启动
-    `/etc/uci-defaults/90-luci-app-ota`。
-12. **cache restore**（可选）：从 `toolchain` Release 恢复构建缓存。
-13. **build download**：`make -jN download`，失败后串行重试。
-14. **build compile**：`make -j(nproc+1) IGNORE_ERRORS="n m"`，失败后
+   `ttyd`、`3proxy` 已安装。
+7. **packages add**：见第 3 节。必须在 `feeds install` 之后，因为替换包需要
+   `luci.mk` 和 feed 符号链接已经存在。
+8. **source customize**：删除 `files/etc`、版本、IP、banner、root 密码、WiFi、
+   Argon。见第 4 节。
+9. **config apply**：从高功率模板生成单设备 `.config`，追加插件，执行
+   `make defconfig` 并逐项校验。见第 5 节。
+10. **ota embed**：写 `/etc/ota/build.json`、`/etc/uci-defaults/90-luci-app-ota`
+    和 `version.date`。
+11. **cache restore**（可选）：从 `toolchain` Release 恢复
+    `build_dir/dl/staging_dir/tmp`。
+12. **build download**：`make -jN download`，失败后串行重试。
+13. **build compile**：`make -j(nproc+1) IGNORE_ERRORS="n m"`，失败后
     `make -j1 ... V=s`。
-15. **build collect**：收集镜像、`Packages.tar.gz`、`build.config`、
-    `BUILD_INFO.txt`、`SHA256SUMS`。
-16. **ota index**：生成 `dist/ota.json`。
-17. Release：tag `ruijie_rg-x60-new`，上传 `dist/*`。
-18. **ota publish**：更新 `gh-pages` 的 `ota.json`、`history.json` 和下载页。
+14. **build collect**：只收集固件，见第 7 节。
+15. **Release**：tag 和 Release 名都是 `mediatek_filogic`，正文来自
+    `docs/release-notes/mediatek_filogic.md`。
+16. **ota publish**：把 `ota.json`、`history.json` 和下载页推送到 `gh-pages`。
 
-## 3. 环境变量
+## 3. 插件替换
 
-| 变量 | 默认值 | 用途 |
+在 `package/new` 下克隆：
+
+| 目录 | 仓库 | 分支 |
 | --- | --- | --- |
-| `ZEROWRT_SOURCE_DIR` | `/builder/source` | 源码树 |
-| `ZEROWRT_DEVICE` | `ruijie_rg-x60-new` | profile |
-| `ZEROWRT_IP` | `10.0.0.1` | LAN IP |
-| `ZEROWRT_ROOT_PASSWORD` | `password` | root 密码（不打印） |
-| `ZEROWRT_WIFI_NAME` | `ZeroWrt` | SSID 前缀 |
-| `ZEROWRT_WIFI_PASSWORD` | `1234567890` | WiFi 密码（不打印） |
-| `ZEROWRT_DIST` | `ZeroWrt` | 发行版名 |
-| `ZEROWRT_OTA_URL` | 空 | 固件默认索引地址 |
-| `ZEROWRT_CLANG_VERSION` | `23.0.1` | LLVM 版本 |
+| `openwrt-passwall` | `Openwrt-Passwall/openwrt-passwall` | `main` |
+| `openwrt-passwall-packages` | `Openwrt-Passwall/openwrt-passwall-packages` | `main` |
+| `OpenClash` | `vernesong/OpenClash` | `master` |
+| `luci-theme-argon` | `jerrykuku/luci-theme-argon` | `master` |
+| `luci-app-ota` | `MinimaxFlora/luci-app-ota` | `main` |
 
-CLI 的 `--ip`、`--root-password`、`--wifi-name`、`--wifi-password`、`--dist-name`
-会覆盖环境变量。
+Go 1.27 不放在 `package/new`，而是替换 feed 目录：
 
-## 4. 定制内容
+```text
+feeds/packages/lang/golang  <-  sbwml/packages_lang_golang @ 27.x
+```
 
-| 项目 | 实现 | 结果 |
-| --- | --- | --- |
-| 发行版 | `include/version.mk` | `VERSION_DIST`/`VERSION_MANUFACTURER` → `ZeroWrt` |
-| 版本号 | `VERSION_NUMBER` | `YYYYMMDD`（构建日期） |
-| 发布字符串 | `openwrt_release`、`os-release` | `ZeroWrt-YYYYMMDD`、`ZeroWrt 标准版 @R...` |
-| LAN IP | `config_generate` | 所有 `ipad=${ipaddr:-...}` 默认值 |
-| 主机名 | `config_generate` | `ZeroWrt` |
-| root 密码 | `package/base-files/files/etc/shadow` | `openssl passwd -5` 哈希 |
-| banner | `package/base-files/files/etc/banner` | `assets/banner` |
-| shell | `passwd`、`profile`、`root/.bash*` | bash + 彩色提示符 + `/opt` PATH |
-| ttyd | feed 里的 config/init/menu | 免登录、菜单顺序 50、关闭 stdout 日志 |
-| WiFi | `mtwifi.uc` | `SSID-2.4G/5G/6G`，WPA2 + 密码 |
-| 版本 | `version.date` | 构建时间戳，供 OTA 比较 |
+`openwrt-passwall-packages/sing-box` 克隆后立即删除，`feeds/packages/net/sing-box`
+和对应的 `package/feeds` 链接也删除。PassWall 仍可在 menuconfig 里看到 Sing-Box
+选项，但 `.config` 显式关闭，且源码不存在时不会被编进镜像。
 
-root 密码通过 `openssl passwd -5 -stdin` 生成，密码不会出现在命令行或日志里。
+### 3.1 feed 去重
 
-## 5. OTA
+`packages.py` 会扫描 `package/new` 下所有 `Makefile`，收集：
 
-### 5.1 固件内元数据
+- `PKG_NAME`
+- `LUCI_NAME`
+- `BuildPackage,<name>`
+- Makefile 所在目录名
+
+然后删除：
+
+- `feeds/**` 中声明了同名包的目录；
+- `package/feeds/**` 中同名的符号链接；
+- 删除 feed 目录后变成悬空的符号链接。
+
+这一步是必须的：buildroot 会同时扫描 `feeds/` 和 `package/new`，同名包不会报错，
+而是静默选其中一个。
+
+### 3.2 Argon 配置页
+
+新版 Argon 已把配置页合并进 `luci-theme-argon`。本仓库：
+
+- 只克隆 `luci-theme-argon`；
+- 删除主题仓库里的 `compat/` 兼容包；
+- 删除 feed 里的旧 `luci-app-argon-config` 目录和符号链接；
+- `.config` 只选 `luci-theme-argon`，配置页由主题提供。
+
+这样不会出现两个 Argon 配置页，也不会因为旧 feed 包覆盖主题文件。
+
+## 4. 固件定制
+
+### 4.1 删除 files/etc
+
+源码根部的 `files/etc` 会覆盖 `package/base-files/files`。本仓库先删除
+`files/etc`（上游当前只有 `banner`），再写：
+
+```text
+package/base-files/files/etc/banner
+```
+
+### 4.2 主机名与 LAN IP
+
+修改：
+
+```text
+package/base-files/files/bin/config_generate
+```
+
+- `hostname='ImmortalWrt'` → `hostname='ZeroWrt'`。
+- 上游 LAN IP 有两支：锐捷 `192.168.110.1`，其它 `192.168.6.1`。
+- ZeroWrt 把这两个默认值都替换成统一地址，默认 `10.0.0.1`：
+
+```sh
+case "$board" in
+    ruijie,ew-6000gx-pro*|ruijie,rg-x60*)
+        ipad=${ipaddr:-"10.0.0.1"}
+    ;;
+    *)
+        ipad=${ipaddr:-"10.0.0.1"}
+    ;;
+esac
+```
+
+`lan_ip` 工作流输入可覆盖为其它地址；两个 LAN 默认值始终一起替换。非 LAN 接口的
+`192.168.$((addr_offset++)).1` 保持原样。
+
+### 4.3 版本
+
+`include/version.mk`：
+
+```make
+VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),ZeroWrt)
+VERSION_MANUFACTURER:=$(if $(VERSION_MANUFACTURER),$(VERSION_MANUFACTURER),ZeroWrt)
+```
+
+不修改 `VERSION_NUMBER`。镜像前缀由 `VERSION_DIST_SANITIZED` 决定，结果是
+`zerowrt-mediatek-filogic-<device>-...`。
+
+`package/base-files/files/etc/openwrt_release`：
+
+```sh
+DISTRIB_DESCRIPTION='ZeroWrt-YYYYMMDD'
+DISTRIB_REVISION=' By MinimaxFlora'
+```
+
+`package/base-files/files/usr/lib/os-release`：
+
+```sh
+OPENWRT_RELEASE="ZeroWrt 标准版 @RYYYYMMDD BY MinimaxFlora"
+```
+
+日期取 `.zerowrt-info.json` 的 `build_date`，按 `Asia/Shanghai` 格式化。
+
+### 4.4 WiFi
+
+修改：
+
+```text
+package/mtk/applications/mtwifi-cfg/files/mtwifi.sh
+```
+
+- `ssid="ImmortalWrt-2.4G"` → `ssid="ZeroWrt-2.4G"`
+- `ssid="ImmortalWrt-5G"` → `ssid="ZeroWrt-5G"`
+- `encryption=none` → `encryption=psk2`，并追加 `key='1234567890'`
+- SSID 传给 UCI 时加单引号，避免名称含空格时被拆开
+
+默认密码是 `1234567890`，可通过工作流 `wifi_password` 修改。
+
+### 4.5 Argon
+
+替换的是 `package/new/luci-theme-argon`：
+
+| 文件 | 来源 |
+| --- | --- |
+| `htdocs/luci-static/argon/img/bg1.webp` | `assets/bg1.webp` |
+| `htdocs/luci-static/argon/favicon.ico` | `assets/favicon.ico` |
+| `htdocs/luci-static/argon/img/argon.svg` | 由 favicon 生成，内嵌 PNG data URI |
+| `htdocs/luci-static/argon/icon/android-icon-192x192.png` | favicon → 192×192 |
+| `htdocs/luci-static/argon/icon/apple-icon-144x144.png` | favicon → 144×144 |
+| `htdocs/luci-static/argon/icon/favicon-16x16.png` | favicon → 16×16 |
+| `htdocs/luci-static/argon/icon/favicon-32x32.png` | favicon → 32×32 |
+
+`root/etc/config/argon`：
+
+```uci
+option mode 'light'
+option primary '#EC4899'
+option dark_primary '#BE185D'
+option dark_primary_mode 'custom'
+```
+
+`mode 'light'` 是强制亮色；`dark_primary` 仍然写入，用户手动切到暗色时使用。
+
+### 4.6 root 密码
+
+`package/base-files/files/etc/shadow` 的 root 条目用
+`openssl passwd -5 -stdin` 生成 SHA-256 crypt。密码不会出现在命令行或日志里。
+默认 `password`，工作流输入可覆盖；首次登录请修改。
+
+## 5. 单设备 .config
+
+### 5.1 模板
+
+基础文件是源码里的：
+
+```text
+defconfig/mt7975-ipailna-high-power.config
+```
+
+它提供 MTK WiFi、HNAT、TurboACC 等高功率配置，但也默认选中：
+
+- `mediatek/mt7986` 旧目标；
+- GL.iNet、TP-Link、Xiaomi 等设备；
+- Ruijie 的 8 个布局。
+
+### 5.2 删除与添加
+
+`config.py` 删除所有 `CONFIG_TARGET_DEVICE_*`、`CONFIG_TARGET_MULTI_PROFILE`、
+`CONFIG_TARGET_PER_DEVICE_ROOTFS`、`CONFIG_TARGET_PROFILE`、`CONFIG_TARGET_BOARD`、
+`CONFIG_TARGET_SUBTARGET`、`CONFIG_TARGET_ARCH_PACKAGES` 和
+`CONFIG_TARGET_mediatek*` 选择，但保留 `CONFIG_TARGET_ROOTFS_*`、内核分区等镜像选项。
+
+然后只添加：
+
+```ini
+CONFIG_TARGET_mediatek=y
+CONFIG_TARGET_mediatek_filogic=y
+CONFIG_TARGET_MULTI_PROFILE=y
+CONFIG_TARGET_PER_DEVICE_ROOTFS=y
+CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_<device>=y
+CONFIG_TARGET_DEVICE_PACKAGES_mediatek_filogic_DEVICE_<device>=""
+```
+
+`CONFIG_TARGET_MULTI_PROFILE=y` 和 `CONFIG_TARGET_PER_DEVICE_ROOTFS=y` 不是多选设备，
+而是让 Kconfig 暴露 “Target Devices” 菜单和按设备 rootfs；实际设备仍然只有一行
+`CONFIG_TARGET_DEVICE_...=y`。
+
+### 5.3 插件选择
+
+```ini
+CONFIG_PACKAGE_luci-app-3cat=y
+CONFIG_PACKAGE_luci-app-acme=y
+CONFIG_PACKAGE_luci-theme-argon=y
+CONFIG_PACKAGE_luci-app-arpbind=y
+CONFIG_PACKAGE_luci-app-commands=y
+CONFIG_PACKAGE_luci-app-ddns=y
+CONFIG_PACKAGE_luci-app-openclash=y
+CONFIG_PACKAGE_luci-app-passwall=y
+CONFIG_PACKAGE_luci-app-ramfree=y
+CONFIG_PACKAGE_luci-app-ttyd=y
+CONFIG_PACKAGE_luci-app-upnp=y
+CONFIG_PACKAGE_luci-app-ota=y
+CONFIG_PACKAGE_luci-i18n-ota-zh-cn=y
+
+CONFIG_PACKAGE_luci-proto-wireguard=y
+CONFIG_PACKAGE_wireguard-tools=y
+CONFIG_PACKAGE_kmod-wireguard=y
+
+CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray=y
+# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox is not set
+# CONFIG_PACKAGE_sing-box is not set
+
+CONFIG_PACKAGE_ddns-scripts-aliyun=y
+CONFIG_PACKAGE_ddns-scripts-cloudflare=y
+CONFIG_PACKAGE_ddns-scripts-dnspod=y
+CONFIG_PACKAGE_ddns-scripts-freedns=y
+CONFIG_PACKAGE_ddns-scripts-godaddy=y
+```
+
+DDNS 使用 feed 中的实际包名
+`ddns-scripts-aliyun` / `-cloudflare` / `-dnspod` / `-freedns` / `-godaddy`，
+不是旧配置里的 `ddns-scripts_aliyun` 兼容名。
+
+### 5.4 defconfig 校验
+
+`make defconfig` 后检查：
+
+- 本次设备是唯一被选中的 `CONFIG_TARGET_DEVICE_*_DEVICE_*=y`；
+- `mediatek/filogic` 目标存在；
+- 12 个插件、OTA、DDNS、WireGuard、MTK 加速包都存在；
+- `CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox` 和
+  `CONFIG_PACKAGE_sing-box` 没有变成 `=y`。
+
+任何一项缺失都会直接失败，并打印 `defconfig.log` 末尾，避免带着错误配置编译数小时。
+
+Netcore N60 Pro 的 `make defconfig` 前配置预览见
+[`docs/config/netcore_n60-pro.seed.config`](config/netcore_n60-pro.seed.config)，
+在真实源码树上执行 `make defconfig` 后的最终配置见
+[`docs/config/netcore_n60-pro.final.config`](config/netcore_n60-pro.final.config)。
+
+## 6. OTA
+
+### 6.1 固件内元数据
 
 `ota embed` 写：
 
 ```json
 {
   "dist": "ZeroWrt",
-  "version": "20261102",
-  "device": "ruijie_rg-x60-new-mtkuboot",
-  "model": "ruijie,rg-x60-new-mtkuboot",
+  "version": "20261108",
+  "device": "netcore_n60-pro",
+  "model": "",
   "target": "mediatek/filogic",
-  "build_date": 1793600000,
-  "product": "Ruijie RG-X60 New"
+  "build_date": 1762524000,
+  "product": "Netcore N60 Pro"
 }
 ```
 
-同时写 `version.date`，并生成 `/etc/uci-defaults/90-luci-app-ota`，只在用户没有配置
-`ota.config.api_url` 时写入默认索引地址。
+写入位置：
 
-### 5.2 索引格式
+```text
+package/base-files/files/etc/ota/build.json
+```
 
-`ota index` 生成 schema 2：
+同时写 `version.date`，并生成首次启动默认索引地址：
+
+```text
+package/base-files/files/etc/uci-defaults/90-luci-app-ota
+```
+
+### 6.2 索引
+
+`ota publish` 生成 schema 2：
 
 ```json
 {
   "schema": 2,
-  "generator": "zerowrt ota index",
-  "generated": 1793600100,
   "dist": "ZeroWrt",
   "devices": {
-    "ruijie_rg-x60-new-mtkuboot": {
-      "version": "20261102",
-      "build_date": 1793600000,
-      "url": "https://github.com/<owner>/<repo>/releases/download/ruijie_rg-x60-new/<image>",
+    "netcore_n60-pro": {
+      "version": "20261108",
+      "build_date": 1762524000,
+      "url": "https://github.com/<owner>/<repo>/releases/download/mediatek_filogic/<image>",
       "sha256": "...",
-      "size": 33554432,
+      "size": 0,
       "file": "<image>",
       "target": "mediatek/filogic",
-      "device": "ruijie_rg-x60-new-mtkuboot",
-      "label": "Ruijie RG-X60 New",
-      "changelog": "..."
-    },
-    "ruijie,rg-x60-new-mtkuboot": { "...": "同一份 entry" },
-    "ruijie_rg-x60-new": { "...": "同一份 entry" }
+      "device": "netcore_n60-pro",
+      "label": "Netcore N60 Pro"
+    }
   }
 }
 ```
 
-三个 key 都写，是为了兼容只认设备树名或只认 profile 名的客户端；固件内
-`build.json` 的 `device` 是第一个 key。
+`publish` 会：
 
-镜像选择规则：只接受 `.bin/.itb/.img/.img.gz/.trx/.tar`，排除
-`initramfs`、`recovery`、`preloader`、`bl31`、`factory`、`kernel`、`rootfs` 等，
-优先 `sysupgrade` + `squashfs`。`mtkuboot` 名字里含 `uboot` 不会被误删。
-
-### 5.3 发布
-
-`ota publish`：
-
-1. clone `gh-pages`（不存在则创建 orphan 分支）；
-2. 复制 `luci-app-ota/site` 静态页，删除上游的 `CNAME`（除非显式传 `--cname`）；
+1. clone `gh-pages`（不存在则创建）；
+2. 复制 `luci-app-ota/site`，删除上游 `CNAME`（除非显式传 `--cname`）；
 3. 合并已有 `ota.json` 的其它设备条目；
-4. 追加 `history.json`（同一 device + build_date 去重，保留 120 条）；
-5. 用 `GITHUB_TOKEN` 推回 `gh-pages`。
+4. 追加 `history.json`；
+5. 用 `GITHUB_TOKEN` 推回。
 
-`--no-push --out dist/site` 可以在本地生成同样的页面，不联网。
-
-### 5.4 Pages
+### 6.3 Pages
 
 Settings → Pages → Deploy from a branch → `gh-pages` / `/`。
-默认索引地址是 `https://<owner>.github.io/<repo>/ota.json`。自定义域名见 README。
+默认索引地址：`https://ota.tatalvpai.vip/ota.json`。
 
-## 6. 补丁刷新
+## 7. 产物过滤
 
-### 6.1 LuCI 补丁（0001–0005）
+`build.py` 只匹配：
 
-当前基线：`immortalwrt/luci` `openwrt-25.12`。刷新步骤：
-
-```bash
-git clone -b openwrt-25.12 https://github.com/immortalwrt/luci.git /tmp/luci
-cd /tmp/luci
-git config user.name 'ZeroWrt Builder'
-git config user.email 'builder@zerowrt.invalid'
-git checkout -b refresh
-git am /path/to/repo/scripts/0001-*.patch
-git am /path/to/repo/scripts/0002-*.patch
-git am /path/to/repo/scripts/0003-*.patch
-git am /path/to/repo/scripts/0004-*.patch
-git am /path/to/repo/scripts/0005-*.patch
-git format-patch -5 -o /tmp/refreshed --start-number 1
+```text
+*-initramfs-kernel.bin
+*-squashfs-sysupgrade.bin
+*-squashfs-sysupgrade.itb
+*-initramfs-recovery.itb
+*-bl31-uboot.fip
+*-preloader.bin
 ```
 
-用生成的文件替换 `scripts/0001`–`0005`，然后验证：
+不会收集：
 
-```bash
-git -C /tmp/luci checkout -- .
-git -C /tmp/luci clean -fd
-for p in scripts/000[1-5]-*.patch; do
-  git -C /tmp/luci apply --check "$PWD/$p" || echo "FAILED $p"
-done
+```text
+config.buildinfo
+feeds.buildinfo
+profiles.json
+sha256sums
+version.buildinfo
+*.manifest
+mt7981-ram-ddr3-bl2.bin
+mt7981-ram-ddr4-bl2.bin
+mt7986-ram-ddr3-bl2.bin
+mt7986-ram-ddr4-bl2.bin
+mt7988-ram-comb-bl2.bin
 ```
 
-如果补丁还在，但上游文件已经大幅改动，优先重新生成补丁，而不是加 `--3way`；
-`patches.py` 只使用严格的 `git apply --check`，不会静默接受模糊匹配。
+还会检查：
 
-### 6.2 GCC 16（0006）
+- 至少有一个 `squashfs-sysupgrade`；
+- 每个文件名以 `zerowrt-` 开头（防止 `VERSION_DIST` 没生效）。
 
-`0006` 增加 `toolchain/gcc/patches-16.x/*` 和 `Config.version` 的 16.1.0 选项。
-它当前基于 `25.12` 的 `toolchain/gcc`，应用时偏移为 0。GCC 版本变化后需要重新
-生成；否则 `configs/` 里的 `CONFIG_GCC_USE_VERSION_16=y` 会导致源码下载/配置失败。
-
-### 6.3 包补丁（900-*）
-
-- libwebsockets 4.4.1：`900-fix-build-for-gcc-16.patch` 删除 deaddrop 插件里
-  未使用的变量，已用 `patch --dry-run` 对照 4.4.1 源码验证。
-- elfutils 0.192：`900-fix-gcc16-null-dereference-with-lto.patch` 在
-  `libelf/elf32_updatenull.c` 增加空指针检查，已验证可应用。
-
-包版本升级后（`PKG_VERSION` 变化）需要重新检查。`patches.py` 会把补丁复制到包的
-`patches/` 目录，构建时由 buildroot 应用；应用失败会在编译阶段报错，不会静默跳过。
-
-## 7. 工具链缓存
+## 8. 工具链缓存
 
 `toolchain.yml` 编译 `make toolchain/compile`，然后：
 
 ```bash
-python3 scripts/zerowrt.py cache save --tree /builder/source --repo <owner>/<repo>
+python3 scripts/zerowrt.py cache save \
+  --tree /builder/source \
+  --repo <owner>/<repo>
 ```
 
 资产名从 `staging_dir/toolchain-*` 推导：
@@ -241,25 +419,37 @@ python3 scripts/zerowrt.py cache save --tree /builder/source --repo <owner>/<rep
 toolchain_<libc>_<arch>_gcc-<major>.tar.zst
 ```
 
-`build.yml` 的 `cache restore` 只取与 `.config` 中 GCC 大版本匹配的最新资产，
-解压后 touch `staging_dir`/`tmp`。缓存是**可选**的：没有资产时只警告，工具链照常编译。
+- tag：`toolchain`
+- Release 名：`Toolchain_Cache`
+- `build.yml` 的 `cache restore` 只取与 `.config` 中 GCC 大版本匹配的最新资产；
+- 没有缓存时只警告，工具链照常编译。
 
-## 8. 代码质量
+## 9. 新增设备
+
+1. 确认设备在 `target/linux/mediatek/image/filogic.mk` 中有 `define Device/<name>`；
+2. 在 `scripts/zerowrt_core/profiles.py` 添加 `DeviceProfile`；
+3. 在 `.github/workflows/build.yml` 的 `device.options` 添加选项；
+4. 运行单元测试。
+
+设备名必须与上游 `Device/` 名完全一致，否则 `config apply` 会在 `defconfig` 后报
+“another device is selected” 或缺少目标。
+
+## 10. 代码质量
 
 ```bash
 python -m unittest discover -v
 python -m ruff check scripts tests
 ```
 
-测试不联网、不调用 `make`/`apt`，覆盖：settings 校验、config 渲染、设备解析、
-定制幂等性、feed 冲突清理、补丁重复应用、产物收集、OTA 索引/历史/发布、
-工具链资产名。
+测试不联网、不调用 `make`/`apt`，覆盖：
 
-## 9. 从旧仓库迁移
-
-- MediaTek Builder 的 `diy-script.sh` 已逐项翻译进
-  `scripts/zerowrt_core/customize.py` 和 `packages.py`；
-- 原来的 `curl | patch` 改成随仓库分发的、已刷新的补丁文件；
-- 原来的 `make -j$(nproc)` 改成内存感知的 `nproc + 1`，并保留串行 `V=s` 兜底；
-- 原来的 `cachewrtbuild` action 改成可选的 `toolchain` Release 缓存；
-- 旧的 `build.sh`/`diy-script.sh` 不再存在；workflow 只调用 Python CLI。
+- 12 个设备注册与默认 IP；
+- 设置校验；
+- 高功率模板的设备剥离与保留镜像选项；
+- 单设备选择与 Sing-Box 关闭；
+- Argon 资源生成与配置；
+- WiFi/banner/版本/密码；
+- feed 同名包清理；
+- 固件产物过滤；
+- OTA 元数据、索引合并与本地发布；
+- 工具链缓存资产名。

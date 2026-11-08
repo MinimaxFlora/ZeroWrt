@@ -4,11 +4,11 @@
 
 # ZeroWrt
 
-### MT798x 固件构建流水线，一条命令编译，一键在线升级。
+### MT798x MediaTek Filogic 固件构建流水线
 
 ![Target](https://img.shields.io/badge/target-mediatek%2Ffilogic-2E9D72?style=flat-square)
-![Source](https://img.shields.io/badge/source-ImmortalWrt%2025.12-1793d1?style=flat-square)
-![Device](https://img.shields.io/badge/device-Ruijie%20RG--X60%20New-E45A1B?style=flat-square)
+![Source](https://img.shields.io/badge/source-immortalwrt--mt798x--6.6-1793d1?style=flat-square)
+![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--3.0-4c9c2f?style=flat-square)
 
 [Releases](../../releases) · [Issues](../../issues) · [构建说明](docs/BUILD.md)
@@ -16,120 +16,147 @@
 </div>
 
 > [!IMPORTANT]
-> 本仓库是 **ZeroWrt 的 Python 重写版**。设备配置、补丁和固件定制流程来自
-> [OpenWrt_MediaTek_Builder](https://github.com/MinimaxFlora/OpenWrt_MediaTek_Builder)，
-> 构建依赖、LLVM、并行编译和工具链缓存来自
-> [ZeroWrt](https://github.com/MinimaxFlora/ZeroWrt)。
-> 构建时不再执行仓库里的 shell 脚本，所有步骤都由 `scripts/zerowrt.py` 完成。
-
----
+> 本仓库是 **ZeroWrt 的 Python 重写版**。安装编译依赖、清理/扩容磁盘、安装 LLVM
+> 等 Runner 准备逻辑保留；固件定制、设备配置、插件替换、OTA 和产物发布全部重写为
+> Python。工作流只调用 `scripts/zerowrt.py`。
 
 ## 这是什么
 
-ZeroWrt 是一套面向 MT798x 路由器的自建固件流水线。源码来自公开的
-[`chasey-dev/immortalwrt-mt798x-rebase`](https://github.com/chasey-dev/immortalwrt-mt798x-rebase)
-`25.12` 分支，设备配置沿用 MediaTek Builder 的
-[`configs/ruijie-rg-x60-new.config`](configs/ruijie-rg-x60-new.config)，
-并在其中加入 **luci-app-ota**，让设备可以在 LuCI 里检查、下载、校验并安装新固件。
+ZeroWrt 面向 **MediaTek Filogic（MT7986）** 路由器，源码固定为：
 
-一次完整构建在 GitHub Actions 上大约 30–60 分钟（首次没有工具链缓存时更久），
-产物包括：
+| 项目 | 值 |
+| --- | --- |
+| 源码仓库 | [`Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly`](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) |
+| 分支 | `openwrt-24.10-6.6` |
+| 目标 | `mediatek/filogic` |
+| 配置模板 | `defconfig/mt7975-ipailna-high-power.config` |
+| 发布 tag / Release | `mediatek_filogic` |
 
-```text
-zerowrt-mediatek-filogic-ruijie_rg-x60-new-mtkuboot-squashfs-sysupgrade.bin
-Packages.tar.gz
-build.config
-BUILD_INFO.txt
-SHA256SUMS
-ota.json
-```
-
-Release tag 使用设备 profile 名 `ruijie_rg-x60-new`。同一 tag 再次构建会覆盖旧资产，
-OTA 索引则按 `build_date` 判断新旧。
+每次工作流只编译 **一个设备**。`config apply` 会从高功率模板中删除所有默认设备选择，
+只加入本次选择的设备，因此不会出现“选 N60 Pro 却把其它设备一起编译”的情况。
 
 ## 支持设备
 
-| 设备 | 源码 | 布局 | OTA key |
-| --- | --- | --- | --- |
-| 锐捷 RG-X60 New | immortalwrt-mt798x-rebase `25.12` | MTK U-Boot（mtkuboot） | `ruijie_rg-x60-new-mtkuboot` |
+| 设备 | 布局 | 默认 LAN IP |
+| --- | --- | --- |
+| `netcore_n60-pro` — Netcore N60 Pro | Standard | `10.0.0.1` |
+| `ruijie_ew-6000gx-pro` — Ruijie EW-6000GX Pro | Standard | `10.0.0.1` |
+| `ruijie_ew-6000gx-pro-stock` — Ruijie EW-6000GX Pro | Stock | `10.0.0.1` |
+| `ruijie_ew-6000gx-pro-expand` — Ruijie EW-6000GX Pro | Expand | `10.0.0.1` |
+| `ruijie_ew-6000gx-pro-ubootmod` — Ruijie EW-6000GX Pro | U-Boot Mod | `10.0.0.1` |
+| `ruijie_rg-x60-new` — Ruijie RG-X60 New | Standard | `10.0.0.1` |
+| `ruijie_rg-x60-new-stock` — Ruijie RG-X60 New | Stock | `10.0.0.1` |
+| `ruijie_rg-x60-new-expand` — Ruijie RG-X60 New | Expand | `10.0.0.1` |
+| `ruijie_rg-x60-new-ubootmod` — Ruijie RG-X60 New | U-Boot Mod | `10.0.0.1` |
+| `supergateway_s20l` — Super Gateway S20L | Standard | `10.0.0.1` |
+| `supergateway_s20m` — Super Gateway S20M | Standard | `10.0.0.1` |
+| `supergateway_s20p` — Super Gateway S20P | Standard | `10.0.0.1` |
 
-> **从旧 ZeroWrt 升级前请先确认分区布局。** 旧 ZeroWrt 使用 `ubootmod`，
-> 这里使用 `mtkuboot`，两者镜像不能直接互刷。请从 U-Boot 恢复页按对应布局刷入，
-> 第一次切换时不要保留配置。
+> 所有设备默认 LAN IP 都是 `10.0.0.1`，可在工作流里修改。源码 `config_generate`
+> 里的锐捷/非锐捷两个默认值都会被替换成同一个地址。
 
-## 功能
+## 固件定制
 
-- **配置来自 `configs/`**：`ruijie-rg-x60-new.config` 原样保留，Python 只追加 OTA
-  必需项并检查 `defconfig` 有没有丢掉关键包。
-- **完整设备定制**：LAN IP、root 密码、WiFi SSID/密码、bash、ttyd 免登录、
-  登录 banner、版本字符串、MTK WiFi 默认值。
-- **补丁已刷新**：`0001`–`0005` 重新基于 `immortalwrt/luci` `openwrt-25.12`
-  生成，`0006` 为 GCC 16 工具链补丁，两个 `900-*` 包补丁已对照
-  libwebsockets 4.4.1 / elfutils 0.192 验证。
-- **LLVM + GCC 16**：预装 Clang 工具链，主工具链使用配置选择的 GCC 16。
-- **编译策略**：`nproc + 1` 并行、按可用内存限流、`IGNORE_ERRORS="n m"`，
-  失败后自动串行 `V=s` 重试。
-- **工具链缓存**：可从 `toolchain` Release 恢复 `build_dir/dl/staging_dir/tmp`，
-  跳过最耗时的工具链编译。
-- **OTA 更新**：构建时写入 `/etc/ota/build.json`，发布时生成
-  `ota.json`/`history.json` 到 `gh-pages`，设备端使用 `luci-app-ota` 一键升级。
-- **纯 Python**：workflow 只调用 CLI，不再维护大段 `sed`/`curl` shell。
+| 项目 | 实现 |
+| --- | --- |
+| 删除 vendor 覆盖 | 删除源码根部 `files/etc`（避免旧 banner 覆盖 base-files） |
+| 主机名 | `package/base-files/files/bin/config_generate` → `ZeroWrt` |
+| LAN IP | 锐捷/非锐捷两个默认值统一为 `10.0.0.1`，可由 `lan_ip` 覆盖 |
+| 发行版名 | `include/version.mk` 的 `VERSION_DIST` / `VERSION_MANUFACTURER` → `ZeroWrt` |
+| 版本字符串 | `openwrt_release` → `DISTRIB_DESCRIPTION='ZeroWrt-YYYYMMDD'`、`DISTRIB_REVISION=' By MinimaxFlora'`；`os-release` → `ZeroWrt 标准版 @RYYYYMMDD BY MinimaxFlora` |
+| 登录 banner | `assets/banner` → `package/base-files/files/etc/banner` |
+| WiFi | `package/mtk/applications/mtwifi-cfg/files/mtwifi.sh`：`ZeroWrt-2.4G` / `ZeroWrt-5G`，`psk2`，默认密码 `1234567890` |
+| Argon 主题 | 替换主题；配置页已合并进主题；背景 `assets/bg1.webp`；favicon/logo/图标由 `assets/favicon.ico` 生成；强制亮色；主色 `#EC4899`，暗色主色 `#BE185D` |
+| WireGuard | `luci-proto-wireguard` + `wireguard-tools` + `kmod-wireguard` |
+| 设备配置 | 基于高功率模板，移除全部默认设备，只加入本次设备 |
+| 插件 | 3cat、ACME、Argon 主题、ARP Bind、Commands、DDNS、OpenClash、PassWall、RamFree、TTYD、UPnP、OTA、WireGuard |
+| PassWall | 只启用 Xray，显式关闭 Sing-Box（MTK 镜像体积考虑） |
+| DDNS | 阿里云、Cloudflare、DNSPod、FreeDNS、GoDaddy |
+| OTA | [`MinimaxFlora/luci-app-ota`](https://github.com/MinimaxFlora/luci-app-ota) |
+| Go | 替换为 [`sbwml/packages_lang_golang`](https://github.com/sbwml/packages_lang_golang) `27.x`（Xray 需要 Go 1.27） |
 
-## 快速开始
+## 插件替换
 
-进入 **Actions → Build ZeroWrt → Run workflow**，填写：
+在 `./scripts/feeds update -a && ./scripts/feeds install -a` 之后执行：
+
+| 替换 | 来源 | 位置 |
+| --- | --- | --- |
+| PassWall | `Openwrt-Passwall/openwrt-passwall` | `package/new/openwrt-passwall` |
+| PassWall 依赖 | `Openwrt-Passwall/openwrt-passwall-packages` | `package/new/openwrt-passwall-packages` |
+| OpenClash | `vernesong/OpenClash` | `package/new/OpenClash` |
+| Argon 主题（含配置页） | `jerrykuku/luci-theme-argon` | `package/new/luci-theme-argon` |
+| OTA | `MinimaxFlora/luci-app-ota` | `package/new/luci-app-ota` |
+| Go 1.27 | `sbwml/packages_lang_golang` | 替换 `feeds/packages/lang/golang` |
+
+`package/new` 里出现的同名包会从 `feeds/` 和 `package/feeds/` 中删除，避免 buildroot
+静默选到旧版本。`openwrt-passwall-packages` 中的 `sing-box` 会在克隆后删除，feed 里的
+`sing-box` 也会一并移除。旧的独立 `luci-app-argon-config` feed 包会被删除，配置页使用
+`luci-theme-argon` 内置版本。
+
+## 使用工作流
+
+进入 **Actions → Build ZeroWrt → Run workflow**：
 
 | 输入 | 默认值 | 说明 |
 | --- | --- | --- |
-| `device` | `ruijie_rg-x60-new` | 设备 profile |
-| `lan_ip` | `10.0.0.1` | 管理地址 / LAN IP |
-| `root_password` | `password` | root 密码，至少 8 位；**首次登录请立即修改** |
-| `wifi_name` | `ZeroWrt` | SSID 前缀，自动追加 `-2.4G` / `-5G` / `-6G` |
-| `wifi_password` | `1234567890` | WiFi 密码，8–63 位安全字符 |
-| `ota_url` | 空 | 留空时使用 `https://<owner>.github.io/<repo>/ota.json` |
-| `ota_cname` | 空 | 自定义下载页域名，写入 `gh-pages` 的 `CNAME` |
+| `device` | `netcore_n60-pro` | 只编译一个设备 |
+| `lan_ip` | `10.0.0.1` | 所有设备统一的 LAN IP，可修改 |
+| `root_password` | `password` | 至少 8 位，首次登录请修改 |
+| `wifi_name` | `ZeroWrt` | 自动追加 `-2.4G` / `-5G` |
+| `wifi_password` | `1234567890` | 8–63 位 |
+| `ota_url` | `https://ota.tatalvpai.vip/ota.json` | 默认 OTA 索引地址 |
+| `ota_cname` | `ota.tatalvpai.vip` | OTA 下载页域名 |
 | `cache_toolchain` | `true` | 有缓存时恢复工具链 |
 
-构建成功后会自动：
+Netcore N60 Pro 在 `make defconfig` 之前的配置预览见
+[`docs/config/netcore_n60-pro.seed.config`](<docs/config/netcore_n60-pro.seed.config>)，
+在真实源码树上执行 `make defconfig` 后的最终配置见
+[`docs/config/netcore_n60-pro.final.config`](<docs/config/netcore_n60-pro.final.config>)。
 
-1. 上传 Artifact（保留 14 天）；
-2. 创建/更新 tag 为 `ruijie_rg-x60-new` 的 Release；
+构建成功后：
+
+1. 上传 Artifact（仅固件，保留 14 天）；
+2. 更新 tag / Release 名均为 `mediatek_filogic` 的 Release；
 3. 把 `ota.json`、`history.json` 和下载页推送到 `gh-pages`。
 
-### 启用 GitHub Pages
+## 产物
 
-仓库 **Settings → Pages** 选择 **Deploy from a branch**，分支 `gh-pages`、目录 `/`。
-如果 `ota_url` 留空，固件会检查：
+Release 和 Artifact **只包含固件**，不会上传：
+
+`config.buildinfo`、`feeds.buildinfo`、`profiles.json`、`sha256sums`、
+`version.buildinfo`、`*.manifest`、`mt7981-ram-ddr3-bl2.bin`、
+`mt7981-ram-ddr4-bl2.bin`、`mt7986-ram-ddr3-bl2.bin`、`mt7986-ram-ddr4-bl2.bin`、
+`mt7988-ram-comb-bl2.bin`。
+
+典型文件：
 
 ```text
-https://<owner>.github.io/<repo>/ota.json
+zerowrt-mediatek-filogic-netcore_n60-pro-initramfs-kernel.bin
+zerowrt-mediatek-filogic-netcore_n60-pro-squashfs-sysupgrade.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-bl31-uboot.fip
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-initramfs-recovery.itb
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-preloader.bin
+zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```
 
-使用自定义域名时，把域名填到 `ota_cname`，并在 DNS 添加指向
-`<owner>.github.io` 的 CNAME（Cloudflare 请设为 DNS only）。
+## 工具链缓存
 
-## 在设备上升级
+`Build Toolchain Cache` 工作流：
 
-固件内置 `luci-app-ota`：
+- tag：`toolchain`
+- Release 名：`Toolchain_Cache`
+- 资产：`toolchain_<libc>_<arch>_gcc-<major>.tar.zst`
 
-**系统 → 在线升级 → 检查更新**，然后下载并安装。索引地址、是否允许不安全连接、
-是否保留配置等都在 **在线升级 → 配置** 里。
+固件构建在 `make download` 前恢复缓存；没有缓存时只警告，工具链照常编译。
 
-安全策略：
+## 本地开发
 
-- 索引必须是 `https`（除非显式允许不安全连接）；
-- 索引条目必须带 SHA256，缺失直接拒绝；
-- 下载完成后校验 SHA256，并用 `sysupgrade -T` 预检镜像；
-- 校验失败的文件会被删除。
-
-## 本地构建
-
-构建依赖和编译步骤只支持 Linux（GitHub Actions 使用 Ubuntu 24.04）。
+构建依赖和编译步骤只支持 Linux（与 GitHub Actions 的 Ubuntu 24.04 一致）。
 在 Linux 上：
 
 ```bash
 export ZEROWRT_SOURCE_DIR=/builder/source
-export ZEROWRT_DEVICE=ruijie_rg-x60-new
+export ZEROWRT_DEVICE=netcore_n60-pro
 
 python3 scripts/zerowrt.py system free-disk --build-dir /builder
 python3 scripts/zerowrt.py system install-deps
@@ -138,81 +165,89 @@ python3 scripts/zerowrt.py source clone --dest "$ZEROWRT_SOURCE_DIR"
 python3 scripts/zerowrt.py source feeds-update --tree "$ZEROWRT_SOURCE_DIR"
 python3 scripts/zerowrt.py source feeds-install --tree "$ZEROWRT_SOURCE_DIR"
 python3 scripts/zerowrt.py packages add --tree "$ZEROWRT_SOURCE_DIR"
-python3 scripts/zerowrt.py source customize --tree "$ZEROWRT_SOURCE_DIR"
-python3 scripts/zerowrt.py patches apply --tree "$ZEROWRT_SOURCE_DIR"
+python3 scripts/zerowrt.py source customize --tree "$ZEROWRT_SOURCE_DIR" --assets assets
 python3 scripts/zerowrt.py config apply --tree "$ZEROWRT_SOURCE_DIR"
-python3 scripts/zerowrt.py ota embed --tree "$ZEROWRT_SOURCE_DIR" --api-url https://example.com/ota.json
-python3 scripts/zerowrt.py build download --tree "$ZEROWRT_SOURCE_DIR" --jobs "$(nproc)"
-python3 scripts/zerowrt.py build compile --tree "$ZEROWRT_SOURCE_DIR" --jobs "$(nproc)"
+python3 scripts/zerowrt.py ota embed --tree "$ZEROWRT_SOURCE_DIR" \
+  --api-url https://example.com/ota.json
+python3 scripts/zerowrt.py build download --tree "$ZEROWRT_SOURCE_DIR"
+python3 scripts/zerowrt.py build compile --tree "$ZEROWRT_SOURCE_DIR"
 python3 scripts/zerowrt.py build collect --tree "$ZEROWRT_SOURCE_DIR" --out dist
-python3 scripts/zerowrt.py ota index --tree "$ZEROWRT_SOURCE_DIR" --dist dist \
-  --repo <owner>/<repo> --tag ruijie_rg-x60-new
 ```
 
-完整参数、目录说明和补丁刷新方法见 [docs/BUILD.md](docs/BUILD.md)。
+单元测试不需要 Linux、不需要联网、不调用 `make`/`apt`：
+
+```bash
+python -m unittest discover -v
+python -m ruff check scripts tests
+```
 
 ## 目录结构
 
 ```text
 .
-├── configs/ruijie-rg-x60-new.config   # 设备 .config（MediaTek Builder 原文件）
-├── assets/                            # banner、logo
+├── assets/                         # banner、Argon 背景、favicon
+├── docs/
+│   ├── BUILD.md                    # 构建与维护文档
+│   └── release-notes/              # Release 正文
 ├── scripts/
-│   ├── zerowrt.py                     # CLI 入口
-│   ├── zerowrt_core/                  # sysops/source/packages/customize/config/
-│   │                                  # patches/build/ota/cache/state
-│   └── 000*.patch, 900-*.patch        # 已刷新/已验证的补丁
-├── tests/                             # 不联网的单元测试
-├── docs/BUILD.md                      # 构建与维护文档
-└── .github/workflows/                 # build / toolchain / quality
+│   ├── zerowrt.py                  # CLI 入口
+│   └── zerowrt_core/
+│       ├── build.py                # 下载/编译/只收集固件
+│       ├── cache.py                # toolchain Release 缓存
+│       ├── config.py               # 高功率模板 → 单设备 .config
+│       ├── customize.py            # 版本/IP/WiFi/banner/Argon
+│       ├── ota.py                  # OTA 元数据、索引、gh-pages
+│       ├── packages.py             # 插件替换与 feed 去重
+│       ├── profiles.py             # 12 个设备
+│       ├── settings.py             # 输入校验
+│       ├── source.py               # clone/feeds
+│       ├── state.py                # .zerowrt-info.json
+│       ├── sysops.py               # 依赖/扩容/LLVM
+│       └── util.py                 # 通用工具
+├── tests/                          # 不联网单元测试
+└── .github/workflows/              # build / toolchain / quality
 ```
-
-## 补丁说明
-
-| 补丁 | 作用 | 基线 |
-| --- | --- | --- |
-| `0001` | 状态页帮助/反馈按钮 | luci `openwrt-25.12` |
-| `0002` | 帮助链接中文翻译 | luci `openwrt-25.12` |
-| `0003` | 防火墙移除 flow offloading 设置 | luci `openwrt-25.12` |
-| `0004` | 重启确认弹窗 | luci `openwrt-25.12` |
-| `0005` | 状态页网络速率 | luci `openwrt-25.12` |
-| `0006` | GCC 16 工具链支持 | rebase `25.12` |
-| `900-fix-build-for-gcc-16` | libwebsockets 4.4.1 GCC 16 修复 | 包源码 |
-| `900-fix-gcc16-null-dereference-with-lto` | elfutils 0.192 LTO 空指针修复 | 包源码 |
-
-`0001`–`0005` 的 `index` 行和行号已按当前 LuCI 基线重新生成，应用时偏移为 0。
-上游更新后如果补丁失效，构建会在 `patches apply` 阶段直接失败并打印 `git apply`
-的上下文，而不是带着旧代码继续编译。
 
 ## 常见问题
 
-**为什么不用 `scripts/feeds update -a` 再跑一次？**
-补丁应用后再 `update` 会 `git pull`，可能覆盖补丁或因为本地修改失败。本流水线只在
-最前面 update 一次，最后只 `install -a`，再清理与 `package/new` 重名的 feed 包。
+**为什么 Release 里只有固件？**
+`build collect` 只匹配 initramfs-kernel、squashfs-sysupgrade、U-Boot Mod 的
+`bl31-uboot.fip` / `preloader.bin` / `initramfs-recovery.itb`。manifests、buildinfo、
+profiles.json、sha256sums 和 DDR bl2 都不会进入 `dist/`。
 
-**为什么 Docker 包被克隆了却没有进固件？**
-`configs/ruijie-rg-x60-new.config` 没有选中 Docker。保留克隆是为了需要时只改一行
-配置即可启用，不会增加默认镜像体积。
+**为什么 tag 和 Release 都叫 `mediatek_filogic`？**
+同一 Release 会累积不同设备的固件；每次只上传本次设备。OTA 索引按设备 key 合并，
+不会覆盖其它设备。
 
-**工具链缓存什么时候需要重建？**
-目标架构、libc 或 GCC 大版本变化后。缓存文件名带 `gcc-<major>`，但不同小版本仍可能
-不兼容；换 GCC 后请重新运行 **Build Toolchain Cache**。
+**为什么 PassWall 没有 Sing-Box？**
+`sing-box` 源码已删除，`.config` 里显式
+`# CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox is not set`，并检查
+`CONFIG_PACKAGE_sing-box` 没有变成 `=y`。
 
-**OTA 检查提示“索引中没有适用于此设备的固件”？**
-索引 key 是 `ruijie_rg-x60-new-mtkuboot`。确认 `ota.json` 的 `devices` 里存在该 key，
-以及固件内 `/etc/ota/build.json` 的 `device` 与之一致。
+**为什么所有设备都是 10.0.0.1？**
+上游 `config_generate` 原本按 board 分成锐捷 `192.168.110.1` 和非锐捷 `192.168.6.1`
+两支。ZeroWrt 把两个 LAN 默认值都替换成统一的 `10.0.0.1`，工作流 `lan_ip` 可覆盖；
+非 LAN 接口的 `192.168.$((addr_offset++)).1` 不动。
+
+**WireGuard 在哪里配置？**
+固件包含 `luci-proto-wireguard`、`wireguard-tools` 和 `kmod-wireguard`。在
+**网络 → 接口 → 添加新接口 → 协议 WireGuard VPN** 中配置。
+
+**Argon 配置页还需要单独装 `luci-app-argon-config` 吗？**
+不需要。新版 Argon 已把配置页合并进 `luci-theme-argon`，本仓库不再克隆独立包，并会
+删除 feed 里的旧 `luci-app-argon-config`。
 
 ## 致谢
 
-设备配置、补丁和定制流程来自
-[OpenWrt_MediaTek_Builder](https://github.com/MinimaxFlora/OpenWrt_MediaTek_Builder)；
-Python 架构、依赖安装、LLVM、编译与 OTA 思路来自
-[ZeroWrt](https://github.com/MinimaxFlora/ZeroWrt)；
-源码来自 [chasey-dev](https://github.com/chasey-dev/immortalwrt-mt798x-rebase)、
-[ImmortalWrt](https://github.com/immortalwrt)、
-[OpenWrt](https://github.com/openwrt) 及各自上游。
+源码来自 [Yuzhii0718](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly)、
+[ImmortalWrt](https://github.com/immortalwrt)、[OpenWrt](https://github.com/openwrt)；
+插件来自 [Openwrt-Passwall](https://github.com/Openwrt-Passwall)、
+[vernesong/OpenClash](https://github.com/vernesong/OpenClash)、
+[jerrykuku](https://github.com/jerrykuku)、
+[sbwml](https://github.com/sbwml) 和
+[MinimaxFlora](https://github.com/MinimaxFlora)。
 
 ## 许可
 
-本项目以 **GPL-3.0** 发布，见 [LICENSE](LICENSE)。固件本身包含 OpenWrt、
-ImmortalWrt 及大量第三方组件， redistributing 镜像时请同时遵守它们的许可证。
+GPL-3.0，见 [LICENSE](LICENSE)。固件包含 OpenWrt、ImmortalWrt 及第三方组件，
+分发镜像时请同时遵守它们的许可证。

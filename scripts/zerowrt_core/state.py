@@ -1,10 +1,10 @@
 """Build metadata shared by the workflow steps.
 
-``.zerowrt-info.json`` lives at the root of the source tree. It is written
-after the clone, completed after ``config apply`` and read again by ``ota
-embed``, ``build collect`` and ``ota index``. Keeping one file means the
-firmware, the release notes and the OTA index can never disagree about the
-device, the version or the build date.
+``.zerowrt-info.json`` lives at the root of the source tree.  It is written
+after the clone and completed after ``config apply``; the OTA embed, artifact
+collection and release/OTA steps all read the same record.  One file means the
+image, the release and the update index cannot disagree about the device,
+version or build date.
 """
 
 from __future__ import annotations
@@ -16,6 +16,13 @@ from pathlib import Path
 from . import util
 
 INFO_FILE = ".zerowrt-info.json"
+
+try:  # Python 3.9+, present on GitHub's Ubuntu images.
+    from zoneinfo import ZoneInfo
+
+    BUILD_ZONE = ZoneInfo("Asia/Shanghai")
+except Exception:  # pragma: no cover - Windows without tzdata
+    BUILD_ZONE = None
 
 
 def path(tree: Path) -> Path:
@@ -41,20 +48,24 @@ def update(tree: Path, **values) -> dict:
 
 
 def build_date(data: dict) -> int:
-    value = data.get("build_date")
     try:
-        return int(value or 0)
+        return int(data.get("build_date") or 0)
     except (TypeError, ValueError):
         return 0
 
 
-def version_for(build_date: int) -> str:
-    if build_date <= 0:
-        build_date = int(time.time())
-    return datetime.fromtimestamp(build_date, UTC).strftime("%Y%m%d")
+def version_for(build_date_value: int) -> str:
+    """Build-date version, formatted in the workflow's Asia/Shanghai day."""
+    if build_date_value <= 0:
+        build_date_value = int(time.time())
+    if BUILD_ZONE is not None:
+        return datetime.fromtimestamp(build_date_value, BUILD_ZONE).strftime("%Y%m%d")
+    return time.strftime("%Y%m%d", time.localtime(build_date_value))
 
 
 def iso_for(timestamp: int) -> str:
+    if BUILD_ZONE is not None:
+        return datetime.fromtimestamp(int(timestamp), BUILD_ZONE).strftime("%Y-%m-%d %H:%M:%S %z")
     return datetime.fromtimestamp(int(timestamp), UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
 
 

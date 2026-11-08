@@ -1,10 +1,4 @@
-"""Source tree handling: clone the MT798x tree, update feeds and verify them.
-
-The feed layout is deliberately not hard-coded beyond the two names the build
-cannot work without (``luci`` and ``packages``): feeds move packages between
-directories, and a wrong path should fail with a readable message instead of a
-nine-hour compile.
-"""
+"""Source tree handling: clone the MT798x tree, update feeds and verify them."""
 
 from __future__ import annotations
 
@@ -13,15 +7,24 @@ import time
 from pathlib import Path
 
 from . import packages, profiles, state, util
-from .settings import BuildSettings
 
 
 def _verify_tree(tree: Path) -> None:
     tree = Path(tree)
-    if not (tree / "rules.mk").exists() or not (tree / "include" / "version.mk").exists():
+    required = {
+        "rules.mk": tree / "rules.mk",
+        "include/version.mk": tree / "include" / "version.mk",
+        "target/linux/mediatek/image/filogic.mk": tree / "target/linux/mediatek/image/filogic.mk",
+        "defconfig/mt7975-ipailna-high-power.config": tree / "defconfig/mt7975-ipailna-high-power.config",
+        "package/base-files/files/bin/config_generate": tree / "package/base-files/files/bin/config_generate",
+        "package/mtk/applications/mtwifi-cfg/files/mtwifi.sh": (
+            tree / "package/mtk/applications/mtwifi-cfg/files/mtwifi.sh"
+        ),
+    }
+    missing = [name for name, path in required.items() if not path.exists()]
+    if missing:
         raise util.BuildError(
-            f"{tree} does not look like an OpenWrt/ImmortalWrt tree "
-            "(rules.mk and include/version.mk are missing)"
+            f"{tree} does not look like the expected ImmortalWrt MT798x tree; missing:\n  - " + "\n  - ".join(missing)
         )
 
 
@@ -32,7 +35,7 @@ def clone_source(
     ref: str | None = None,
     repo: str | None = None,
 ) -> dict:
-    """Clone the source tree that *device* is built from and record its info."""
+    """Clone the source tree and record its identity in ``.zerowrt-info.json``."""
     profile = profiles.require(device)
     source = profiles.source(profile)
     repo = (repo or os.environ.get("ZEROWRT_SOURCE_REPO") or source.repo).strip()
@@ -45,9 +48,11 @@ def clone_source(
     _verify_tree(Path(tree))
     util.log(f"checked out commit {sha[:12]}")
 
+    build_date = int(time.time())
     data = {
         "dist": "ZeroWrt",
         "profile": profile.name,
+        "artifact": profile.name,
         "source": profile.source,
         "source_label": source.label,
         "source_repo": repo,
@@ -55,22 +60,22 @@ def clone_source(
         "source_commit": sha,
         "board": profile.board,
         "subtarget": profile.subtarget,
-        "target": f"{profile.board}/{profile.subtarget}",
+        "target": profile.target,
         "device": profile.device,
-        "dt_model": profile.dt_model,
+        "dt_model": "",
         "device_vendor": profile.vendor,
         "device_model": profile.model,
+        "device_variant": profile.variant,
         "layout": profile.layout,
-        "build_date": int(time.time()),
-        "version": "",
+        "default_lan_ip": profile.lan_ip,
+        "build_date": build_date,
+        "version": state.version_for(build_date),
     }
-    data["version"] = state.version_for(data["build_date"])
     state.write(Path(tree), data)
     return data
 
 
 def update_feeds(tree: Path) -> None:
-    """Fetch every feed; the feed sources are needed by the customisation step."""
     tree = Path(tree)
     feeds = tree / "scripts" / "feeds"
     if not feeds.exists():
@@ -89,15 +94,12 @@ def update_feeds(tree: Path) -> None:
         log_path = tree / "feeds-update.log"
         if log_path.exists():
             tail = "\n".join(util.read_text(log_path).splitlines()[-40:])
-        raise util.BuildError(
-            "feed update did not provide: " + ", ".join(missing) + "\n" + tail
-        )
+        raise util.BuildError("feed update did not provide: " + ", ".join(missing) + "\n" + tail)
     if code != 0:
         util.warn("feeds update reported an error, but luci/packages are present; continuing")
 
 
 def install_feeds(tree: Path) -> None:
-    """Link the feeds into ``package/feeds`` and drop packages we replace."""
     tree = Path(tree)
     feeds = tree / "scripts" / "feeds"
     if not feeds.exists():
@@ -111,14 +113,11 @@ def install_feeds(tree: Path) -> None:
         log_path=tree / "feeds-install.log",
     )
 
-    # package/new is cloned before this step, so the feed copies of those
-    # packages have to disappear before the buildroot scans the tree.
-    packages.prune_feed_conflicts(tree)
-
     required = {
-        "luci-compat": tree / "package" / "feeds" / "luci" / "luci-compat",
-        "lyaml": tree / "package" / "feeds" / "packages" / "lyaml",
-        "ttyd": tree / "package" / "feeds" / "packages" / "ttyd",
+        "luci-compat": tree / "package/feeds/luci/luci-compat",
+        "lyaml": tree / "package/feeds/packages/lyaml",
+        "ttyd": tree / "package/feeds/packages/ttyd",
+        "3proxy": tree / "package/feeds/packages/3proxy",
     }
     missing = [name for name, path in required.items() if not path.exists()]
     if missing:
@@ -126,24 +125,9 @@ def install_feeds(tree: Path) -> None:
         log_path = tree / "feeds-install.log"
         if log_path.exists():
             tail = "\n".join(util.read_text(log_path).splitlines()[-40:])
-        raise util.BuildError(
-            "feeds install did not provide: " + ", ".join(missing) + "\n" + tail
-        )
+        raise util.BuildError("feeds install did not provide: " + ", ".join(missing) + "\n" + tail)
+
+    # package/new is cloned after this step; prune its feed duplicates here so
+    # the buildroot never sees two packages with the same name.
+    packages.prune_feed_conflicts(tree)
     util.log("feeds installed")
-
-
-def ensure_patched_luci(tree: Path) -> None:
-    """Fail early when the LuCI feed is not the tree the patches target."""
-    tree = Path(tree)
-    candidates = [
-        tree / "feeds" / "luci" / "modules" / "luci-mod-status",
-        tree / "feeds" / "luci" / "applications" / "luci-app-firewall",
-    ]
-    missing = [str(path.relative_to(tree)) for path in candidates if not path.exists()]
-    if missing:
-        raise util.BuildError("unexpected LuCI feed layout, missing: " + ", ".join(missing))
-
-
-def settings(tree: Path) -> BuildSettings:
-    """Convenience helper for tests and commands."""
-    return BuildSettings.from_environment()

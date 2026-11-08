@@ -1,14 +1,17 @@
 """External packages and feed conflict removal.
 
-Everything cloned by this module lives under ``package/new`` (or in the feed
-directory it replaces). Whichever feed ships a package with the same name loses
-it to :func:`prune_feed_conflicts`; a duplicate package makes the buildroot
-pick one silently, which is how the wrong PassWall core or an old Argon theme
-ends up in an image.
+Only the packages that must differ from the 24.10 feeds are cloned here:
 
-The package list itself is not duplicated here: ``configs/ruijie-rg-x60-new.config``
-stays the authoritative selection. This module only makes sure every name the
-config asks for exists in the tree.
+* PassWall (LuCI app + its core packages)
+* OpenClash
+* Argon theme (the theme now contains the Argon configuration UI)
+* luci-app-ota
+* Go 1.27 (Xray needs it)
+
+Everything is cloned below ``package/new`` (except Go, which replaces the feed
+directory it belongs to).  A package name scanner then removes the feed copies,
+including the ``package/feeds`` symlinks, so the buildroot cannot silently pick
+an old PassWall core or the feed Argon theme.
 """
 
 from __future__ import annotations
@@ -19,194 +22,191 @@ from pathlib import Path
 
 from . import util
 
-# One checkout carries the LuCI front ends, the proxy cores, the theme and the
-# extra applications used by the config.
-HELLOWORLD_REPO = "MinimaxFlora/openwrt_package"
-HELLOWORLD_REF = "master"
+PASSWALL_REPO = "Openwrt-Passwall/openwrt-passwall"
+PASSWALL_REF = "main"
+PASSWALL_DIR = "openwrt-passwall"
 
-# The Go/Rust versions the 25.12 tree expects are newer than the feed copies.
-GOLANG_REPO = "sbwml/packages_lang_golang"
-GOLANG_REF = "27.x"
-RUST_REPO = "sbwml/packages_lang_rust"
-RUST_REF = "main"
+PASSWALL_PACKAGES_REPO = "Openwrt-Passwall/openwrt-passwall-packages"
+PASSWALL_PACKAGES_REF = "main"
+PASSWALL_PACKAGES_DIR = "openwrt-passwall-packages"
 
-# Docker is not selected by the default config but the workflow keeps the same
-# package set as the MediaTek builder so enabling it is a one-line config edit.
-DOCKERMAN_REPO = "sbwml/luci-app-dockerman"
-DOCKERMAN_REF = "openwrt-25.12"
-DOCKER_REPOS = {
-    "docker": ("sbwml/packages_utils_docker", "main"),
-    "dockerd": ("sbwml/packages_utils_dockerd", "main"),
-    "containerd": ("sbwml/packages_utils_containerd", "main"),
-    "runc": ("sbwml/packages_utils_runc", "main"),
-}
+OPENCLASH_REPO = "vernesong/OpenClash"
+OPENCLASH_REF = "master"
+OPENCLASH_DIR = "OpenClash"
+
+ARGON_THEME_REPO = "jerrykuku/luci-theme-argon"
+ARGON_THEME_REF = "master"
+ARGON_THEME_DIR = "luci-theme-argon"
 
 OTA_REPO = "MinimaxFlora/luci-app-ota"
 OTA_REF = "main"
 
-BUILD_PACKAGE_RE = re.compile(r"call BuildPackage,([^)\n]+)\)")
-PKG_NAME_RE = re.compile(r"^PKG_NAME\s*:?=\s*(\S+)", re.M)
+GOLANG_REPO = "sbwml/packages_lang_golang"
+GOLANG_REF = "27.x"
+
+BUILD_PACKAGE_RE = re.compile(r"call\s+BuildPackage,\s*([^)\n]+)\)")
+NAME_RE = re.compile(r"^(?:PKG_NAME|LUCI_NAME)\s*:?=\s*(\S+)", re.M)
 
 
-def declared_package_names(directory: Path) -> set[str]:
-    """Names a package directory registers with the buildroot.
-
-    A single Makefile can build several packages (helloworld's
-    ``v2ray-geodata`` registers ``v2ray-geoip`` and ``v2ray-geosite``), while
-    LuCI Makefiles write ``BuildPackage,$(PKG_NAME)``. Comparing directory
-    names alone therefore misses real conflicts.
-    """
-    makefile = Path(directory) / "Makefile"
+def _makefile_names(makefile: Path) -> set[str]:
     if not makefile.is_file():
         return set()
-
     text = util.read_text(makefile)
-    match = PKG_NAME_RE.search(text)
-    pkg_name = match.group(1) if match else ""
+    match = NAME_RE.search(text)
+    pkg_name = match.group(1).strip() if match else ""
 
     names: set[str] = set()
     for raw in BUILD_PACKAGE_RE.findall(text):
         name = raw.replace("$(PKG_NAME)", pkg_name).strip()
-        if not name or "$" in name:
-            continue
-        names.add(name)
-    if pkg_name:
+        if name and "$" not in name:
+            names.add(name)
+    if pkg_name and "$" not in pkg_name:
         names.add(pkg_name)
+    if names:
+        return names
+    # LuCI themes and some applications rely on the directory name rather than
+    # an explicit PKG_NAME.  The parent directory is the package name in that
+    # case, and it is also a useful fallback for older Makefiles.
+    return {makefile.parent.name}
+
+
+def declared_package_names(directory: Path) -> set[str]:
+    """Package names declared by ``directory/Makefile``."""
+    return _makefile_names(Path(directory) / "Makefile")
+
+
+def package_names_under(root: Path) -> set[str]:
+    """Every package name declared by any Makefile below *root*."""
+    root = Path(root)
+    names: set[str] = set()
+    if not root.is_dir():
+        return names
+    for makefile in root.rglob("Makefile"):
+        names |= _makefile_names(makefile)
     return names
 
 
 def new_package_names(tree: Path) -> set[str]:
-    """Every package name owned by ``package/new``."""
-    names: set[str] = set()
-    new_dir = Path(tree) / "package" / "new"
-    if not new_dir.is_dir():
-        return names
-    for root, dirs, _files in os.walk(new_dir, topdown=True, followlinks=False):
-        for name in dirs:
-            candidate = Path(root) / name
-            names |= declared_package_names(candidate)
-    return names
+    return package_names_under(Path(tree) / "package" / "new")
 
 
-def _prune_packages(base: Path, names: set[str], *, removed: list[Path]) -> None:
-    """Delete every directory under *base* that provides one of ``names``."""
+def _prune_feed_packages(base: Path, names: set[str], *, removed: list[Path]) -> None:
+    """Delete package directories below *base* that provide one of ``names``."""
+    base = Path(base)
     if not base.exists():
         return
-    for root, dirs, _files in os.walk(base, topdown=True, followlinks=False):
-        keep = []
-        for name in dirs:
-            candidate = Path(root) / name
-            is_package = (candidate / "Makefile").is_file()
-            if is_package and (candidate.name in names or declared_package_names(candidate) & names):
-                if util.remove_path(candidate):
-                    removed.append(candidate)
-                continue
-            keep.append(name)
-        dirs[:] = keep
+    candidates = {makefile.parent for makefile in base.rglob("Makefile")}
+    # The Go feed is intentionally replaced in place; never prune it even if a
+    # cloned package happens to declare a package named "golang".
+    protected = base / "packages" / "lang" / "golang"
+    # Deepest first: removing a parent must not hide a nested package that also
+    # needs to be reported.
+    for candidate in sorted(candidates, key=lambda path: len(path.parts), reverse=True):
+        if not candidate.exists():
+            continue
+        if candidate == protected or protected in candidate.parents:
+            continue
+        if declared_package_names(candidate) & names and util.remove_path(candidate):
+            removed.append(candidate)
 
 
 def prune_feed_conflicts(tree: Path) -> list[Path]:
-    """Remove feed copies of every package cloned into ``package/new``.
-
-    Both the raw feed checkouts and the ``package/feeds`` links are pruned:
-    the link is what the buildroot actually scans, and a stale link survives a
-    removal from the feed checkout.
-    """
+    """Remove feed copies of every package cloned into ``package/new``."""
     tree = Path(tree)
     names = new_package_names(tree)
     removed: list[Path] = []
     if not names:
         return removed
-    _prune_packages(tree / "feeds", names, removed=removed)
-    _prune_packages(tree / "package" / "feeds", names, removed=removed)
+
+    _prune_feed_packages(tree / "feeds", names, removed=removed)
+    _prune_feed_packages(tree / "package" / "feeds", names, removed=removed)
+
+    # Symlinks are not package directories; remove the ones whose name matches,
+    # then clean up links that became dangling after the feed copy was deleted.
+    links_root = tree / "package" / "feeds"
+    if links_root.exists():
+        for path in sorted(links_root.rglob("*"), key=lambda item: len(item.parts), reverse=True):
+            if not path.is_symlink():
+                continue
+            if (path.name in names or not path.exists()) and util.remove_path(path):
+                removed.append(path)
+
     for path in removed:
-        util.log(f"removed feed package {path.relative_to(tree)}")
+        try:
+            util.log(f"removed feed duplicate {path.relative_to(tree)}")
+        except ValueError:
+            util.log(f"removed feed duplicate {path}")
     return removed
 
 
-def _clone(repo: str, ref: str, dest: Path) -> None:
+def _clone(repo: str, ref: str, dest: Path) -> Path:
+    dest = Path(dest)
     if dest.is_symlink() or dest.exists():
         util.remove_path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     util.log(f"adding {dest.name} ({repo} @ {ref})")
     util.clone(repo, dest, ref=ref, token=None, depth=1)
-
-
-def _add_helloworld(tree: Path) -> Path:
-    new_dir = Path(tree) / "package" / "new"
-    new_dir.mkdir(parents=True, exist_ok=True)
-    helloworld = new_dir / "helloworld"
-    _clone(HELLOWORLD_REPO, HELLOWORLD_REF, helloworld)
-
-    # autocore is a vendor helper for the prebuilt MTK images; the rebase tree
-    # builds its own and a duplicate only slows the scan down.
-    util.remove_path(helloworld / "autocore")
-    return helloworld
-
-
-def _replace_feed_dir(tree: Path, relative: Path, repo: str, ref: str) -> Path:
-    dest = Path(tree) / relative
-    _clone(repo, ref, dest)
     return dest
 
 
-def _ensure_feed_links(tree: Path) -> None:
-    """Keep the package/feeds links valid after a feed directory is replaced.
+def _replace_feed_dir(tree: Path, relative: Path, repo: str, ref: str) -> Path:
+    return _clone(repo, ref, Path(tree) / relative)
 
-    ``scripts/feeds install`` (run before this step) already created these
-    links. Replacing the directory behind a link keeps it valid, but a package
-    that did not exist in the feed index would otherwise never be scanned.
-    """
-    links = {
-        Path("package/feeds/packages/golang"): Path("feeds/packages/lang/golang"),
-        Path("package/feeds/packages/rust"): Path("feeds/packages/lang/rust"),
-        Path("package/feeds/luci/luci-app-dockerman"): Path("feeds/luci/applications/luci-app-dockerman"),
-    }
-    for name in DOCKER_REPOS:
-        links[Path("package/feeds/packages") / name] = Path("feeds/packages/utils") / name
-    for link, target in links.items():
-        link_path = Path(tree) / link
-        target_path = Path(tree) / target
-        if not target_path.exists() or link_path.is_symlink() or link_path.exists():
-            continue
-        link_path.parent.mkdir(parents=True, exist_ok=True)
-        link_path.symlink_to(os.path.relpath(target_path, link_path.parent))
+
+def _ensure_golang_link(tree: Path) -> None:
+    """Keep ``package/feeds/packages/golang`` valid after replacing the feed dir."""
+    link = Path(tree) / "package" / "feeds" / "packages" / "golang"
+    target = Path(tree) / "feeds" / "packages" / "lang" / "golang"
+    if not target.exists() or link.exists() or link.is_symlink():
+        return
+    link.parent.mkdir(parents=True, exist_ok=True)
+    link.symlink_to(os.path.relpath(target, link.parent))
 
 
 def add_external_packages(tree: Path) -> None:
-    """Clone the package set used by the device config into the source tree."""
+    """Clone the external package set and remove the feed duplicates."""
     tree = Path(tree)
     new_dir = tree / "package" / "new"
     new_dir.mkdir(parents=True, exist_ok=True)
 
-    helloworld = _add_helloworld(tree)
-
-    _replace_feed_dir(tree, Path("feeds/packages/lang/golang"), GOLANG_REPO, GOLANG_REF)
-    _replace_feed_dir(tree, Path("feeds/packages/lang/rust"), RUST_REPO, RUST_REF)
-
-    _replace_feed_dir(
-        tree,
-        Path("feeds/luci/applications/luci-app-dockerman"),
-        DOCKERMAN_REPO,
-        DOCKERMAN_REF,
+    _clone(PASSWALL_REPO, PASSWALL_REF, new_dir / PASSWALL_DIR)
+    passwall_packages = _clone(
+        PASSWALL_PACKAGES_REPO,
+        PASSWALL_PACKAGES_REF,
+        new_dir / PASSWALL_PACKAGES_DIR,
     )
-    for name, (repo, ref) in DOCKER_REPOS.items():
-        _replace_feed_dir(tree, Path("feeds/packages/utils") / name, repo, ref)
+    # PassWall can select Sing-Box, but on MT7986 it only makes the image much
+    # larger.  Remove both the cloned source and the feed copy; the .config also
+    # explicitly unsets it.
+    util.remove_path(passwall_packages / "sing-box")
+    util.remove_path(tree / "feeds" / "packages" / "net" / "sing-box")
+    util.remove_path(tree / "package" / "feeds" / "packages" / "sing-box")
+    # homeproxy is a sing-box front end; leaving it in the tree only produces a
+    # "dependency on sing-box which does not exist" defconfig warning.
+    util.remove_path(tree / "feeds" / "luci" / "applications" / "luci-app-homeproxy")
+    util.remove_path(tree / "package" / "feeds" / "luci" / "luci-app-homeproxy")
+
+    _clone(OPENCLASH_REPO, OPENCLASH_REF, new_dir / OPENCLASH_DIR)
+
+    theme = _clone(ARGON_THEME_REPO, ARGON_THEME_REF, new_dir / ARGON_THEME_DIR)
+    # New Argon releases integrate the configuration UI into the theme.  Drop
+    # the compatibility shim (if present) and the old feed package so there is
+    # exactly one Argon implementation in the tree.
+    util.remove_path(theme / "compat")
+    util.remove_path(tree / "feeds" / "luci" / "applications" / "luci-app-argon-config")
+    util.remove_path(tree / "package" / "feeds" / "luci" / "luci-app-argon-config")
 
     add_ota_app(tree)
+    _replace_feed_dir(tree, Path("feeds/packages/lang/golang"), GOLANG_REPO, GOLANG_REF)
 
-    _validate_layout(new_dir, helloworld)
-    # The feeds were installed before this step; prune what package/new owns so
-    # the build cannot see a duplicate. Links for the replaced feed directories
-    # are created here because no second `feeds install` runs.
+    _validate_layout(new_dir)
     prune_feed_conflicts(tree)
-    _ensure_feed_links(tree)
+    _ensure_golang_link(tree)
 
 
 def add_ota_app(tree: Path) -> Path:
     """Clone ``luci-app-ota`` into ``package/new``."""
-    dest = Path(tree) / "package" / "new" / "luci-app-ota"
-    _clone(OTA_REPO, OTA_REF, dest)
+    dest = _clone(OTA_REPO, OTA_REF, Path(tree) / "package" / "new" / "luci-app-ota")
     if not (dest / "Makefile").exists():
         raise util.BuildError(f"luci-app-ota checkout is missing a Makefile: {dest}")
     if not (dest / "root" / "usr" / "bin" / "ota").exists():
@@ -215,16 +215,33 @@ def add_ota_app(tree: Path) -> Path:
     return dest
 
 
-def _validate_layout(new_dir: Path, helloworld: Path) -> None:
+def _validate_layout(new_dir: Path) -> None:
     checks = {
-        "package/new/helloworld/luci-app-passwall/Makefile": helloworld / "luci-app-passwall" / "Makefile",
-        "package/new/helloworld/luci-app-openclash/Makefile": helloworld / "luci-app-openclash" / "Makefile",
-        "package/new/helloworld/luci-theme-argon/Makefile": helloworld / "luci-theme-argon" / "Makefile",
-        "package/new/helloworld/luci-app-argon-config/Makefile": helloworld / "luci-app-argon-config" / "Makefile",
-        "package/new/helloworld/sing-box/Makefile": helloworld / "sing-box" / "Makefile",
-        "package/new/helloworld/v2ray-geodata/Makefile": helloworld / "v2ray-geodata" / "Makefile",
+        "package/new/openwrt-passwall/luci-app-passwall/Makefile": new_dir
+        / "openwrt-passwall"
+        / "luci-app-passwall"
+        / "Makefile",
+        "package/new/openwrt-passwall-packages/xray-core/Makefile": new_dir
+        / "openwrt-passwall-packages"
+        / "xray-core"
+        / "Makefile",
+        "package/new/OpenClash/luci-app-openclash/Makefile": new_dir / "OpenClash" / "luci-app-openclash" / "Makefile",
+        "package/new/luci-theme-argon/Makefile": new_dir / "luci-theme-argon" / "Makefile",
         "package/new/luci-app-ota/Makefile": new_dir / "luci-app-ota" / "Makefile",
     }
     missing = [name for name, path in checks.items() if not path.exists()]
     if missing:
         raise util.BuildError("unexpected repository layout, missing:\n  - " + "\n  - ".join(missing))
+
+    theme = new_dir / "luci-theme-argon"
+    for relative in (
+        theme / "root/etc/config/argon",
+        theme / "htdocs/luci-static/argon/img/bg1.webp",
+        theme / "htdocs/luci-static/argon/favicon.ico",
+        theme / "htdocs/luci-static/resources/view/argon-config.js",
+    ):
+        if not relative.exists():
+            raise util.BuildError(f"Argon theme is incomplete, missing: {relative}")
+
+    if (new_dir / "openwrt-passwall-packages" / "sing-box").exists():
+        raise util.BuildError("sing-box is still present in package/new; remove it before building")

@@ -18,7 +18,7 @@ from pathlib import Path
 try:  # POSIX only; the helpers are exercised on Linux runners.
     import pwd
 except ImportError:  # pragma: no cover - Windows development machines
-    pwd = None
+    pwd = None  # type: ignore[assignment]
 
 from . import util
 
@@ -65,7 +65,7 @@ def _run_user() -> str:
         return sudo_user
     if pwd is not None and hasattr(os, "getuid"):
         try:
-            name = pwd.getpwuid(os.getuid()).pw_name
+            name = pwd.getpwuid(os.getuid()).pw_name  # type: ignore[attr-defined]
             if name != "root":
                 return name
         except KeyError:

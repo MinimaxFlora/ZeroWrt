@@ -253,21 +253,22 @@ def generate_index(
         entry["label"] = label
 
     existing_data = _load_index(existing)
-    devices = existing_data.get("devices") if isinstance(existing_data.get("devices"), dict) else {}
-    devices = dict(devices)
+    raw_devices = existing_data.get("devices")
+    devices: dict = dict(raw_devices) if isinstance(raw_devices, dict) else {}
     for key in device_keys(info):
         devices[key] = dict(entry)
 
+    dist_name = str(info.get("dist") or "ZeroWrt")
     index = {
         "schema": 2,
         "generator": "zerowrt ota index",
         "generated": int(time.time()),
-        "dist": str(info.get("dist") or "ZeroWrt"),
+        "dist": dist_name,
         "devices": dict(sorted(devices.items())),
     }
     util.write_json(dist / "ota.json", index)
     if history is not None:
-        update_history(history, entry, dist_name=index["dist"])
+        update_history(history, entry, dist_name=dist_name)
     util.log(f"OTA index: {image.name} -> {', '.join(device_keys(info))}")
     util.log(f"OTA image sha256 {digest[:16]}..., {size} bytes")
     return index

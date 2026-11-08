@@ -482,6 +482,7 @@ toolchain_<libc>_<arch>_gcc-<major>.tar.zst
 python -m unittest discover -v
 python -m ruff check scripts tests
 python -m ruff format --check scripts tests
+mypy scripts
 coverage run -m unittest discover
 coverage report --fail-under=70
 ```

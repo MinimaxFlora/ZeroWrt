@@ -158,7 +158,7 @@ def run(
             Path(log_path).parent.mkdir(parents=True, exist_ok=True)
             log_file = stack.enter_context(open(log_path, "a", encoding="utf-8", errors="replace"))
 
-        proc = subprocess.Popen(
+        child = subprocess.Popen(
             cmd,
             cwd=str(cwd) if cwd else None,
             env=env,
@@ -169,17 +169,17 @@ def run(
             stderr=subprocess.STDOUT,
             bufsize=1,
         )
-        if proc.stdout is None:
-            proc.kill()
+        if child.stdout is None:
+            child.kill()
             raise BuildError(f"failed to capture stdout: {shown}")
-        for line in proc.stdout:
+        for line in child.stdout:
             if not quiet:
                 sys.stdout.write(line)
                 sys.stdout.flush()
             if log_file is not None:
                 log_file.write(line)
-        code = proc.wait(timeout=timeout)
-        proc.stdout.close()
+        code = child.wait(timeout=timeout)
+        child.stdout.close()
 
     if check and code != 0:
         raise BuildError(f"command failed ({code}): {shown}")

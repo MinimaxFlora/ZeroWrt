@@ -27,11 +27,12 @@ jobs:
       - name: Install tooling
         run: |
           python -m pip install --upgrade pip
-          python -m pip install ruff pillow coverage
-      - name: Lint and format
+          python -m pip install ruff pillow coverage mypy
+      - name: Lint, format and types
         run: |
           ruff check scripts tests
           ruff format --check scripts tests
+          mypy scripts
           python -m compileall -q scripts tests
       - name: Unit tests with coverage
         run: |

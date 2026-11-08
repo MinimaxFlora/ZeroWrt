@@ -12,14 +12,14 @@ from __future__ import annotations
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from . import util
 
 INFO_FILE = ".zerowrt-info.json"
 
-try:  # Python 3.9+, present on GitHub's Ubuntu images.
-    from zoneinfo import ZoneInfo
-
+BUILD_ZONE: ZoneInfo | None
+try:  # Python 3.9+; ZoneInfo may still fail when tzdata is missing.
     BUILD_ZONE = ZoneInfo("Asia/Shanghai")
 except Exception:  # pragma: no cover - Windows without tzdata
     BUILD_ZONE = None

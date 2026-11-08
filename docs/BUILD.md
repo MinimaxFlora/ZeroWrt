@@ -235,6 +235,24 @@ feeds/luci/modules/luci-base/po/zh_Hans/base.po
 外部链接带 `rel="noopener noreferrer"`。`base.po` 增加四条带源码行号的
 `zh_Hans` 翻译，并补齐 `Project-Id-Version` / `MIME-Version` 头。
 
+### 4.8 防火墙 zones
+
+`luci.py` 同时修改：
+
+```text
+feeds/luci/applications/luci-app-firewall/htdocs/luci-static/resources/view/firewall/zones.js
+```
+
+删除完整区块：
+
+```text
+/* Netfilter flow offload support */
+if (L.hasSystemFeature('offloading')) { ... }
+```
+
+删除后校验 `offloading_type`、`flow_offloading`、`Routing/NAT Offloading`
+都不再出现；重复执行不会破坏文件。
+
 ## 5. 设备配置
 
 ### 5.1 已生成配置

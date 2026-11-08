@@ -14,6 +14,7 @@
 - WiFi 默认 `ZeroWrt-2.4G` / `ZeroWrt-5G`，WPA2 `psk2`，密码 `1234567890`。
 - 登录 banner 使用 `assets/banner`。
 - 状态页加入“帮助与反馈”三个按钮，并在 `base.po` 补齐四条简体中文翻译。
+- 删除防火墙 zones 页面的 `Routing/NAT Offloading` 流量卸载区块。
 - 加入 WireGuard：`luci-proto-wireguard`、`wireguard-tools`、`kmod-wireguard`。
 - 替换 PassWall、PassWall packages、OpenClash、Argon 主题、OTA。
 - Argon 配置页已合并进 `luci-theme-argon`，不再单独克隆

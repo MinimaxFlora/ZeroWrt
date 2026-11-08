@@ -7,12 +7,14 @@ entry silently falls back to English.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from . import util
 
 STATUS_JS = Path("feeds/luci/modules/luci-mod-status/htdocs/luci-static/resources/view/status/include/10_system.js")
 BASE_PO = Path("feeds/luci/modules/luci-base/po/zh_Hans/base.po")
+FIREWALL_ZONES = Path("feeds/luci/applications/luci-app-firewall/htdocs/luci-static/resources/view/firewall/zones.js")
 
 STYLE_MARKER = "zerowrt-support-style"
 STYLE_BLOCK = """\t\tif (!document.getElementById('zerowrt-support-style')) {
@@ -172,7 +174,39 @@ def patch_base_po(tree: Path, lines: dict[str, int]) -> None:
     util.log(f"LuCI: help/feedback links and {len(TRANSLATIONS)} zh_Hans strings patched")
 
 
+def patch_firewall_zones(tree: Path) -> None:
+    """Remove the stock flow-offloading section from the firewall zones page."""
+    tree = Path(tree)
+    path = tree / FIREWALL_ZONES
+    _require(path)
+    text = util.read_text(path)
+
+    if "Netfilter flow offload support" in text:
+        pattern = re.compile(
+            r"\t\t/\* Netfilter flow offload support \*/\n\n"
+            r"\t\tif \(L\.hasSystemFeature\('offloading'\)\) \{\n"
+            r".*?\n\t\t\}\n\n+",
+            re.S,
+        )
+        text, count = pattern.subn("", text, count=1)
+        if count != 1:
+            raise util.BuildError(f"{FIREWALL_ZONES}: offloading block was not removed cleanly")
+        util.write_text(path, text)
+
+    final = util.read_text(path)
+    for marker in (
+        "Netfilter flow offload support",
+        "Routing/NAT Offloading",
+        "offloading_type",
+        "flow_offloading",
+    ):
+        if marker in final:
+            raise util.BuildError(f"{FIREWALL_ZONES}: offloading marker {marker!r} is still present")
+    util.log("LuCI: removed the firewalls zones flow-offloading section")
+
+
 def apply(tree: Path) -> None:
-    """Patch the status page and its zh_Hans catalog."""
+    """Patch the status page, firewall zones and the zh_Hans catalog."""
     lines = patch_status_js(tree)
     patch_base_po(tree, lines)
+    patch_firewall_zones(tree)

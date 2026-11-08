@@ -33,6 +33,28 @@ class LuciTest(unittest.TestCase):
             'msgid ""\nmsgstr ""\n"Language: zh_Hans\\n"\n"Content-Type: text/plain; charset=UTF-8\\n"\n',
             encoding="utf-8",
         )
+        self.zones = self.tree / luci.FIREWALL_ZONES
+        self.zones.parent.mkdir(parents=True)
+        self.zones.write_text(
+            "return baseclass.extend({\n"
+            "\trender: function() {\n"
+            "\t\t/* Netfilter flow offload support */\n"
+            "\n"
+            "\t\tif (L.hasSystemFeature('offloading')) {\n"
+            "\t\t\ts = m.section(form.TypedSection, 'defaults', _('Routing/NAT Offloading'),\n"
+            "\t\t\t\t_('Not fully compatible with QoS/SQM.'));\n"
+            "\n"
+            '\t\t\to = s.option(form.RichListValue, "offloading_type", _("Flow offloading type"));\n'
+            "\t\t\to.load = function (section_id) {\n"
+            "\t\t\t\tvar flow_offloading = uci.get('firewall', section_id, 'flow_offloading');\n"
+            "\t\t\t};\n"
+            "\t\t}\n"
+            "\n"
+            "\t\ts = m.section(form.GridSection, 'zone', _('Zones'));\n"
+            "\t}\n"
+            "});\n",
+            encoding="utf-8",
+        )
 
     def test_apply_is_idempotent_and_translates(self) -> None:
         luci.apply(self.tree)
@@ -52,9 +74,22 @@ class LuciTest(unittest.TestCase):
             self.assertIn(f'msgid "{msgid}"\nmsgstr "{msgstr}"', po)
         self.assertIn("10_system.js:", po)
 
-        before = js, po
+        zones = self.zones.read_text(encoding="utf-8")
+        self.assertNotIn("Netfilter flow offload support", zones)
+        self.assertNotIn("offloading_type", zones)
+        self.assertNotIn("flow_offloading", zones)
+        self.assertIn("_('Zones')", zones)
+
+        before = js, po, zones
         luci.apply(self.tree)
-        self.assertEqual((self.js.read_text(encoding="utf-8"), self.po.read_text(encoding="utf-8")), before)
+        self.assertEqual(
+            (
+                self.js.read_text(encoding="utf-8"),
+                self.po.read_text(encoding="utf-8"),
+                self.zones.read_text(encoding="utf-8"),
+            ),
+            before,
+        )
 
     def test_missing_status_page_fails(self) -> None:
         self.js.unlink()

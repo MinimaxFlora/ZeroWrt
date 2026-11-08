@@ -69,6 +69,7 @@ ZeroWrt 面向 **MediaTek Filogic（MT7986）** 路由器，源码固定为：
 | WiFi | `package/mtk/applications/mtwifi-cfg/files/mtwifi.sh`：`ZeroWrt-2.4G` / `ZeroWrt-5G`，`psk2`，默认密码 `1234567890` |
 | Argon 主题 | 替换主题；配置页已合并进主题；背景 `assets/bg1.webp`；favicon/logo/图标由 `assets/favicon.ico` 生成；强制亮色；主色 `#EC4899`，暗色主色 `#BE185D` |
 | LuCI 帮助与反馈 | 状态页加入项目主页、问题反馈、捐赠地址按钮，并补齐 `zh_Hans` 翻译 |
+| 防火墙 zones | 删除 `Routing/NAT Offloading` / `Flow offloading type` 区块 |
 | WireGuard | `luci-proto-wireguard` + `wireguard-tools` + `kmod-wireguard` |
 | 设备配置 | 复制 `configs/<设备>.config`（diffconfig）后执行 `make defconfig` |
 | 插件 | 3cat、ACME、Argon 主题、ARP Bind、Commands、DDNS、OpenClash、PassWall、RamFree、TTYD、UPnP、OTA、WireGuard |

@@ -102,6 +102,26 @@ class CustomizeTest(unittest.TestCase):
             "feeds/luci/modules/luci-base/po/zh_Hans/base.po",
             'msgid ""\nmsgstr ""\n"Language: zh_Hans\\n"\n',
         )
+        self._write(
+            "feeds/luci/applications/luci-app-firewall/htdocs/luci-static/resources/view/firewall/zones.js",
+            "return baseclass.extend({\n"
+            "\trender: function() {\n"
+            "\t\t/* Netfilter flow offload support */\n"
+            "\n"
+            "\t\tif (L.hasSystemFeature('offloading')) {\n"
+            "\t\t\ts = m.section(form.TypedSection, 'defaults', _('Routing/NAT Offloading'),\n"
+            "\t\t\t\t_('Not fully compatible with QoS/SQM.'));\n"
+            "\n"
+            '\t\t\to = s.option(form.RichListValue, "offloading_type", _("Flow offloading type"));\n'
+            "\t\t\to.load = function (section_id) {\n"
+            "\t\t\t\tvar flow_offloading = uci.get('firewall', section_id, 'flow_offloading');\n"
+            "\t\t\t};\n"
+            "\t\t}\n"
+            "\n"
+            "\t\ts = m.section(form.GridSection, 'zone', _('Zones'));\n"
+            "\t}\n"
+            "});\n",
+        )
         self._write("package/new/luci-theme-argon/Makefile", "include $(TOPDIR)/rules.mk\n")
         self._write_bytes("package/new/luci-theme-argon/htdocs/luci-static/argon/img/bg1.webp", b"old bg")
         self._write_bytes("package/new/luci-theme-argon/htdocs/luci-static/argon/favicon.ico", b"old icon")

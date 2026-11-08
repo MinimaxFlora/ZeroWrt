@@ -498,4 +498,5 @@ coverage report --fail-under=70
 - feed 同名包清理、feed 失败终止；
 - 固件产物过滤、`dist` 清理；
 - OTA 元数据、索引合并、损坏索引拒绝与本地发布；
-- 工具链缓存资产名。
+- 工具链缓存资产名；
+- workflow YAML 解析与 Action SHA 固定检查。

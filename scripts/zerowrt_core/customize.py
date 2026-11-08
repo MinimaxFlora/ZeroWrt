@@ -13,7 +13,7 @@ import re
 import shutil
 from pathlib import Path
 
-from . import state, util
+from . import luci, state, util
 from .settings import BuildSettings
 
 VERSION_MK = Path("include/version.mk")
@@ -421,6 +421,7 @@ def apply(
     patch_root_password(tree, settings.root_password)
     patch_wifi(tree, settings)
     patch_argon(tree, assets)
+    luci.apply(tree)
     verify(tree, settings, assets=assets)
     util.log(f"customisations applied for {profile.name} ({profile.target}, LAN {settings.effective_ip()})")
 

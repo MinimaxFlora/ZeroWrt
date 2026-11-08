@@ -216,6 +216,25 @@ option dark_primary_mode 'custom'
 工作流 **不再提供默认密码**，`root_password` 必填（8–128 位），空值会在
 `source customize` 前直接失败。
 
+### 4.7 LuCI 帮助与反馈
+
+`luci.py` 在 `source customize` 阶段修改：
+
+```text
+feeds/luci/modules/luci-mod-status/htdocs/luci-static/resources/view/status/include/10_system.js
+feeds/luci/modules/luci-base/po/zh_Hans/base.po
+```
+
+状态页加入：
+
+- `Project Website` → `https://github.com/MinimaxFlora/ZeroWrt`
+- `Issue Feedback` → `https://github.com/MinimaxFlora/ZeroWrt/issues`
+- `Donation Address` → `https://pay.kejizero.xyz`
+
+按钮样式通过 `<style id="zerowrt-support-style">` 注入，重复渲染不会重复添加；
+外部链接带 `rel="noopener noreferrer"`。`base.po` 增加四条带源码行号的
+`zh_Hans` 翻译，并补齐 `Project-Id-Version` / `MIME-Version` 头。
+
 ## 5. 设备配置
 
 ### 5.1 已生成配置
@@ -494,6 +513,7 @@ coverage report --fail-under=70
 - 高功率模板的设备剥离与生成配置的唯一设备检查；
 - 单设备选择与 Sing-Box 关闭；
 - Argon 资源生成与配置；
+- LuCI 帮助与反馈按钮与 zh_Hans 翻译；
 - WiFi/banner/版本/密码；
 - feed 同名包清理、feed 失败终止；
 - 固件产物过滤、`dist` 清理；

@@ -87,6 +87,21 @@ class CustomizeTest(unittest.TestCase):
             "set wireless.default_${dev}.ssid=${ssid}\n"
             "\t\t\t\t\tset wireless.default_${dev}.encryption=none\n",
         )
+        self._write(
+            "feeds/luci/modules/luci-mod-status/htdocs/luci-static/resources/view/status/include/10_system.js",
+            "return baseclass.extend({\n"
+            "\trender: function(data) {\n"
+            "\t\tvar fields = [\n"
+            "\t\t\t_('Hostname'), boardinfo.hostname,\n"
+            "\t\t\t_('CPU usage (%)'),    cpuusage.cpuusage\n"
+            "\t\t];\n"
+            "\t}\n"
+            "});\n",
+        )
+        self._write(
+            "feeds/luci/modules/luci-base/po/zh_Hans/base.po",
+            'msgid ""\nmsgstr ""\n"Language: zh_Hans\\n"\n',
+        )
         self._write("package/new/luci-theme-argon/Makefile", "include $(TOPDIR)/rules.mk\n")
         self._write_bytes("package/new/luci-theme-argon/htdocs/luci-static/argon/img/bg1.webp", b"old bg")
         self._write_bytes("package/new/luci-theme-argon/htdocs/luci-static/argon/favicon.ico", b"old icon")

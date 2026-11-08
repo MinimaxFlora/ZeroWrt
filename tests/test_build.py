@@ -64,6 +64,14 @@ class BuildTest(unittest.TestCase):
         collected = build.collect(tree, tree / "dist")
         self.assertEqual({path.name for path in collected}, set(names))
 
+    def test_collect_cleans_stale_output(self) -> None:
+        _, tree = self._tree(["zerowrt-mediatek-filogic-netcore_n60-pro-squashfs-sysupgrade.bin"])
+        out = tree / "dist"
+        out.mkdir()
+        (out / "stale.bin").write_bytes(b"old")
+        build.collect(tree, out)
+        self.assertFalse((out / "stale.bin").exists())
+
     def test_no_sysupgrade_fails(self) -> None:
         _, tree = self._tree(["zerowrt-mediatek-filogic-netcore_n60-pro-initramfs-kernel.bin"])
         with self.assertRaises(util.BuildError):

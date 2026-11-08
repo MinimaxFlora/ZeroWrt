@@ -19,6 +19,7 @@ import time
 import urllib.request
 from contextlib import ExitStack
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 class BuildError(RuntimeError):
@@ -168,7 +169,9 @@ def run(
             stderr=subprocess.STDOUT,
             bufsize=1,
         )
-        assert proc.stdout is not None
+        if proc.stdout is None:
+            proc.kill()
+            raise BuildError(f"failed to capture stdout: {shown}")
         for line in proc.stdout:
             if not quiet:
                 sys.stdout.write(line)
@@ -204,8 +207,17 @@ def sudo_output(cmd) -> str:
     return output.strip()
 
 
-def download(url: str, dest: Path, *, retries: int = 3, timeout: int = 120) -> Path:
-    """Download *url* to *dest* with a few retries and a progress hint."""
+def download(
+    url: str,
+    dest: Path,
+    *,
+    retries: int = 3,
+    timeout: int = 120,
+    expected_sha256: str | None = None,
+) -> Path:
+    """Download *url* to *dest* with retries and an optional SHA256 check."""
+    if urlparse(url).scheme not in ("http", "https"):
+        raise BuildError(f"refusing non-HTTP(S) download URL: {url!r}")
     dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     last_error = None
@@ -213,7 +225,8 @@ def download(url: str, dest: Path, *, retries: int = 3, timeout: int = 120) -> P
         try:
             log(f"downloading {url} (attempt {attempt}/{retries})")
             request = urllib.request.Request(url, headers={"User-Agent": "ZeroWrt-Builder/2.0"})
-            with urllib.request.urlopen(request, timeout=timeout) as response:
+            # Scheme is validated above; file:// and custom schemes cannot reach this call.
+            with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310
                 total = int(response.headers.get("Content-Length") or 0)
                 written = 0
                 with open(dest, "wb") as handle:
@@ -225,6 +238,11 @@ def download(url: str, dest: Path, *, retries: int = 3, timeout: int = 120) -> P
                         written += len(chunk)
                         if total and written % (10 * 1024 * 1024) < 1024 * 256:
                             log(f"  {written // (1024 * 1024)} MiB / {total // (1024 * 1024)} MiB")
+            if expected_sha256:
+                actual = sha256_file(dest)
+                if actual.lower() != expected_sha256.lower():
+                    dest.unlink(missing_ok=True)
+                    raise BuildError(f"SHA256 mismatch for {url}: expected {expected_sha256}, got {actual}")
             return dest
         except Exception as exc:  # noqa: BLE001 - network errors are varied
             last_error = exc

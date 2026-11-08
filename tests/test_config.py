@@ -98,6 +98,12 @@ class ConfigTest(unittest.TestCase):
         self.assertTrue(any("another device" in item for item in problems))
         self.assertTrue(any("sing-box" in item for item in problems))
 
+    def test_roundtrip_diff_detects_changed_option(self) -> None:
+        before = "CONFIG_A=y\n# CONFIG_B is not set\n"
+        after = "CONFIG_A=n\n# CONFIG_B is not set\n"
+        self.assertEqual(config._roundtrip_diff(before, after), ["CONFIG_A"])
+        self.assertEqual(config._roundtrip_diff(before, before), [])
+
     def test_preview_without_make(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tree = Path(tmp)

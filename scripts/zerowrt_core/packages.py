@@ -23,26 +23,26 @@ from pathlib import Path
 from . import util
 
 PASSWALL_REPO = "Openwrt-Passwall/openwrt-passwall"
-PASSWALL_REF = "main"
+PASSWALL_REF = "f19da54330424c54e16fd636cee5d76a2a6ee102"
 PASSWALL_DIR = "openwrt-passwall"
 
 PASSWALL_PACKAGES_REPO = "Openwrt-Passwall/openwrt-passwall-packages"
-PASSWALL_PACKAGES_REF = "main"
+PASSWALL_PACKAGES_REF = "da712cf06cf4e6fd39e147fb36e6ec936003fcc9"
 PASSWALL_PACKAGES_DIR = "openwrt-passwall-packages"
 
 OPENCLASH_REPO = "vernesong/OpenClash"
-OPENCLASH_REF = "master"
+OPENCLASH_REF = "e553e82e01c697aefbe1555261a503f425e00ccd"
 OPENCLASH_DIR = "OpenClash"
 
 ARGON_THEME_REPO = "jerrykuku/luci-theme-argon"
-ARGON_THEME_REF = "master"
+ARGON_THEME_REF = "c6d63bd68aa9272e40c35cee5e615f45cc1e4eb0"
 ARGON_THEME_DIR = "luci-theme-argon"
 
 OTA_REPO = "MinimaxFlora/luci-app-ota"
-OTA_REF = "main"
+OTA_REF = "5f66f5dc27bf9ec9d4666cc07f69d9b5ed1829d2"
 
 GOLANG_REPO = "sbwml/packages_lang_golang"
-GOLANG_REF = "27.x"
+GOLANG_REF = "cd8953c31e0f64ea2853f87bb0f32256646a160d"
 
 BUILD_PACKAGE_RE = re.compile(r"call\s+BuildPackage,\s*([^)\n]+)\)")
 NAME_RE = re.compile(r"^(?:PKG_NAME|LUCI_NAME)\s*:?=\s*(\S+)", re.M)
@@ -157,7 +157,11 @@ def _ensure_golang_link(tree: Path) -> None:
     """Keep ``package/feeds/packages/golang`` valid after replacing the feed dir."""
     link = Path(tree) / "package" / "feeds" / "packages" / "golang"
     target = Path(tree) / "feeds" / "packages" / "lang" / "golang"
-    if not target.exists() or link.exists() or link.is_symlink():
+    if not target.exists():
+        return
+    if link.is_symlink() and not link.exists():
+        util.remove_path(link)
+    if link.exists() or link.is_symlink():
         return
     link.parent.mkdir(parents=True, exist_ok=True)
     link.symlink_to(os.path.relpath(target, link.parent))

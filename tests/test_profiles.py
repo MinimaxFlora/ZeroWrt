@@ -40,11 +40,11 @@ class ProfileTest(unittest.TestCase):
         self.assertEqual(profiles.RELEASE_TAG, "mediatek_filogic")
 
     def test_settings_effective_ip(self) -> None:
-        ruijie = BuildSettings(device="ruijie_rg-x60-new")
+        ruijie = BuildSettings(device="ruijie_rg-x60-new", root_password="password")
         self.assertEqual(ruijie.effective_ip(), "10.0.0.1")
-        other = BuildSettings(device="netcore_n60-pro")
+        other = BuildSettings(device="netcore_n60-pro", root_password="password")
         self.assertEqual(other.effective_ip(), "10.0.0.1")
-        override = BuildSettings(device="netcore_n60-pro", lan_ip="10.0.0.2")
+        override = BuildSettings(device="netcore_n60-pro", lan_ip="10.0.0.2", root_password="password")
         self.assertEqual(override.effective_ip(), "10.0.0.2")
 
 

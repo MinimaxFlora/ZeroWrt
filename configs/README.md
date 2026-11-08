@@ -6,6 +6,9 @@
 ./scripts/diffconfig.sh > netcore-n60-pro.config
 ```
 
+当前生成基线：源码 commit `6e1f514b99156ca05921defcb0d1f31df3157c4d`。
+源码/插件更新后需要重新生成并提交。
+
 构建时 `config apply`：
 
 ```text
@@ -45,6 +48,7 @@ python3 scripts/zerowrt.py config generate \
 → make defconfig
 → 校验唯一设备/关键包
 → ./scripts/diffconfig.sh > configs/<设备>.config
+→ 复制该 diffconfig 再 make defconfig，确认结果与首次完全一致
 ```
 
 生成结果提交到仓库后再跑 `Build ZeroWrt`。

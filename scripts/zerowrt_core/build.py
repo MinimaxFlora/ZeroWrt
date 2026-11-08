@@ -139,6 +139,11 @@ def collect(tree: Path, out_dir: Path) -> list[Path]:
 
     util.header(f"Collecting firmware from {source_dir.relative_to(tree)}")
     out_dir.mkdir(parents=True, exist_ok=True)
+    # The release step uploads dist/*; stale files from a reused workspace must
+    # never be mixed with this build.
+    for old in out_dir.iterdir():
+        if old.is_file():
+            old.unlink()
     collected = _collect_files(source_dir, out_dir)
     if not _has_sysupgrade(collected):
         raise util.BuildError("no sysupgrade image was produced; refusing to publish only initramfs/loader files")

@@ -44,7 +44,7 @@
 - 管理地址：所有设备统一 `10.0.0.1`，可由构建输入覆盖
 - 主机名：`ZeroWrt`
 - WiFi：`ZeroWrt-2.4G` / `ZeroWrt-5G`，WPA2-PSK，默认密码 `1234567890`（可由构建输入覆盖）
-- 默认 root 密码：由构建输入决定（默认 `password`，首次登录请立即修改）
+- root 密码：构建时必填（8–128 位），不提供默认密码
 - 主题：Argon 强制亮色，主色 `#EC4899`
 - WireGuard：已集成 LuCI 协议页、`wireguard-tools` 和内核模块
 

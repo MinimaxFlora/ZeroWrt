@@ -12,6 +12,7 @@ import glob
 import os
 import re
 import shutil
+import tempfile
 from pathlib import Path
 
 try:  # POSIX only; the helpers are exercised on Linux runners.
@@ -413,7 +414,7 @@ def _apt_install(packages: list[str]) -> None:
 
 def install_docker() -> None:
     util.header("Installing Docker (for OpenWrt docker packages)")
-    key = Path("/tmp/docker.gpg")
+    key = Path(tempfile.gettempdir()) / "docker.gpg"
     util.download("https://download.docker.com/linux/ubuntu/gpg", key)
     util.sudo_run(["gpg", "--dearmor", "--yes", "-o", "/usr/share/keyrings/docker.gpg", str(key)])
     codename = "noble"
@@ -426,8 +427,8 @@ def install_docker() -> None:
         "deb [arch=amd64 signed-by=/usr/share/keyrings/docker.gpg] "
         f"https://download.docker.com/linux/ubuntu {codename} stable\n"
     )
-    util.write_text(Path("/tmp/docker.list"), repo_line)
-    util.sudo_run(["cp", "/tmp/docker.list", "/etc/apt/sources.list.d/docker.list"])
+    util.write_text(Path(tempfile.gettempdir()) / "docker.list", repo_line)
+    util.sudo_run(["cp", str(Path(tempfile.gettempdir()) / "docker.list"), "/etc/apt/sources.list.d/docker.list"])
     util.sudo_run(["apt-get", "update", "-y"], check=False)
     _apt_install(
         [
@@ -456,10 +457,17 @@ def install_deps(*, docker: bool = False) -> None:
 
 
 CLANG_VERSION = os.environ.get("ZEROWRT_CLANG_VERSION", "23.0.1")
-CLANG_URL = (
-    "https://github.com/sbwml/openwrt-llvm-toolchain/releases/download/"
-    f"{CLANG_VERSION}/clang-{CLANG_VERSION}-x86_64-unknown-linux-gnu.tar.xz"
-)
+CLANG_SHA256 = "a3728df2af120624c94956a67c41fde90c2a040a7110305cf162753428d68c5e"
+
+
+def clang_url(version: str) -> str:
+    return (
+        "https://github.com/sbwml/openwrt-llvm-toolchain/releases/download/"
+        f"{version}/clang-{version}-x86_64-unknown-linux-gnu.tar.xz"
+    )
+
+
+CLANG_URL = clang_url(CLANG_VERSION)
 
 
 def install_llvm(*, version: str = CLANG_VERSION, url: str | None = None, strict: bool = False) -> None:
@@ -468,9 +476,10 @@ def install_llvm(*, version: str = CLANG_VERSION, url: str | None = None, strict
     if clang.exists():
         util.log(f"already installed: {clang}")
     else:
-        archive = Path(f"/tmp/clang-{version}.tar.xz")
+        archive = Path(tempfile.gettempdir()) / f"clang-{version}.tar.xz"
+        expected = CLANG_SHA256 if version == CLANG_VERSION and url is None else None
         try:
-            util.download(url or CLANG_URL, archive, timeout=300)
+            util.download(url or clang_url(version), archive, timeout=300, expected_sha256=expected)
             util.sudo_run(["mkdir", "-p", "/opt/clang"])
             util.sudo_run(["tar", "--strip-components=1", "-C", "/opt/clang", "-xf", str(archive)])
             archive.unlink(missing_ok=True)

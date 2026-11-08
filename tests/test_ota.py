@@ -83,6 +83,18 @@ class OtaTest(unittest.TestCase):
         self.assertIn("ruijie_rg-x60-new", index["devices"])
         self.assertIn("netcore_n60-pro", index["devices"])
 
+    def test_generate_index_rejects_corrupt_existing(self) -> None:
+        existing = self.root / "ota.json"
+        existing.write_text("{not-json", encoding="utf-8")
+        with self.assertRaises(util.BuildError):
+            ota.generate_index(
+                self.dist,
+                info=self.info,
+                repo="owner/repo",
+                tag="mediatek_filogic",
+                existing=existing,
+            )
+
     def test_publish_no_push(self) -> None:
         site = self.root / "site"
         site.mkdir()

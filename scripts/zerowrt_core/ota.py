@@ -139,22 +139,28 @@ def _asset_url(repo: str, tag: str, filename: str, url_base: str | None) -> str:
 def _load_index(path: Path | None) -> dict:
     if path is None or not Path(path).exists():
         return {}
+    source = Path(path)
     try:
-        data = util.read_json(Path(path), default={})
-        return data if isinstance(data, dict) else {}
-    except util.BuildError:
-        return {}
+        data = util.read_json(source)
+    except util.BuildError as exc:
+        raise util.BuildError(f"cannot parse existing OTA index {source}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise util.BuildError(f"existing OTA index {source} is not a JSON object")
+    if "devices" in data and not isinstance(data["devices"], dict):
+        raise util.BuildError(f"existing OTA index {source} has an invalid 'devices' field")
+    return data
 
 
 def _load_history(path: Path | None) -> dict:
     if path is None or not Path(path).exists():
         return {"schema": 1, "releases": []}
+    source = Path(path)
     try:
-        data = util.read_json(Path(path), default={})
-    except util.BuildError:
-        return {"schema": 1, "releases": []}
+        data = util.read_json(source)
+    except util.BuildError as exc:
+        raise util.BuildError(f"cannot parse existing OTA history {source}: {exc}") from exc
     if not isinstance(data, dict) or not isinstance(data.get("releases"), list):
-        return {"schema": 1, "releases": []}
+        raise util.BuildError(f"existing OTA history {source} has an invalid 'releases' field")
     return data
 
 

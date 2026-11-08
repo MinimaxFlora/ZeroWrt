@@ -105,7 +105,7 @@ class CustomizeTest(unittest.TestCase):
         with mock.patch.object(customize, "_openssl_hash", return_value="$5$fake$hash"):
             customize.apply(
                 self.tree,
-                settings or BuildSettings(),
+                settings or BuildSettings(root_password="password"),
                 assets=ASSETS,
                 repo_root=REPO_ROOT,
             )
@@ -186,15 +186,21 @@ class CustomizeTest(unittest.TestCase):
         self.assertEqual(generate.count('ipad=${ipaddr:-"10.0.0.1"}'), 2)
 
     def test_explicit_lan_ip_replaces_both_defaults(self) -> None:
-        self._apply(BuildSettings(lan_ip="10.0.0.2"))
+        self._apply(BuildSettings(lan_ip="10.0.0.2", root_password="password"))
         generate = (self.tree / "package/base-files/files/bin/config_generate").read_text(encoding="utf-8")
         self.assertEqual(generate.count('ipad=${ipaddr:-"10.0.0.2"}'), 2)
         self.assertNotIn("192.168.110.1", generate)
         self.assertNotIn('ipad=${ipaddr:-"192.168.6.1"}', generate)
         self.assertIn('ipad=${ipaddr:-"192.168.$((addr_offset++)).1"}', generate)
 
+    def test_lan_ip_equal_to_upstream_default_is_valid(self) -> None:
+        self._apply(BuildSettings(lan_ip="192.168.110.1", root_password="password"))
+        generate = (self.tree / "package/base-files/files/bin/config_generate").read_text(encoding="utf-8")
+        self.assertEqual(generate.count('ipad=${ipaddr:-"192.168.110.1"}'), 2)
+        self.assertNotIn('ipad=${ipaddr:-"192.168.6.1"}', generate)
+
     def test_custom_wifi(self) -> None:
-        self._apply(BuildSettings(wifi_name="Lab", wifi_password="abcdefgh"))
+        self._apply(BuildSettings(wifi_name="Lab", wifi_password="abcdefgh", root_password="password"))
         wifi = (self.tree / "package/mtk/applications/mtwifi-cfg/files/mtwifi.sh").read_text(encoding="utf-8")
         self.assertIn('ssid="Lab-5G"', wifi)
         self.assertIn("key='abcdefgh'", wifi)

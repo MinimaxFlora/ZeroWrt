@@ -25,6 +25,10 @@
   `ota.tatalvpai.vip`。
 - 12 个设备各生成一份 `configs/<device>.config`（`diffconfig.sh` 差异配置）；
   `config apply` 复制后执行 `make defconfig` 展开，不再手工填配置。
+- 源码、PassWall、OpenClash、Argon、OTA、Go 全部固定 commit；Actions 固定 SHA；
+  LLVM 下载校验 SHA256。
+- feed update/install 失败立即终止；OTA 索引/历史损坏时不再静默清空；root 密码改为必填。
+- 增加 diffconfig 回灌校验、dist 清理、覆盖率门禁和配置路径触发。
 - Release tag / Release 名统一为 `mediatek_filogic`；Release 只上传固件。
 - 工具链缓存保留：tag `toolchain`，Release 名 `Toolchain_Cache`。
 - 新增不联网单元测试与 Ruff 检查。

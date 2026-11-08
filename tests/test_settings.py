@@ -8,7 +8,7 @@ from zerowrt_core.settings import BuildSettings
 
 class SettingsTest(unittest.TestCase):
     def test_defaults(self) -> None:
-        settings = BuildSettings()
+        settings = BuildSettings(root_password="password")
         self.assertEqual(settings.device, "netcore_n60-pro")
         self.assertEqual(settings.lan_ip, "10.0.0.1")
         self.assertEqual(settings.ota_url, "https://ota.tatalvpai.vip/ota.json")
@@ -21,6 +21,7 @@ class SettingsTest(unittest.TestCase):
             {
                 "ZEROWRT_DEVICE": "ruijie_rg-x60-new",
                 "ZEROWRT_LAN_IP": "10.0.0.2",
+                "ZEROWRT_ROOT_PASSWORD": "password",
                 "ZEROWRT_WIFI_NAME": "Lab",
                 "ZEROWRT_WIFI_PASSWORD": "abcdefgh",
             }
@@ -28,25 +29,29 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(settings.effective_ip(), "10.0.0.2")
         self.assertEqual(settings.ssid("5g"), "Lab-5G")
 
+    def test_missing_root_password(self) -> None:
+        with self.assertRaises(util.BuildError):
+            BuildSettings()
+
     def test_invalid_ip(self) -> None:
         with self.assertRaises(util.BuildError):
-            BuildSettings(lan_ip="192.168.1.999")
+            BuildSettings(lan_ip="192.168.1.999", root_password="password")
 
     def test_ipv6_rejected(self) -> None:
         with self.assertRaises(util.BuildError):
-            BuildSettings(lan_ip="fd00::1")
+            BuildSettings(lan_ip="fd00::1", root_password="password")
 
     def test_invalid_wifi_password(self) -> None:
         with self.assertRaises(util.BuildError):
-            BuildSettings(wifi_password="short")
+            BuildSettings(wifi_password="short", root_password="password")
 
     def test_unknown_device(self) -> None:
         with self.assertRaises(util.BuildError):
-            BuildSettings(device="not-a-device")
+            BuildSettings(device="not-a-device", root_password="password")
 
     def test_ssid_too_long(self) -> None:
         with self.assertRaises(util.BuildError):
-            BuildSettings(wifi_name="x" * 32)
+            BuildSettings(wifi_name="x" * 32, root_password="password")
 
 
 if __name__ == "__main__":

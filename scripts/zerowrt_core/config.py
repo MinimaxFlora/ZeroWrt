@@ -1,10 +1,9 @@
-"""Build ``.config`` from the upstream high-power template, one device at a time.
+"""Generate and install per-device ``.config`` files.
 
-The template ``defconfig/mt7975-ipailna-high-power.config`` is the base that
-provides the MTK WiFi / HNAT / TurboACC options.  It also selects a long list of
-unrelated devices.  This module removes every target/device selection, adds the
-one device requested by the workflow, then appends the ZeroWrt package set and
-runs ``make defconfig``.
+``config generate`` expands the high-power template for every device, validates
+the result, then saves a small ``diffconfig.sh`` fragment under ``configs/``.
+``config apply`` copies that fragment to the source tree and runs
+``make defconfig`` once at build time.
 """
 
 from __future__ import annotations
@@ -321,6 +320,25 @@ def _diffconfig(tree: Path) -> str:
     return output.rstrip() + "\n"
 
 
+def _config_map(text: str) -> dict[str, str | None]:
+    result: dict[str, str | None] = {}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("# ") and stripped.endswith(" is not set"):
+            result[stripped[2:-11].strip()] = None
+        elif "=" in stripped and not stripped.startswith("#"):
+            key, value = stripped.split("=", 1)
+            result[key.strip()] = value.strip()
+    return result
+
+
+def _roundtrip_diff(before: str, after: str) -> list[str]:
+    left = _config_map(before)
+    right = _config_map(after)
+    keys = sorted(set(left) | set(right))
+    return [key for key in keys if left.get(key) != right.get(key)]
+
+
 def generate_all(tree: Path, out_dir: Path | None = None) -> list[Path]:
     """Generate a minimal ``diffconfig.sh`` fragment for every device."""
     tree = Path(tree)
@@ -331,14 +349,24 @@ def generate_all(tree: Path, out_dir: Path | None = None) -> list[Path]:
         profile = profiles.require(name)
         util.header(f"Generating {config_filename(profile)}")
         util.write_text(tree / ".config", preview(tree, device=name))
-        _run_defconfig(tree, profile, log_name=f"defconfig-{profile.name}.log")
+        resolved = _run_defconfig(tree, profile, log_name=f"defconfig-{profile.name}.log")
         # Store only the delta from Kconfig defaults.  Build restores it and
         # runs defconfig again, which is much smaller than 9000+ lines/device.
         fragment = _diffconfig(tree)
+        # Round-trip the fragment before saving it.  A diffconfig that cannot
+        # reproduce the validated .config must never reach the repository.
+        util.write_text(tree / ".config", fragment)
+        roundtrip = _run_defconfig(tree, profile, log_name=f"roundtrip-{profile.name}.log")
+        differences = _roundtrip_diff(resolved, roundtrip)
+        if differences:
+            raise util.BuildError(
+                f"{profile.name}: diffconfig round-trip changed {len(differences)} option(s): "
+                + ", ".join(differences[:12])
+            )
         destination = out_dir / config_filename(profile)
         util.write_text(destination, fragment)
         generated.append(destination)
-        util.log(f"generated {destination} ({len(fragment.splitlines())} lines)")
+        util.log(f"generated {destination} ({len(fragment.splitlines())} lines, round-trip OK)")
     return generated
 
 

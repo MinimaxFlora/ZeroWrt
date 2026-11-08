@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 
 from . import profiles, util
 
-DEFAULT_ROOT_PASSWORD = "password"
+DEFAULT_ROOT_PASSWORD = ""
 DEFAULT_WIFI_NAME = "ZeroWrt"
 DEFAULT_WIFI_PASSWORD = "1234567890"
 DEFAULT_DIST_NAME = "ZeroWrt"
@@ -51,12 +51,12 @@ class BuildSettings:
         return cls(
             device=values.get("ZEROWRT_DEVICE") or profiles.DEFAULT_DEVICE,
             lan_ip=values.get("ZEROWRT_LAN_IP") or values.get("ZEROWRT_IP") or DEFAULT_LAN_IP,
-            root_password=values.get("ZEROWRT_ROOT_PASSWORD") or DEFAULT_ROOT_PASSWORD,
+            root_password=values.get("ZEROWRT_ROOT_PASSWORD", ""),
             wifi_name=values.get("ZEROWRT_WIFI_NAME") or DEFAULT_WIFI_NAME,
             wifi_password=values.get("ZEROWRT_WIFI_PASSWORD") or DEFAULT_WIFI_PASSWORD,
             dist_name=values.get("ZEROWRT_DIST") or DEFAULT_DIST_NAME,
             ota_url=values.get("ZEROWRT_OTA_URL") or DEFAULT_OTA_URL,
-        ).validated()
+        )
 
     def with_overrides(self, **values: str | None) -> BuildSettings:
         """Return a copy where every non-None value replaces the current one."""
@@ -64,7 +64,7 @@ class BuildSettings:
         for key, value in values.items():
             if value is not None:
                 current[key] = value
-        return replace(self, **current).validated()
+        return replace(self, **current)
 
     def profile(self) -> profiles.DeviceProfile:
         return profiles.require(self.device)
@@ -78,10 +78,7 @@ class BuildSettings:
         return f"{self.wifi_name}-{suffix}"
 
     def validated(self) -> BuildSettings:
-        try:
-            profile = profiles.require(self.device)
-        except util.BuildError:
-            raise
+        profiles.require(self.device)
         if not DEVICE_RE.fullmatch(self.device):
             raise util.BuildError(f"invalid device profile name: {self.device!r}")
 
@@ -95,11 +92,12 @@ class BuildSettings:
             if address.is_multicast or address.is_unspecified or address.is_loopback:
                 raise util.BuildError(f"LAN IP address is not usable: {self.lan_ip!r}")
 
-        if self.root_password:
-            if "\n" in self.root_password or "\r" in self.root_password:
-                raise util.BuildError("root password must be a single non-empty line")
-            if not 8 <= len(self.root_password) <= 128:
-                raise util.BuildError("root password must be 8-128 characters")
+        if not self.root_password:
+            raise util.BuildError("root password is required (8-128 characters)")
+        if "\n" in self.root_password or "\r" in self.root_password:
+            raise util.BuildError("root password must be a single non-empty line")
+        if not 8 <= len(self.root_password) <= 128:
+            raise util.BuildError("root password must be 8-128 characters")
 
         if not self.wifi_name or self.wifi_name != self.wifi_name.strip():
             raise util.BuildError("WiFi name must not be empty or padded with spaces")
@@ -122,7 +120,4 @@ class BuildSettings:
             if parsed.scheme not in ("http", "https") or not parsed.netloc:
                 raise util.BuildError(f"invalid OTA index URL: {self.ota_url!r}")
 
-        # Make the profile part of validation explicit even though require()
-        # already raised; this keeps the variable meaningful for type checkers.
-        _ = profile
         return self

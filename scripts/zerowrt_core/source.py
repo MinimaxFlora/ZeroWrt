@@ -6,7 +6,7 @@ import os
 import time
 from pathlib import Path
 
-from . import packages, profiles, state, util
+from . import profiles, state, util
 
 
 def _verify_tree(tree: Path) -> None:
@@ -96,7 +96,11 @@ def update_feeds(tree: Path) -> None:
             tail = "\n".join(util.read_text(log_path).splitlines()[-40:])
         raise util.BuildError("feed update did not provide: " + ", ".join(missing) + "\n" + tail)
     if code != 0:
-        util.warn("feeds update reported an error, but luci/packages are present; continuing")
+        tail = ""
+        log_path = tree / "feeds-update.log"
+        if log_path.exists():
+            tail = "\n".join(util.read_text(log_path).splitlines()[-40:])
+        raise util.BuildError(f"feeds update failed ({code})\n{tail}")
 
 
 def install_feeds(tree: Path) -> None:
@@ -106,12 +110,18 @@ def install_feeds(tree: Path) -> None:
         raise util.BuildError(f"feeds script not found: {feeds}")
 
     util.header("Installing OpenWrt feeds")
-    util.run(
+    code, _ = util.run(
         [str(feeds), "install", "-a"],
         cwd=tree,
         check=False,
         log_path=tree / "feeds-install.log",
     )
+    if code != 0:
+        tail = ""
+        log_path = tree / "feeds-install.log"
+        if log_path.exists():
+            tail = "\n".join(util.read_text(log_path).splitlines()[-40:])
+        raise util.BuildError(f"feeds install failed ({code})\n{tail}")
 
     required = {
         "luci-compat": tree / "package/feeds/luci/luci-compat",
@@ -127,7 +137,4 @@ def install_feeds(tree: Path) -> None:
             tail = "\n".join(util.read_text(log_path).splitlines()[-40:])
         raise util.BuildError("feeds install did not provide: " + ", ".join(missing) + "\n" + tail)
 
-    # package/new is cloned after this step; prune its feed duplicates here so
-    # the buildroot never sees two packages with the same name.
-    packages.prune_feed_conflicts(tree)
     util.log("feeds installed")

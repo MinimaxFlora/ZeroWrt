@@ -82,7 +82,7 @@ def cmd_system_install_llvm(args: argparse.Namespace) -> None:
 
 
 def cmd_source_clone(args: argparse.Namespace) -> None:
-    device = args.device or settings.BuildSettings.from_environment().device
+    device = args.device or os.environ.get("ZEROWRT_DEVICE") or profiles.DEFAULT_DEVICE
     info = source.clone_source(Path(args.dest), device=device, ref=args.ref)
     _export_env(
         {
@@ -122,11 +122,12 @@ def cmd_packages_add(args: argparse.Namespace) -> None:
 
 
 def cmd_config_apply(args: argparse.Namespace) -> None:
-    build_settings = _settings(args)
+    device = args.device or os.environ.get("ZEROWRT_DEVICE") or profiles.DEFAULT_DEVICE
+    dist_name = args.dist_name or os.environ.get("ZEROWRT_DIST") or settings.DEFAULT_DIST_NAME
     config.apply(
         Path(args.tree),
-        device=build_settings.device,
-        dist_name=build_settings.dist_name,
+        device=device,
+        dist_name=dist_name,
     )
 
 
@@ -301,11 +302,12 @@ def build_parser() -> argparse.ArgumentParser:
     _add_tree(pkg_add)
     pkg_add.set_defaults(func=cmd_packages_add)
 
-    config_cmd = sub.add_parser("config", help="render .config from the high-power template")
+    config_cmd = sub.add_parser("config", help="install or generate per-device diffconfigs")
     config_sub = config_cmd.add_subparsers(dest="config_command", required=True)
-    config_apply = config_sub.add_parser("apply", help="select one device and run make defconfig")
+    config_apply = config_sub.add_parser("apply", help="copy one device diffconfig and run make defconfig")
     _add_tree(config_apply)
-    _add_build_settings(config_apply)
+    config_apply.add_argument("--device", default=None, help="device profile (default: ZEROWRT_DEVICE)")
+    config_apply.add_argument("--dist-name", default=None, help="distribution name (default: ZeroWrt)")
     config_apply.set_defaults(func=cmd_config_apply)
 
     config_preview = config_sub.add_parser(
@@ -319,7 +321,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     config_generate = config_sub.add_parser(
         "generate",
-        help="generate full post-defconfig configs/<device>.config for every device",
+        help="generate diffconfig fragments under configs/ for every device",
     )
     _add_tree(config_generate)
     config_generate.add_argument("--out", default="configs")

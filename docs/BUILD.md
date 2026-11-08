@@ -8,15 +8,18 @@
 | 项目 | 值 |
 | --- | --- |
 | 源码仓库 | `Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly` |
-| 分支 | `openwrt-24.10-6.6` |
+| 分支 | `openwrt-24.10-6.6`（默认固定在 commit `6e1f514b`） |
 | 目标 | `mediatek/filogic` |
 | 内核 | 6.6 |
 | 设备配置 | `configs/<device>.config`（`diffconfig.sh` 差异配置） |
 | 重新生成 | `scripts/zerowrt_core/config.py` 的 `config generate` |
 | Release tag | `mediatek_filogic` |
 
-源码是公开仓库，不需要 `SOURCE_TOKEN`。需要写权限的是 `GITHUB_TOKEN`
-（Actions 自动提供），用于 Release 和 `gh-pages`。
+源码是公开仓库，不需要 `SOURCE_TOKEN`。源码默认固定到 commit
+`6e1f514b99156ca05921defcb0d1f31df3157c4d`；临时升级可用
+`ZEROWRT_SOURCE_REF=<branch-or-sha>` 覆盖，正式发布前应把新 commit 写回
+`profiles.SOURCE_REF`。需要写权限的是 `GITHUB_TOKEN`（Actions 自动提供），用于
+Release 和 `gh-pages`。
 
 ## 2. 工作流顺序
 
@@ -26,7 +29,8 @@
    创建 swap。根分区已经足够大时跳过清理。
 2. **install-deps**：安装 OpenWrt 编译依赖、`ccache`、`lvm2`、`xfsprogs`、
    Python/Pillow 等。
-3. **install-llvm**：下载 sbwml 的 Clang 到 `/opt/clang`，写入 `GITHUB_PATH`。
+3. **install-llvm**：下载 sbwml 的 Clang 到 `/opt/clang`，校验固定 SHA256 后写入
+   `GITHUB_PATH`。
 4. **source clone**：克隆源码，校验关键文件，写入 `.zerowrt-info.json`
    （仓库、分支、commit、构建日期、设备）。
 5. **feeds update**：`./scripts/feeds update -a`，确认 `feeds/luci`、`feeds/packages`。
@@ -54,18 +58,18 @@
 
 在 `package/new` 下克隆：
 
-| 目录 | 仓库 | 分支 |
+| 目录 | 仓库 | 固定 commit |
 | --- | --- | --- |
-| `openwrt-passwall` | `Openwrt-Passwall/openwrt-passwall` | `main` |
-| `openwrt-passwall-packages` | `Openwrt-Passwall/openwrt-passwall-packages` | `main` |
-| `OpenClash` | `vernesong/OpenClash` | `master` |
-| `luci-theme-argon` | `jerrykuku/luci-theme-argon` | `master` |
-| `luci-app-ota` | `MinimaxFlora/luci-app-ota` | `main` |
+| `openwrt-passwall` | `Openwrt-Passwall/openwrt-passwall` | `f19da543` |
+| `openwrt-passwall-packages` | `Openwrt-Passwall/openwrt-passwall-packages` | `da712cf0` |
+| `OpenClash` | `vernesong/OpenClash` | `e553e82e` |
+| `luci-theme-argon` | `jerrykuku/luci-theme-argon` | `c6d63bd6` |
+| `luci-app-ota` | `MinimaxFlora/luci-app-ota` | `5f66f5dc` |
 
 Go 1.27 不放在 `package/new`，而是替换 feed 目录：
 
 ```text
-feeds/packages/lang/golang  <-  sbwml/packages_lang_golang @ 27.x
+feeds/packages/lang/golang  <-  sbwml/packages_lang_golang @ cd8953c3
 ```
 
 `openwrt-passwall-packages/sing-box` 克隆后立即删除，`feeds/packages/net/sing-box`
@@ -209,7 +213,8 @@ option dark_primary_mode 'custom'
 
 `package/base-files/files/etc/shadow` 的 root 条目用
 `openssl passwd -5 -stdin` 生成 SHA-256 crypt。密码不会出现在命令行或日志里。
-默认 `password`，工作流输入可覆盖；首次登录请修改。
+工作流 **不再提供默认密码**，`root_password` 必填（8–128 位），空值会在
+`source customize` 前直接失败。
 
 ## 5. 设备配置
 
@@ -253,6 +258,7 @@ make defconfig           ->  展开为 9000+ 行的完整配置
   → make defconfig
   → 校验唯一设备/关键包
   → ./scripts/diffconfig.sh > configs/<device>.config
+  → 复制 diffconfig 再 make defconfig，确认逐项一致
 ```
 
 模板本身提供 MTK WiFi、HNAT、TurboACC 等高功率配置，但也默认选中：
@@ -475,6 +481,9 @@ toolchain_<libc>_<arch>_gcc-<major>.tar.zst
 ```bash
 python -m unittest discover -v
 python -m ruff check scripts tests
+python -m ruff format --check scripts tests
+coverage run -m unittest discover
+coverage report --fail-under=70
 ```
 
 测试不联网、不调用 `make`/`apt`，覆盖：
@@ -485,7 +494,7 @@ python -m ruff check scripts tests
 - 单设备选择与 Sing-Box 关闭；
 - Argon 资源生成与配置；
 - WiFi/banner/版本/密码；
-- feed 同名包清理；
-- 固件产物过滤；
-- OTA 元数据、索引合并与本地发布；
+- feed 同名包清理、feed 失败终止；
+- 固件产物过滤、`dist` 清理；
+- OTA 元数据、索引合并、损坏索引拒绝与本地发布；
 - 工具链缓存资产名。

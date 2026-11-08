@@ -14,7 +14,8 @@ from dataclasses import dataclass
 from . import util
 
 SOURCE_REPO = "Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly"
-SOURCE_REF = "openwrt-24.10-6.6"
+# Pinned commit on openwrt-24.10-6.6; use ZEROWRT_SOURCE_REF to advance it.
+SOURCE_REF = "6e1f514b99156ca05921defcb0d1f31df3157c4d"
 SOURCE_LABEL = "ImmortalWrt MT798x 6.6 (PadavanOnly)"
 BOARD = "mediatek"
 SUBTARGET = "filogic"

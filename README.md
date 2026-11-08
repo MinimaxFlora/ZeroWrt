@@ -27,7 +27,7 @@ ZeroWrt 面向 **MediaTek Filogic（MT7986）** 路由器，源码固定为：
 | 项目 | 值 |
 | --- | --- |
 | 源码仓库 | [`Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly`](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) |
-| 分支 | `openwrt-24.10-6.6` |
+| 分支 | `openwrt-24.10-6.6`（默认固定在 commit `6e1f514b`） |
 | 目标 | `mediatek/filogic` |
 | 配置来源 | `configs/<设备>.config`（`./scripts/diffconfig.sh` 生成的差异配置） |
 | 发布 tag / Release | `mediatek_filogic` |
@@ -89,6 +89,8 @@ ZeroWrt 面向 **MediaTek Filogic（MT7986）** 路由器，源码固定为：
 | OTA | `MinimaxFlora/luci-app-ota` | `package/new/luci-app-ota` |
 | Go 1.27 | `sbwml/packages_lang_golang` | 替换 `feeds/packages/lang/golang` |
 
+外部包都固定到 commit（见 `packages.py`），不会跟随分支头漂移；更新时改常量并重新生成 configs。
+
 `package/new` 里出现的同名包会从 `feeds/` 和 `package/feeds/` 中删除，避免 buildroot
 静默选到旧版本。`openwrt-passwall-packages` 中的 `sing-box` 会在克隆后删除，feed 里的
 `sing-box` 也会一并移除。旧的独立 `luci-app-argon-config` feed 包会被删除，配置页使用
@@ -102,7 +104,7 @@ ZeroWrt 面向 **MediaTek Filogic（MT7986）** 路由器，源码固定为：
 | --- | --- | --- |
 | `device` | `netcore_n60-pro` | 只编译一个设备 |
 | `lan_ip` | `10.0.0.1` | 所有设备统一的 LAN IP，可修改 |
-| `root_password` | `password` | 至少 8 位，首次登录请修改 |
+| `root_password` | 必填 | 至少 8 位，不提供默认密码 |
 | `wifi_name` | `ZeroWrt` | 自动追加 `-2.4G` / `-5G` |
 | `wifi_password` | `1234567890` | 8–63 位 |
 | `ota_url` | `https://ota.tatalvpai.vip/ota.json` | 默认 OTA 索引地址 |
@@ -153,6 +155,7 @@ zerowrt-mediatek-filogic-ruijie_rg-x60-new-ubootmod-squashfs-sysupgrade.itb
 ```bash
 export ZEROWRT_SOURCE_DIR=/builder/source
 export ZEROWRT_DEVICE=netcore_n60-pro
+export ZEROWRT_ROOT_PASSWORD='change-me-please'
 
 python3 scripts/zerowrt.py system free-disk --build-dir /builder
 python3 scripts/zerowrt.py system install-deps

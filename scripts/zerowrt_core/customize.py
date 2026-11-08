@@ -386,6 +386,7 @@ def _verify_argon(tree: Path, assets: Path) -> list[str]:
             "option mode 'light'",
             "option primary '#EC4899'",
             "option dark_primary '#BE185D'",
+            "option dark_primary_mode 'custom'",
         ):
             if needle not in config:
                 problems.append(f"Argon config is missing {needle!r}")
@@ -453,7 +454,7 @@ def verify(tree: Path, settings: BuildSettings, *, assets: Path) -> None:
     if generate.count(f'ipad=${{ipaddr:-"{expected_ip}"}}') < 2:
         problems.append(f"config_generate does not use {expected_ip} for both LAN defaults")
     for old in ("192.168.110.1", "192.168.6.1"):
-        if old in generate:
+        if old != expected_ip and old in generate:
             problems.append(f"config_generate still contains the old default {old}")
     if f"hostname='{settings.dist_name}'" not in generate:
         problems.append("config_generate hostname is wrong")

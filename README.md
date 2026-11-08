@@ -108,11 +108,6 @@ ZeroWrt 面向 **MediaTek Filogic（MT7986）** 路由器，源码固定为：
 | `ota_cname` | `ota.tatalvpai.vip` | OTA 下载页域名 |
 | `cache_toolchain` | `true` | 有缓存时恢复工具链 |
 
-Netcore N60 Pro 在 `make defconfig` 之前的配置预览见
-[`docs/config/netcore_n60-pro.seed.config`](<docs/config/netcore_n60-pro.seed.config>)，
-在真实源码树上执行 `make defconfig` 后的最终配置见
-[`docs/config/netcore_n60-pro.final.config`](<docs/config/netcore_n60-pro.final.config>)。
-
 构建成功后：
 
 1. 上传 Artifact（仅固件，保留 14 天）；

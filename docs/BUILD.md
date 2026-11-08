@@ -297,11 +297,6 @@ DDNS 使用 feed 中的实际包名
 
 任何一项缺失都会直接失败，并打印 `defconfig.log` 末尾，避免带着错误配置编译数小时。
 
-Netcore N60 Pro 的 `make defconfig` 前配置预览见
-[`docs/config/netcore_n60-pro.seed.config`](config/netcore_n60-pro.seed.config)，
-在真实源码树上执行 `make defconfig` 后的最终配置见
-[`docs/config/netcore_n60-pro.final.config`](config/netcore_n60-pro.final.config)。
-
 ## 6. OTA
 
 ### 6.1 固件内元数据

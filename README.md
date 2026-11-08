@@ -29,11 +29,11 @@ ZeroWrt 面向 **MediaTek Filogic（MT7986）** 路由器，源码固定为：
 | 源码仓库 | [`Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly`](https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly) |
 | 分支 | `openwrt-24.10-6.6` |
 | 目标 | `mediatek/filogic` |
-| 配置模板 | `defconfig/mt7975-ipailna-high-power.config` |
+| 配置来源 | 已生成的 `configs/<设备>.config`（从高功率模板 + `make defconfig` 得到） |
 | 发布 tag / Release | `mediatek_filogic` |
 
-每次工作流只编译 **一个设备**。`config apply` 会从高功率模板中删除所有默认设备选择，
-只加入本次选择的设备，因此不会出现“选 N60 Pro 却把其它设备一起编译”的情况。
+每次工作流只编译 **一个设备**。`config apply` 直接把 `configs/<设备>.config`
+复制成源码树的 `.config`，不再每次填充或执行 `make defconfig`。
 
 ## 支持设备
 
@@ -68,7 +68,7 @@ ZeroWrt 面向 **MediaTek Filogic（MT7986）** 路由器，源码固定为：
 | WiFi | `package/mtk/applications/mtwifi-cfg/files/mtwifi.sh`：`ZeroWrt-2.4G` / `ZeroWrt-5G`，`psk2`，默认密码 `1234567890` |
 | Argon 主题 | 替换主题；配置页已合并进主题；背景 `assets/bg1.webp`；favicon/logo/图标由 `assets/favicon.ico` 生成；强制亮色；主色 `#EC4899`，暗色主色 `#BE185D` |
 | WireGuard | `luci-proto-wireguard` + `wireguard-tools` + `kmod-wireguard` |
-| 设备配置 | 基于高功率模板，移除全部默认设备，只加入本次设备 |
+| 设备配置 | 直接复制 `configs/<设备>.config` 到 `.config`，文件内只选中当前设备 |
 | 插件 | 3cat、ACME、Argon 主题、ARP Bind、Commands、DDNS、OpenClash、PassWall、RamFree、TTYD、UPnP、OTA、WireGuard |
 | PassWall | 只启用 Xray，显式关闭 Sing-Box（MTK 镜像体积考虑） |
 | DDNS | 阿里云、Cloudflare、DNSPod、FreeDNS、GoDaddy |
@@ -181,6 +181,7 @@ python -m ruff check scripts tests
 ```text
 .
 ├── assets/                         # banner、Argon 背景、favicon
+├── configs/                        # 12 个设备已 defconfig 的完整 .config
 ├── docs/
 │   ├── BUILD.md                    # 构建与维护文档
 │   └── release-notes/              # Release 正文
@@ -189,7 +190,7 @@ python -m ruff check scripts tests
 │   └── zerowrt_core/
 │       ├── build.py                # 下载/编译/只收集固件
 │       ├── cache.py                # toolchain Release 缓存
-│       ├── config.py               # 高功率模板 → 单设备 .config
+│       ├── config.py               # 复制 configs/<设备>.config / 批量生成
 │       ├── customize.py            # 版本/IP/WiFi/banner/Argon
 │       ├── ota.py                  # OTA 元数据、索引、gh-pages
 │       ├── packages.py             # 插件替换与 feed 去重

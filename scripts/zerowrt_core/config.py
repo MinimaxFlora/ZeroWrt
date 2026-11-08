@@ -10,11 +10,14 @@ runs ``make defconfig``.
 from __future__ import annotations
 
 import re
+import shutil
 import time
 from pathlib import Path
 
 from . import profiles, state, util
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CONFIGS_DIR = PROJECT_ROOT / "configs"
 BASE_CONFIG = Path("defconfig/mt7975-ipailna-high-power.config")
 BOARD = profiles.BOARD
 SUBTARGET = profiles.SUBTARGET
@@ -229,50 +232,26 @@ def _check_resolved(resolved: str, profile: profiles.DeviceProfile) -> list[str]
     return problems
 
 
-def apply(
+def config_filename(profile: profiles.DeviceProfile) -> str:
+    """Release-friendly file name, e.g. ``netcore-n60-pro.config``."""
+    return profile.name.replace("_", "-") + ".config"
+
+
+def static_path(
+    profile: profiles.DeviceProfile,
+    root: Path | None = None,
+) -> Path:
+    base = Path(root) if root is not None else PROJECT_ROOT
+    return base / "configs" / config_filename(profile)
+
+
+def _record_config(
     tree: Path,
+    profile: profiles.DeviceProfile,
     *,
-    device: str,
-    dist_name: str = "ZeroWrt",
+    dist_name: str,
+    source: Path,
 ) -> dict:
-    tree = Path(tree)
-    profile = profiles.require(device)
-    base = tree / BASE_CONFIG
-    if not base.is_file():
-        raise util.BuildError(f"high-power config template not found: {base}")
-
-    util.header("Writing .config")
-    text = render_config(util.read_text(base), profile)
-    util.write_text(tree / ".config", text)
-    util.log(
-        f"{BASE_CONFIG} -> .config; target {profile.target}, "
-        f"device {profile.device}, {len(PACKAGE_SELECTIONS)} package selection(s)"
-    )
-
-    util.header("Resolving configuration (make defconfig)")
-    log_path = tree / "defconfig.log"
-    code, _ = util.run(
-        ["make", "defconfig"],
-        cwd=tree,
-        log_path=log_path,
-        check=False,
-    )
-    if code != 0:
-        tail = "\n".join(util.read_text(log_path).splitlines()[-80:]) if log_path.exists() else ""
-        raise util.BuildError(f"make defconfig failed ({code})\n{tail}")
-
-    resolved = util.read_text(tree / ".config")
-    problems = _check_resolved(resolved, profile)
-    if problems:
-        tail = "\n".join(util.read_text(log_path).splitlines()[-60:]) if log_path.exists() else ""
-        raise util.BuildError(
-            "the configuration is missing selections or still selects another device "
-            "(missing dependency, renamed package, or a stale template):\n  - "
-            + "\n  - ".join(dict.fromkeys(problems))
-            + "\n\nLast defconfig output:\n"
-            + tail
-        )
-
     info = state.read(tree)
     build_date = state.build_date(info) or int(time.time())
     version = str(info.get("version") or state.version_for(build_date))
@@ -293,10 +272,73 @@ def apply(
             "device_source": device_info.get("device_source", ""),
             "layout": profile.layout,
             "default_lan_ip": profile.lan_ip,
+            "config": str(source),
             "build_date": build_date,
             "version": version,
         }
     )
     state.write(tree, info)
-    util.log(f"configuration ready: {profile.target} device={profile.device} version={version}")
+    return info
+
+
+def generate_all(tree: Path, out_dir: Path | None = None) -> list[Path]:
+    """Generate a full post-defconfig ``.config`` for every supported device.
+
+    This is the maintenance command used to refresh ``configs/*.config``.
+    Normal builds only copy the checked-in file; they do not run defconfig.
+    """
+    tree = Path(tree)
+    out_dir = Path(out_dir) if out_dir is not None else CONFIGS_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    generated: list[Path] = []
+    for name in profiles.names():
+        profile = profiles.require(name)
+        util.header(f"Generating {config_filename(profile)}")
+        util.write_text(tree / ".config", preview(tree, device=name))
+        log_path = tree / f"defconfig-{profile.name}.log"
+        code, _ = util.run(
+            ["make", "defconfig"],
+            cwd=tree,
+            log_path=log_path,
+            check=False,
+        )
+        if code != 0:
+            tail = "\n".join(util.read_text(log_path).splitlines()[-80:]) if log_path.exists() else ""
+            raise util.BuildError(f"make defconfig failed for {profile.name} ({code})\n{tail}")
+        resolved = util.read_text(tree / ".config")
+        problems = _check_resolved(resolved, profile)
+        if problems:
+            raise util.BuildError(
+                f"{profile.name}: generated config is invalid:\n  - " + "\n  - ".join(dict.fromkeys(problems))
+            )
+        destination = out_dir / config_filename(profile)
+        util.write_text(destination, resolved)
+        generated.append(destination)
+        util.log(f"generated {destination} ({len(resolved.splitlines())} lines)")
+    return generated
+
+
+def apply(
+    tree: Path,
+    *,
+    device: str,
+    dist_name: str = "ZeroWrt",
+) -> dict:
+    tree = Path(tree)
+    profile = profiles.require(device)
+    source = static_path(profile)
+    if not source.is_file():
+        raise util.BuildError(f"checked-in config not found: {source}; run 'config generate' on a source tree first")
+
+    util.header("Installing device .config")
+    text = util.read_text(source)
+    problems = _check_resolved(text, profile)
+    if problems:
+        raise util.BuildError(
+            f"{source} is stale or selects another device:\n  - " + "\n  - ".join(dict.fromkeys(problems))
+        )
+    shutil.copyfile(source, tree / ".config")
+    util.log(f"{source} -> {tree / '.config'} (no defconfig needed)")
+    info = _record_config(tree, profile, dist_name=dist_name, source=source)
+    util.log(f"configuration ready: {profile.target} device={profile.device} version={info['version']}")
     return info

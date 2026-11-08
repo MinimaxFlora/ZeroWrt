@@ -1,6 +1,6 @@
 # 构建与维护
 
-本文档面向维护者：说明每个构建步骤、固件定制点、设备配置如何从高功率模板生成，
+本文档面向维护者：说明每个构建步骤、固件定制点、设备配置的生成与使用，
 以及 OTA 与工具链缓存的工作方式。
 
 ## 1. 源码与目标
@@ -11,8 +11,8 @@
 | 分支 | `openwrt-24.10-6.6` |
 | 目标 | `mediatek/filogic` |
 | 内核 | 6.6 |
-| 设备配置模板 | `defconfig/mt7975-ipailna-high-power.config` |
-| 配置生成 | `scripts/zerowrt_core/config.py` |
+| 设备配置 | `configs/<device>.config`（已执行 `make defconfig`） |
+| 重新生成 | `scripts/zerowrt_core/config.py` 的 `config generate` |
 | Release tag | `mediatek_filogic` |
 
 源码是公开仓库，不需要 `SOURCE_TOKEN`。需要写权限的是 `GITHUB_TOKEN`
@@ -36,8 +36,8 @@
    `luci.mk` 和 feed 符号链接已经存在。
 8. **source customize**：删除 `files/etc`、版本、IP、banner、root 密码、WiFi、
    Argon。见第 4 节。
-9. **config apply**：从高功率模板生成单设备 `.config`，追加插件，执行
-   `make defconfig` 并逐项校验。见第 5 节。
+9. **config apply**：把 `configs/<device>.config` 复制为源码树 `.config`，
+   校验唯一设备和关键包；不再执行 `make defconfig`。见第 5 节。
 10. **ota embed**：写 `/etc/ota/build.json`、`/etc/uci-defaults/90-luci-app-ota`
     和 `version.date`。
 11. **cache restore**（可选）：从 `toolchain` Release 恢复
@@ -211,30 +211,56 @@ option dark_primary_mode 'custom'
 `openssl passwd -5 -stdin` 生成 SHA-256 crypt。密码不会出现在命令行或日志里。
 默认 `password`，工作流输入可覆盖；首次登录请修改。
 
-## 5. 单设备 .config
+## 5. 设备配置
 
-### 5.1 模板
+### 5.1 已生成配置
 
-基础文件是源码里的：
+`configs/` 下每个设备一份 **已经执行过 `make defconfig` 的完整 `.config`**：
 
 ```text
-defconfig/mt7975-ipailna-high-power.config
+configs/netcore-n60-pro.config
+configs/ruijie-rg-x60-new.config
+configs/ruijie-rg-x60-new-stock.config
+configs/ruijie-rg-x60-new-expand.config
+configs/ruijie-rg-x60-new-ubootmod.config
+configs/ruijie-ew-6000gx-pro.config
+configs/ruijie-ew-6000gx-pro-stock.config
+configs/ruijie-ew-6000gx-pro-expand.config
+configs/ruijie-ew-6000gx-pro-ubootmod.config
+configs/supergateway-s20l.config
+configs/supergateway-s20m.config
+configs/supergateway-s20p.config
 ```
 
-它提供 MTK WiFi、HNAT、TurboACC 等高功率配置，但也默认选中：
+`config apply` 只做复制和校验：
+
+```text
+configs/<device>.config  ->  源码树/.config
+```
+
+不再执行 `make defconfig`，所以 Workflow 不需要每次重新展开几百个依赖。
+
+### 5.2 生成方式
+
+配置由 `config generate` 批量生成，对每个设备执行：
+
+```text
+源码 defconfig/mt7975-ipailna-high-power.config
+  → 删除所有 CONFIG_TARGET_DEVICE_* / 旧目标选择
+  → 只加入当前设备
+  → 追加 ZeroWrt 插件、WireGuard、PassWall Xray、DDNS
+  → make defconfig
+  → 校验唯一设备/关键包
+  → 写入 configs/<device>.config
+```
+
+模板本身提供 MTK WiFi、HNAT、TurboACC 等高功率配置，但也默认选中：
 
 - `mediatek/mt7986` 旧目标；
 - GL.iNet、TP-Link、Xiaomi 等设备；
-- Ruijie 的 8 个布局。
+- Ruijie 的多个布局。
 
-### 5.2 删除与添加
-
-`config.py` 删除所有 `CONFIG_TARGET_DEVICE_*`、`CONFIG_TARGET_MULTI_PROFILE`、
-`CONFIG_TARGET_PER_DEVICE_ROOTFS`、`CONFIG_TARGET_PROFILE`、`CONFIG_TARGET_BOARD`、
-`CONFIG_TARGET_SUBTARGET`、`CONFIG_TARGET_ARCH_PACKAGES` 和
-`CONFIG_TARGET_mediatek*` 选择，但保留 `CONFIG_TARGET_ROOTFS_*`、内核分区等镜像选项。
-
-然后只添加：
+生成时会删除这些设备选择，只保留当前设备。目标块固定为：
 
 ```ini
 CONFIG_TARGET_mediatek=y
@@ -285,17 +311,30 @@ DDNS 使用 feed 中的实际包名
 `ddns-scripts-aliyun` / `-cloudflare` / `-dnspod` / `-freedns` / `-godaddy`，
 不是旧配置里的 `ddns-scripts_aliyun` 兼容名。
 
-### 5.4 defconfig 校验
+### 5.4 config apply 校验
 
-`make defconfig` 后检查：
+复制前检查：
 
-- 本次设备是唯一被选中的 `CONFIG_TARGET_DEVICE_*_DEVICE_*=y`；
-- `mediatek/filogic` 目标存在；
+- 文件中只有当前设备这一行 `CONFIG_TARGET_DEVICE_*_DEVICE_*=y`；
+- `mediatek/filogic` 目标和 `CONFIG_TARGET_MULTI_PROFILE` /
+  `CONFIG_TARGET_PER_DEVICE_ROOTFS` 存在；
 - 12 个插件、OTA、DDNS、WireGuard、MTK 加速包都存在；
 - `CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox` 和
   `CONFIG_PACKAGE_sing-box` 没有变成 `=y`。
 
-任何一项缺失都会直接失败，并打印 `defconfig.log` 末尾，避免带着错误配置编译数小时。
+任何一项不满足都会直接失败，不会把错误配置带进编译。
+
+### 5.5 重新生成
+
+源码、feeds 或插件变化后，在 Linux 源码树执行：
+
+```bash
+python3 scripts/zerowrt.py config generate \
+  --tree /builder/source \
+  --out configs
+```
+
+生成结果提交到仓库后再运行 `Build ZeroWrt`。
 
 ## 6. OTA
 
@@ -426,8 +465,9 @@ toolchain_<libc>_<arch>_gcc-<major>.tar.zst
 3. 在 `.github/workflows/build.yml` 的 `device.options` 添加选项；
 4. 运行单元测试。
 
-设备名必须与上游 `Device/` 名完全一致，否则 `config apply` 会在 `defconfig` 后报
-“another device is selected” 或缺少目标。
+设备名必须与上游 `Device/` 名完全一致。新增设备后需要执行
+`config generate` 生成对应的 `configs/<device>.config`，否则 `config apply` 会报
+缺少配置文件或选中了其它设备。
 
 ## 10. 代码质量
 
@@ -440,7 +480,7 @@ python -m ruff check scripts tests
 
 - 12 个设备注册与默认 IP；
 - 设置校验；
-- 高功率模板的设备剥离与保留镜像选项；
+- 高功率模板的设备剥离与生成配置的唯一设备检查；
 - 单设备选择与 Sing-Box 关闭；
 - Argon 资源生成与配置；
 - WiFi/banner/版本/密码；

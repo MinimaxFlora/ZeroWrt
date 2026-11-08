@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zerowrt_core import config, profiles
+from zerowrt_core import config, profiles, state
 
 
 class ConfigTest(unittest.TestCase):
@@ -150,6 +150,39 @@ class ConfigTest(unittest.TestCase):
             info = config.resolve_device(tree, profiles.require("ruijie_rg-x60-new-expand"))
             self.assertEqual(info["device_model"], "RG-X60 New (Expand)")
             self.assertEqual(info["device_variant"], "")
+
+    def test_static_configs_exist_for_every_device(self) -> None:
+        for name in profiles.names():
+            profile = profiles.require(name)
+            path = config.static_path(profile)
+            self.assertTrue(path.is_file(), path)
+            text = path.read_text(encoding="utf-8")
+            target = f"{config.target_symbol(profile.device)}=y"
+            self.assertIn(target, text)
+            devices = [
+                line
+                for line in text.splitlines()
+                if line.startswith("CONFIG_TARGET_DEVICE_") and line.endswith("=y") and "PACKAGES" not in line
+            ]
+            self.assertEqual(devices, [target], path.name)
+
+    def test_apply_copies_static_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tree = Path(tmp)
+            state.write(
+                tree,
+                {
+                    "build_date": 1762524000,
+                    "version": "20261109",
+                    "device": "netcore_n60-pro",
+                    "profile": "netcore_n60-pro",
+                },
+            )
+            info = config.apply(tree, device="netcore_n60-pro")
+            expected = config.static_path(profiles.require("netcore_n60-pro")).read_text(encoding="utf-8")
+            self.assertEqual((tree / ".config").read_text(encoding="utf-8"), expected)
+            self.assertEqual(info["device"], "netcore_n60-pro")
+            self.assertEqual(info["version"], "20261109")
 
 
 if __name__ == "__main__":

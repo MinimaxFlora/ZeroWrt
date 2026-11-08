@@ -139,6 +139,11 @@ def cmd_config_preview(args: argparse.Namespace) -> None:
         sys.stdout.write(text)
 
 
+def cmd_config_generate(args: argparse.Namespace) -> None:
+    generated = config.generate_all(Path(args.tree), Path(args.out))
+    util.log(f"generated {len(generated)} device config(s) in {args.out}")
+
+
 def cmd_ota_embed(args: argparse.Namespace) -> None:
     tree = Path(args.tree)
     info = state.read(tree)
@@ -311,6 +316,14 @@ def build_parser() -> argparse.ArgumentParser:
     config_preview.add_argument("--device", default=profiles.DEFAULT_DEVICE)
     config_preview.add_argument("--out", default="", help="write to this file instead of stdout")
     config_preview.set_defaults(func=cmd_config_preview)
+
+    config_generate = config_sub.add_parser(
+        "generate",
+        help="generate full post-defconfig configs/<device>.config for every device",
+    )
+    _add_tree(config_generate)
+    config_generate.add_argument("--out", default="configs")
+    config_generate.set_defaults(func=cmd_config_generate)
 
     ota_cmd = sub.add_parser("ota", help="embed OTA metadata, build the index and publish it")
     ota_sub = ota_cmd.add_subparsers(dest="ota_command", required=True)

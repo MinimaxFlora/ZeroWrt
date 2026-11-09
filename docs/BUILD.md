@@ -64,7 +64,7 @@ Release 和 `gh-pages`。
 | `openwrt-passwall-packages` | `Openwrt-Passwall/openwrt-passwall-packages` | `da712cf0` |
 | `OpenClash` | `vernesong/OpenClash` | `e553e82e` |
 | `luci-theme-argon` | `jerrykuku/luci-theme-argon` | `c6d63bd6` |
-| `luci-app-ota` | `MinimaxFlora/luci-app-ota` | `5f66f5dc` |
+| `luci-app-ota` | `MinimaxFlora/luci-app-ota` | `929cece3` |
 
 Go 1.27 不放在 `package/new`，而是替换 feed 目录：
 
@@ -255,18 +255,16 @@ if (L.hasSystemFeature('offloading')) { ... }
 
 ### 4.9 OTA 与 24.10 ucode 兼容
 
-`luci-app-ota` 的 `/usr/bin/ota` 使用 `fs.statvfs()` 做下载前剩余空间检查，
-但 OpenWrt 24.10 的 `ucode-mod-fs` 没有导出 `statvfs`，脚本会在启动时直接报
-`Module does not export statvfs`，于是 `ubus call luci.ota info` 返回
-`no output from /usr/bin/ota`。
-
-`ota_compat.py` 在克隆 OTA 源码后删除该可选预检查，保留下载器的实际写入校验：
+`luci-app-ota` 已直接兼容 24.10：`/usr/bin/ota` 用命名空间导入 `fs`，
+`fs.statvfs` 存在时才做下载前剩余空间检查；OpenWrt 24.10 的
+`ucode-mod-fs` 没有该导出时自动跳过，较新的 ucode 仍保留检查。
 
 ```text
+luci-app-ota @ 929cece3
 package/new/luci-app-ota/root/usr/bin/ota
 ```
 
-补丁后验证 `statvfs` 不再出现，且 `const size` 仍传给 `ota-download`。
+`PKG_RELEASE` 已升到 `2`，构建时直接使用该插件，不再需要额外的补丁模块。
 
 ## 5. 设备配置
 

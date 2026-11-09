@@ -93,6 +93,7 @@ jobs:
             --min-free-gb 50
 
       - name: Install build dependencies
+        timeout-minutes: 20
         run: python3 scripts/zerowrt.py system install-deps
 
       - name: Install LLVM

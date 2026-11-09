@@ -398,16 +398,38 @@ APT_GROUPS = [
 ]
 
 
+APT_NETWORK_OPTS = [
+    "-o",
+    "Acquire::http::Timeout=15",
+    "-o",
+    "Acquire::https::Timeout=15",
+    "-o",
+    "Acquire::Retries=2",
+]
+
+
 def _apt_install(packages: list[str]) -> None:
     if not packages:
         return
     env = {**os.environ, "DEBIAN_FRONTEND": "noninteractive"}
-    code, _ = util.sudo_run(["apt-get", "install", "-y", *packages], env=env, check=False)
+    util.log(f"apt install {len(packages)} package(s)")
+    code, _ = util.sudo_run(
+        ["apt-get", "install", "-y", "--no-install-recommends", *APT_NETWORK_OPTS, *packages],
+        env=env,
+        check=False,
+        timeout=900,
+    )
     if code == 0:
         return
     util.warn("batch install failed, retrying package by package")
     for package in packages:
-        code, _ = util.sudo_run(["apt-get", "install", "-y", package], env=env, check=False, quiet=True)
+        code, _ = util.sudo_run(
+            ["apt-get", "install", "-y", "--no-install-recommends", *APT_NETWORK_OPTS, package],
+            env=env,
+            check=False,
+            quiet=True,
+            timeout=180,
+        )
         if code != 0:
             util.warn(f"not installed (optional): {package}")
 
@@ -447,8 +469,13 @@ def install_docker() -> None:
 
 def install_deps(*, docker: bool = False) -> None:
     util.header("Installing OpenWrt build dependencies")
-    util.sudo_run(["apt-get", "update", "-y"], check=False)
-    for group in APT_GROUPS:
+    util.sudo_run(
+        ["apt-get", "update", "-y", *APT_NETWORK_OPTS],
+        check=False,
+        timeout=300,
+    )
+    for index, group in enumerate(APT_GROUPS, start=1):
+        util.log(f"dependency group {index}/{len(APT_GROUPS)}")
         _apt_install(group)
     if docker:
         install_docker()

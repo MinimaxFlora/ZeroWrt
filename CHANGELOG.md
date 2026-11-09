@@ -38,6 +38,7 @@
   LLVM 下载校验 SHA256。
 - feed update/install 失败立即终止；OTA 索引/历史损坏时不再静默清空；root 密码改为必填。
 - 增加 diffconfig 回灌校验、dist 清理、覆盖率门禁和配置路径触发。
+- `install-deps` 使用 `--no-install-recommends` 和 APT 网络超时，避免 TeX Live 等推荐包拖慢安装。
 - Release tag / 名保持 `mediatek_filogic`，固件资产名加入 `run_id`，保留历史版本。
 - 工具链缓存保留：tag `toolchain`，Release 名 `Toolchain_Cache`。
 - 新增不联网单元测试与 Ruff 检查。

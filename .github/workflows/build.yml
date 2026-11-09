@@ -217,56 +217,17 @@ jobs:
           overwrite_files: true
           fail_on_unmatched_files: true
 
-      - name: Download current OTA index
+      - name: Trigger 1Panel-Website
         if: success()
         env:
-          OTA_URL: ${{ inputs.ota_url }}
+          OTA_SITE_TOKEN: ${{ secrets.OTA_SITE_TOKEN }}
         run: |
-          mkdir -p /tmp/zerowrt-ota-live
-          curl -fL --retry 3 --retry-delay 2 "$OTA_URL" \
-            -o /tmp/zerowrt-ota-live/ota.json
-          curl -fL --retry 3 --retry-delay 2 "${OTA_URL%/*}/history.json" \
-            -o /tmp/zerowrt-ota-live/history.json || true
-
-      - name: Render OTA data
-        if: success()
-        run: |
-          python3 scripts/zerowrt.py ota publish \
+          python3 scripts/zerowrt.py ota dispatch \
             --tree "$ZEROWRT_SOURCE_DIR" \
             --dist dist \
             --repo "$GITHUB_REPOSITORY" \
             --tag mediatek_filogic \
-            --out dist/ota-data \
-            --existing /tmp/zerowrt-ota-live/ota.json \
-            --history /tmp/zerowrt-ota-live/history.json
-
-      - name: Setup Node for OTA site
-        if: success()
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 24
-
-      - name: Build OTA site
-        if: success()
-        run: |
-          rm -rf /tmp/zerowrt-ota-site
-          git clone --depth 1 https://github.com/MinimaxFlora/ZeroWrt-OTA.git /tmp/zerowrt-ota-site
-          cp dist/ota-data/ota.json dist/ota-data/history.json /tmp/zerowrt-ota-site/docs/public/
-          npm install -g pnpm@11.28.5
-          cd /tmp/zerowrt-ota-site
-          pnpm install --frozen-lockfile
-          pnpm build
-
-      - name: Deploy OTA site to Cloudflare Pages
-        if: success()
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          npx --yes wrangler@4.158.0 pages deploy /tmp/zerowrt-ota-site/docs/.vitepress/dist \
-            --project-name=zerowrt-ota \
-            --branch=main \
-            --commit-dirty=true
+            --site-repo MinimaxFlora/1Panel-Website
 
       - name: Trim build logs
         if: failure()

@@ -15,10 +15,13 @@ plugin's CLI cannot break the release pipeline silently.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
 import time
+import urllib.error
+import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -189,17 +192,16 @@ def update_history(path: Path, entry: dict, *, dist_name: str, limit: int = HIST
     util.write_json(Path(path), data)
 
 
-def generate_index(
+def build_entry(
     dist: Path,
     *,
     info: dict,
     repo: str,
     tag: str,
-    existing: Path | None = None,
-    history: Path | None = None,
     changelog: str = "",
     url_base: str | None = None,
 ) -> dict:
+    """Build one firmware entry without touching the index files."""
     dist = Path(dist)
     image = select_image(dist)
     checksums = read_checksums(dist)
@@ -235,12 +237,11 @@ def generate_index(
     ).strip()
     digest = checksums.get(image.name) or util.sha256_file(image)
     size = image.stat().st_size
-    url = _asset_url(repo, tag, image.name, url_base)
 
     entry = {
         "version": version,
         "build_date": build_date,
-        "url": url,
+        "url": _asset_url(repo, tag, image.name, url_base),
         "sha256": digest,
         "size": size,
         "file": image.name,
@@ -250,6 +251,22 @@ def generate_index(
     }
     if label:
         entry["label"] = label
+    return entry
+
+
+def generate_index(
+    dist: Path,
+    *,
+    info: dict,
+    repo: str,
+    tag: str,
+    existing: Path | None = None,
+    history: Path | None = None,
+    changelog: str = "",
+    url_base: str | None = None,
+) -> dict:
+    dist = Path(dist)
+    entry = build_entry(dist, info=info, repo=repo, tag=tag, changelog=changelog, url_base=url_base)
 
     existing_data = _load_index(existing)
     raw_devices = existing_data.get("devices")
@@ -268,9 +285,57 @@ def generate_index(
     util.write_json(dist / "ota.json", index)
     if history is not None:
         update_history(history, entry, dist_name=dist_name)
-    util.log(f"OTA index: {image.name} -> {', '.join(device_keys(info))}")
-    util.log(f"OTA image sha256 {digest[:16]}..., {size} bytes")
+    util.log(f"OTA index: {entry['file']} -> {', '.join(device_keys(info))}")
+    util.log(f"OTA image sha256 {entry['sha256'][:16]}..., {entry['size']} bytes")
     return index
+
+
+def dispatch(
+    *,
+    dist: Path,
+    info: dict,
+    repo: str,
+    tag: str,
+    site_repo: str,
+    token: str | None = None,
+    event_type: str = "firmware-release",
+) -> dict:
+    """Send one firmware entry to the website repository.
+
+    All index/history merging and deployment live in the website repository;
+    this function is the only hand-off from the firmware build.
+    """
+    token = token or os.environ.get("OTA_SITE_TOKEN") or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise util.BuildError("OTA dispatch needs OTA_SITE_TOKEN or GH_TOKEN")
+    entry = build_entry(dist, info=info, repo=repo, tag=tag)
+    payload = {
+        "entry": entry,
+        "device_keys": device_keys(info),
+        "dist": str(info.get("dist") or "ZeroWrt"),
+    }
+    body = json.dumps({"event_type": event_type, "client_payload": payload}).encode("utf-8")
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{site_repo}/dispatches",
+        data=body,
+        method="POST",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "ZeroWrt-Builder/3.0",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            if response.status not in (200, 204):
+                raise util.BuildError(f"website dispatch returned HTTP {response.status}")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")[-2000:]
+        raise util.BuildError(f"website dispatch failed ({exc.code}): {detail}") from exc
+    util.log(f"OTA dispatch -> {site_repo} ({entry['device']} {entry['version']})")
+    return payload
 
 
 def _shell_quote(value: str) -> str:

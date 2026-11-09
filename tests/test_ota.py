@@ -120,6 +120,27 @@ class OtaTest(unittest.TestCase):
         merged_history = json.loads((self.root / "merged" / "history.json").read_text(encoding="utf-8"))
         self.assertGreaterEqual(len(merged_history["releases"]), 2)
 
+    def test_dispatch_payload(self) -> None:
+        from unittest import mock
+
+        with mock.patch("zerowrt_core.ota.urllib.request.urlopen") as urlopen:
+            response = mock.MagicMock()
+            response.__enter__.return_value.status = 204
+            urlopen.return_value = response
+            payload = ota.dispatch(
+                dist=self.dist,
+                info=self.info,
+                repo="owner/repo",
+                tag="mediatek_filogic",
+                site_repo="owner/1Panel-Website",
+                token="token",
+            )
+            request = urlopen.call_args[0][0]
+            body = json.loads(request.data)
+        self.assertEqual(body["event_type"], "firmware-release")
+        self.assertEqual(body["client_payload"]["entry"]["device"], "netcore_n60-pro")
+        self.assertEqual(payload["entry"]["target"], "mediatek/filogic")
+
     def test_publish_data_only(self) -> None:
         out = self.root / "out"
         index = ota.publish(

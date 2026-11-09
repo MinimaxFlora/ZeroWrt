@@ -195,6 +195,22 @@ def cmd_ota_publish(args: argparse.Namespace) -> None:
     )
 
 
+def cmd_ota_dispatch(args: argparse.Namespace) -> None:
+    tree = Path(args.tree)
+    info = state.read(tree)
+    repo = args.repo or os.environ.get("GITHUB_REPOSITORY", "")
+    if not repo:
+        raise util.BuildError("ota dispatch needs --repo or GITHUB_REPOSITORY")
+    ota.dispatch(
+        dist=Path(args.dist),
+        info=info,
+        repo=repo,
+        tag=args.tag or profiles.RELEASE_TAG,
+        site_repo=args.site_repo,
+        token=args.token,
+    )
+
+
 def cmd_build_download(args: argparse.Namespace) -> None:
     build.download_sources(Path(args.tree), _jobs(args.jobs))
 
@@ -354,6 +370,19 @@ def build_parser() -> argparse.ArgumentParser:
     ota_publish.add_argument("--existing", default="", help="existing ota.json to merge")
     ota_publish.add_argument("--history", default="", help="existing history.json to append")
     ota_publish.set_defaults(func=cmd_ota_publish)
+
+    ota_dispatch = ota_sub.add_parser("dispatch", help="trigger the website workflow with one firmware entry")
+    _add_tree(ota_dispatch)
+    ota_dispatch.add_argument("--dist", default="dist")
+    ota_dispatch.add_argument("--repo", default="", help="firmware GitHub repository owner/name")
+    ota_dispatch.add_argument("--tag", default="", help=f"release tag (default: {profiles.RELEASE_TAG})")
+    ota_dispatch.add_argument(
+        "--site-repo",
+        default="MinimaxFlora/1Panel-Website",
+        help="website repository that owns data and deployment",
+    )
+    ota_dispatch.add_argument("--token", default=None, help="website dispatch token (default: OTA_SITE_TOKEN)")
+    ota_dispatch.set_defaults(func=cmd_ota_dispatch)
 
     build_cmd = sub.add_parser("build", help="download, compile and collect")
     build_sub = build_cmd.add_subparsers(dest="build_command", required=True)

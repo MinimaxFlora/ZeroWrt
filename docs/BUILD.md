@@ -52,7 +52,7 @@ Release 和 Cloudflare Pages。
 14. **build collect**：只收集固件，见第 7 节。
 15. **Release**：tag 和 Release 名都是 `mediatek_filogic`，正文来自
     `docs/release-notes/mediatek_filogic.md`。
-16. **ota publish**：生成 `ota.json`、`history.json` OTA 数据。
+16. **ota dispatch**：把本次固件 entry 发送给 1Panel-Website。
 
 ## 3. 插件替换
 
@@ -447,34 +447,41 @@ package/base-files/files/etc/uci-defaults/90-luci-app-ota
 }
 ```
 
-`ota publish` 只生成数据，不再包含页面：
+`ota dispatch` 只发送本次固件的 entry：
 
-1. 从线上 `ota.json` / `history.json` 复制已有数据；
-2. 合并已有 `ota.json` 的其它设备条目；
-3. 追加 `history.json`；
-4. 输出到 `dist/ota-data`。
+```json
+{
+  "event_type": "firmware-release",
+  "client_payload": {
+    "entry": { "device": "...", "version": "...", "url": "...", "sha256": "...", "size": 0 },
+    "device_keys": ["..."],
+    "dist": "ZeroWrt"
+  }
+}
+```
 
-页面由独立仓库 [ZeroWrt-OTA](https://github.com/MinimaxFlora/ZeroWrt-OTA) 构建。
+索引合并、`history.json` 更新、页面构建和部署全部在
+[1Panel-Website](https://github.com/MinimaxFlora/1Panel-Website) 完成。
 
 ### 6.3 Cloudflare Pages
 
-`ota.tatalvpai.vip` 指向 Cloudflare Pages 项目 `zerowrt-ota`。该项目是
-**Direct Upload / ad hoc** 部署，不会因为 Git 提交自动更新，所以构建末尾执行：
+`ota.tatalvpai.vip` 指向 Cloudflare Pages 项目 `zerowrt-ota`，由
+1Panel-Website 的 **Deploy Site** workflow 直接部署：
 
 ```text
-dist/ota-data
-  → 复制到 ZeroWrt-OTA/docs/public
-  → pnpm install && pnpm build
+ZeroWrt: ota dispatch
+  → 1Panel-Website repository_dispatch
+  → 更新 docs/public/ota.json + history.json
+  → pnpm install --frozen-lockfile && pnpm build
   → npx wrangler@4.158.0 pages deploy docs/.vitepress/dist
   → Cloudflare Pages 项目 zerowrt-ota（production branch: main）
 ```
 
+ZeroWrt 只需要 Secret `OTA_SITE_TOKEN`（触发站点仓库 workflow）；
+Cloudflare 的 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 只放在
+1Panel-Website 仓库。ZeroWrt 不再 checkout、构建或部署站点。
+
 GitHub 仓库不再有 `gh-pages` 分支，也不再启用 GitHub Pages。
-
-`build.yml` 的 **Build OTA site** 和 **Deploy OTA site to Cloudflare Pages** 步骤
-使用仓库 Secrets `CLOUDFLARE_API_TOKEN` 和 `CLOUDFLARE_ACCOUNT_ID`。
-
-不再使用 GitHub Pages，也不推送 `gh-pages`。
 
 默认索引地址：`https://ota.tatalvpai.vip/ota.json`。
 

@@ -76,7 +76,7 @@ ZeroWrt 面向 **MediaTek Filogic（MT7986）** 路由器，源码固定为：
 | PassWall | 只启用 Xray，显式关闭 Sing-Box（MTK 镜像体积考虑） |
 | DDNS | 阿里云、Cloudflare、DNSPod、FreeDNS、GoDaddy |
 | OTA | [`MinimaxFlora/luci-app-ota`](https://github.com/MinimaxFlora/luci-app-ota) |
-| OTA 下载站 | [`MinimaxFlora/ZeroWrt-OTA`](https://github.com/MinimaxFlora/ZeroWrt-OTA)（VitePress + Teek，中英文） |
+| OTA 下载站 | [`MinimaxFlora/1Panel-Website`](https://github.com/MinimaxFlora/1Panel-Website)（VitePress + Teek，中英文） |
 | Go | 替换为 [`sbwml/packages_lang_golang`](https://github.com/sbwml/packages_lang_golang) `27.x`（Xray 需要 Go 1.27） |
 
 ## 插件替换
@@ -120,9 +120,9 @@ OTA 插件已直接兼容 24.10：`fs.statvfs` 不存在时跳过可选的空间
 
 1. 上传 Artifact（仅固件，保留 14 天）；
 2. 更新 tag / Release 名均为 `mediatek_filogic` 的 Release；
-3. 下载线上 `ota.json` / `history.json`，生成并合并多设备 OTA 数据；
-4. checkout [ZeroWrt-OTA](https://github.com/MinimaxFlora/ZeroWrt-OTA)，写入数据并构建
-   VitePress 站点，再用 `wrangler` 部署到 Cloudflare Pages `zerowrt-ota`。
+3. 生成本次固件的 OTA entry；
+4. 触发 [1Panel-Website](https://github.com/MinimaxFlora/1Panel-Website) 的
+   `firmware-release` workflow，由站点仓库更新 `ota.json` / `history.json` 并部署 Cloudflare Pages。
 
 不再推送 `gh-pages`，也不再使用 GitHub Pages。
 

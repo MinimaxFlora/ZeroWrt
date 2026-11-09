@@ -18,9 +18,10 @@
 - 升级 `luci-app-ota`，兼容 24.10 ucode 缺少 `statvfs` 的环境。
 - 构建后部署下载页到 Cloudflare Pages `zerowrt-ota`，修复自定义域名索引停留在旧版本。
 - 移除 GitHub Pages / `gh-pages` 发布流程；索引改为从线上读取并合并。
-- 下载站迁移到独立仓库 `ZeroWrt-OTA`，使用 VitePress + Teek；首页只显示最新固件，
+- 下载站迁移到独立仓库 `1Panel-Website`，使用 VitePress + Teek；首页只显示最新固件，
   更新日志独立分页，支持中英文切换。
 - `luci-app-ota` 移除 `site/`、`publish_site.sh` 和 `gen_ota_index.py`，插件仓库只保留插件本身。
+- ZeroWrt 只发送 `repository_dispatch`，站点数据、构建和 Cloudflare 部署全部由 `1Panel-Website` workflow 负责。
 - 加入 WireGuard：`luci-proto-wireguard`、`wireguard-tools`、`kmod-wireguard`。
 - 替换 PassWall、PassWall packages、OpenClash、Argon 主题、OTA。
 - Argon 配置页已合并进 `luci-theme-argon`，不再单独克隆

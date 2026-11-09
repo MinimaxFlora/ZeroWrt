@@ -189,8 +189,6 @@ def cmd_ota_publish(args: argparse.Namespace) -> None:
         info=info,
         repo=repo,
         tag=tag,
-        site=Path(args.site) if args.site else None,
-        cname=args.cname,
         out=Path(args.out) if args.out else None,
         existing_source=Path(args.existing) if args.existing else None,
         history_source=Path(args.history) if args.history else None,
@@ -352,13 +350,7 @@ def build_parser() -> argparse.ArgumentParser:
     ota_publish.add_argument("--dist", default="dist")
     ota_publish.add_argument("--repo", default="", help="GitHub repository owner/name")
     ota_publish.add_argument("--tag", default="", help=f"release tag (default: {profiles.RELEASE_TAG})")
-    ota_publish.add_argument("--site", default="", help="static download page directory")
-    ota_publish.add_argument(
-        "--cname",
-        default=settings.DEFAULT_OTA_CNAME,
-        help=f"custom domain written to CNAME (default: {settings.DEFAULT_OTA_CNAME})",
-    )
-    ota_publish.add_argument("--out", default="", help="output directory")
+    ota_publish.add_argument("--out", default="", help="output directory for ota.json / history.json")
     ota_publish.add_argument("--existing", default="", help="existing ota.json to merge")
     ota_publish.add_argument("--history", default="", help="existing history.json to append")
     ota_publish.set_defaults(func=cmd_ota_publish)

@@ -96,9 +96,6 @@ class OtaTest(unittest.TestCase):
             )
 
     def test_publish_merges_live_index_and_history(self) -> None:
-        site = self.root / "site"
-        site.mkdir()
-        (site / "index.html").write_text("page", encoding="utf-8")
         existing = self.root / "existing.json"
         existing.write_text(
             json.dumps({"schema": 2, "devices": {"other_device": {"version": "20260101"}}}),
@@ -114,7 +111,6 @@ class OtaTest(unittest.TestCase):
             info=self.info,
             repo="owner/repo",
             tag="mediatek_filogic",
-            site=site,
             out=self.root / "merged",
             existing_source=existing,
             history_source=history,
@@ -124,25 +120,20 @@ class OtaTest(unittest.TestCase):
         merged_history = json.loads((self.root / "merged" / "history.json").read_text(encoding="utf-8"))
         self.assertGreaterEqual(len(merged_history["releases"]), 2)
 
-    def test_publish_no_push(self) -> None:
-        site = self.root / "site"
-        site.mkdir()
-        (site / "index.html").write_text("MinimaxFlora/ZeroWrt", encoding="utf-8")
-        (site / "CNAME").write_text("old.example\n", encoding="utf-8")
+    def test_publish_data_only(self) -> None:
         out = self.root / "out"
         index = ota.publish(
             dist=self.dist,
             info=self.info,
             repo="owner/repo",
             tag="mediatek_filogic",
-            site=site,
             out=out,
         )
         self.assertIn("netcore_n60-pro", index["devices"])
         self.assertTrue((out / "ota.json").exists())
-        self.assertTrue((out / "index.html").exists())
+        self.assertTrue((out / "history.json").exists())
+        self.assertFalse((out / "index.html").exists())
         self.assertFalse((out / "CNAME").exists())
-        self.assertIn("owner/repo", (out / "index.html").read_text(encoding="utf-8"))
 
     def test_embed_metadata(self) -> None:
         tree = self.root / "tree"

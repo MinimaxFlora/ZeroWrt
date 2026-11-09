@@ -52,7 +52,7 @@ Release 和 Cloudflare Pages。
 14. **build collect**：只收集固件，见第 7 节。
 15. **Release**：tag 和 Release 名都是 `mediatek_filogic`，正文来自
     `docs/release-notes/mediatek_filogic.md`。
-16. **ota publish**：在本地渲染 `ota.json`、`history.json` 和下载页。
+16. **ota publish**：生成 `ota.json`、`history.json` OTA 数据。
 
 ## 3. 插件替换
 
@@ -64,7 +64,7 @@ Release 和 Cloudflare Pages。
 | `openwrt-passwall-packages` | `Openwrt-Passwall/openwrt-passwall-packages` | `da712cf0` |
 | `OpenClash` | `vernesong/OpenClash` | `e553e82e` |
 | `luci-theme-argon` | `jerrykuku/luci-theme-argon` | `c6d63bd6` |
-| `luci-app-ota` | `MinimaxFlora/luci-app-ota` | `929cece3` |
+| `luci-app-ota` | `MinimaxFlora/luci-app-ota` | `8d06675c` |
 
 Go 1.27 不放在 `package/new`，而是替换 feed 目录：
 
@@ -260,7 +260,7 @@ if (L.hasSystemFeature('offloading')) { ... }
 `ucode-mod-fs` 没有该导出时自动跳过，较新的 ucode 仍保留检查。
 
 ```text
-luci-app-ota @ 929cece3
+luci-app-ota @ 8d06675c
 package/new/luci-app-ota/root/usr/bin/ota
 ```
 
@@ -447,30 +447,32 @@ package/base-files/files/etc/uci-defaults/90-luci-app-ota
 }
 ```
 
-`ota publish` 在本地渲染：
+`ota publish` 只生成数据，不再包含页面：
 
 1. 从线上 `ota.json` / `history.json` 复制已有数据；
-2. 复制 `luci-app-ota/site`，删除上游 `CNAME`（除非显式传 `--cname`）；
-3. 合并已有 `ota.json` 的其它设备条目；
-4. 追加 `history.json`；
-5. 输出到 `dist/ota-site`，由下一步部署。
+2. 合并已有 `ota.json` 的其它设备条目；
+3. 追加 `history.json`；
+4. 输出到 `dist/ota-data`。
+
+页面由独立仓库 [ZeroWrt-OTA](https://github.com/MinimaxFlora/ZeroWrt-OTA) 构建。
 
 ### 6.3 Cloudflare Pages
 
 `ota.tatalvpai.vip` 指向 Cloudflare Pages 项目 `zerowrt-ota`。该项目是
-**Direct Upload / ad hoc** 部署，不会因为 Git 提交自动更新，所以构建末尾必须
-显式部署：
+**Direct Upload / ad hoc** 部署，不会因为 Git 提交自动更新，所以构建末尾执行：
 
 ```text
-dist/ota-site
-  → npx wrangler@4.158.0 pages deploy
+dist/ota-data
+  → 复制到 ZeroWrt-OTA/docs/public
+  → pnpm install && pnpm build
+  → npx wrangler@4.158.0 pages deploy docs/.vitepress/dist
   → Cloudflare Pages 项目 zerowrt-ota（production branch: main）
 ```
 
 GitHub 仓库不再有 `gh-pages` 分支，也不再启用 GitHub Pages。
 
-`build.yml` 的 **Deploy OTA page to Cloudflare Pages** 步骤使用仓库 Secrets
-`CLOUDFLARE_API_TOKEN` 和 `CLOUDFLARE_ACCOUNT_ID`。
+`build.yml` 的 **Build OTA site** 和 **Deploy OTA site to Cloudflare Pages** 步骤
+使用仓库 Secrets `CLOUDFLARE_API_TOKEN` 和 `CLOUDFLARE_ACCOUNT_ID`。
 
 不再使用 GitHub Pages，也不推送 `gh-pages`。
 

@@ -76,6 +76,7 @@ ZeroWrt 面向 **MediaTek Filogic（MT7986）** 路由器，源码固定为：
 | PassWall | 只启用 Xray，显式关闭 Sing-Box（MTK 镜像体积考虑） |
 | DDNS | 阿里云、Cloudflare、DNSPod、FreeDNS、GoDaddy |
 | OTA | [`MinimaxFlora/luci-app-ota`](https://github.com/MinimaxFlora/luci-app-ota) |
+| OTA 下载站 | [`MinimaxFlora/ZeroWrt-OTA`](https://github.com/MinimaxFlora/ZeroWrt-OTA)（VitePress + Teek，中英文） |
 | Go | 替换为 [`sbwml/packages_lang_golang`](https://github.com/sbwml/packages_lang_golang) `27.x`（Xray 需要 Go 1.27） |
 
 ## 插件替换
@@ -113,16 +114,15 @@ OTA 插件已直接兼容 24.10：`fs.statvfs` 不存在时跳过可选的空间
 | `wifi_name` | `ZeroWrt` | 自动追加 `-2.4G` / `-5G` |
 | `wifi_password` | `1234567890` | 8–63 位 |
 | `ota_url` | `https://ota.tatalvpai.vip/ota.json` | 默认 OTA 索引地址 |
-| `ota_cname` | `ota.tatalvpai.vip` | OTA 下载页域名 |
 | `cache_toolchain` | `true` | 有缓存时恢复工具链 |
 
 构建成功后：
 
 1. 上传 Artifact（仅固件，保留 14 天）；
 2. 更新 tag / Release 名均为 `mediatek_filogic` 的 Release；
-3. 下载线上 `ota.json` / `history.json`，在本地渲染下载页并合并多设备条目；
-4. 用 `wrangler` 部署到 Cloudflare Pages 项目 `zerowrt-ota`，保证
-   `ota.tatalvpai.vip` 与本次构建同步。
+3. 下载线上 `ota.json` / `history.json`，生成并合并多设备 OTA 数据；
+4. checkout [ZeroWrt-OTA](https://github.com/MinimaxFlora/ZeroWrt-OTA)，写入数据并构建
+   VitePress 站点，再用 `wrangler` 部署到 Cloudflare Pages `zerowrt-ota`。
 
 不再推送 `gh-pages`，也不再使用 GitHub Pages。
 
@@ -206,7 +206,7 @@ python -m ruff check scripts tests
 │       ├── config.py               # 复制 configs/<设备>.config / 批量生成
 │       ├── customize.py            # 版本/IP/WiFi/banner/Argon
 │       ├── luci.py                 # 状态页帮助反馈 + zh_Hans 翻译
-│       ├── ota.py                  # OTA 元数据、索引、下载页渲染
+│       ├── ota.py                  # OTA 元数据、索引数据生成
 │       ├── packages.py             # 插件替换与 feed 去重
 │       ├── profiles.py             # 12 个设备
 │       ├── settings.py             # 输入校验

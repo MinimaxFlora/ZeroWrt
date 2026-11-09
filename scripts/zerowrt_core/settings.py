@@ -21,7 +21,6 @@ DEFAULT_WIFI_PASSWORD = "1234567890"
 DEFAULT_DIST_NAME = "ZeroWrt"
 DEFAULT_LAN_IP = profiles.DEFAULT_LAN_IP
 DEFAULT_OTA_URL = "https://ota.tatalvpai.vip/ota.json"
-DEFAULT_OTA_CNAME = "ota.tatalvpai.vip"
 
 DEVICE_RE = re.compile(r"[A-Za-z0-9_.-]{1,64}")
 DIST_RE = re.compile(r"[A-Za-z0-9_.-]{1,32}")

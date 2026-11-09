@@ -39,7 +39,7 @@ ARGON_THEME_REF = "c6d63bd68aa9272e40c35cee5e615f45cc1e4eb0"
 ARGON_THEME_DIR = "luci-theme-argon"
 
 OTA_REPO = "MinimaxFlora/luci-app-ota"
-OTA_REF = "929cece34b27bb8816178eb490b86f7138133512"
+OTA_REF = "8d06675c9fcc20c7dd88bd6e397b2afcbb24c460"
 
 GOLANG_REPO = "sbwml/packages_lang_golang"
 GOLANG_REF = "cd8953c31e0f64ea2853f87bb0f32256646a160d"

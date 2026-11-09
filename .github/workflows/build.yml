@@ -46,11 +46,6 @@ on:
         required: false
         type: string
         default: "https://ota.tatalvpai.vip/ota.json"
-      ota_cname:
-        description: "Custom domain for the OTA download page"
-        required: false
-        type: string
-        default: "ota.tatalvpai.vip"
       cache_toolchain:
         description: "Restore the toolchain cache when available"
         required: true
@@ -233,29 +228,36 @@ jobs:
           curl -fL --retry 3 --retry-delay 2 "${OTA_URL%/*}/history.json" \
             -o /tmp/zerowrt-ota-live/history.json || true
 
-      - name: Render OTA page
+      - name: Render OTA data
         if: success()
-        env:
-          OTA_CNAME: ${{ inputs.ota_cname }}
         run: |
           python3 scripts/zerowrt.py ota publish \
             --tree "$ZEROWRT_SOURCE_DIR" \
             --dist dist \
             --repo "$GITHUB_REPOSITORY" \
             --tag mediatek_filogic \
-            --site "$ZEROWRT_SOURCE_DIR/package/new/luci-app-ota/site" \
-            --cname "$OTA_CNAME" \
-            --out dist/ota-site \
+            --out dist/ota-data \
             --existing /tmp/zerowrt-ota-live/ota.json \
             --history /tmp/zerowrt-ota-live/history.json
 
-      - name: Deploy OTA page to Cloudflare Pages
+      - name: Build OTA site
+        if: success()
+        run: |
+          rm -rf /tmp/zerowrt-ota-site
+          git clone --depth 1 https://github.com/MinimaxFlora/ZeroWrt-OTA.git /tmp/zerowrt-ota-site
+          cp dist/ota-data/ota.json dist/ota-data/history.json /tmp/zerowrt-ota-site/docs/public/
+          npm install -g pnpm@11.28.5
+          cd /tmp/zerowrt-ota-site
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Deploy OTA site to Cloudflare Pages
         if: success()
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          npx --yes wrangler@4.158.0 pages deploy dist/ota-site \
+          npx --yes wrangler@4.158.0 pages deploy /tmp/zerowrt-ota-site/docs/.vitepress/dist \
             --project-name=zerowrt-ota \
             --branch=main \
             --commit-dirty=true

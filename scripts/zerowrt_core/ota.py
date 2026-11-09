@@ -341,53 +341,18 @@ def embed(
     return metadata
 
 
-def _brand_site(site: Path, repo: str) -> None:
-    for path in Path(site).rglob("*"):
-        if ".git" in path.parts:
-            continue
-        if not path.is_file() or path.suffix not in {".js", ".html", ".css", ".json", ".md"}:
-            continue
-        text = util.read_text(path)
-        updated = text.replace("MinimaxFlora/ZeroWrt", repo)
-        updated = updated.replace("https://github.com/MinimaxFlora/ZeroWrt", f"https://github.com/{repo}")
-        if updated != text:
-            util.write_text(path, updated)
-
-
-def _copy_site(site: Path, target: Path, *, cname: str) -> None:
-    site = Path(site)
-    target = Path(target)
-    if site.is_dir():
-        # Never copy the upstream project's CNAME: it points at a different
-        # domain. An existing CNAME is preserved unless --cname is explicitly set,
-        # given, so re-publishing does not silently drop a custom domain.
-        shutil.copytree(
-            site,
-            target,
-            dirs_exist_ok=True,
-            ignore=shutil.ignore_patterns("CNAME", "ota.json", "history.json"),
-        )
-        util.log(f"site assets copied from {site}")
-    if cname:
-        util.write_text(target / "CNAME", cname + "\n")
-        util.log(f"CNAME -> {cname}")
-    (target / ".nojekyll").write_text("", encoding="utf-8")
-
-
 def publish(
     *,
     dist: Path,
     info: dict,
     repo: str,
     tag: str,
-    site: Path | None = None,
-    cname: str = "",
     out: Path | None = None,
     existing_source: Path | None = None,
     history_source: Path | None = None,
 ) -> dict:
     dist = Path(dist)
-    checkout = Path(out) if out else dist / "site"
+    checkout = Path(out) if out else dist / "ota-data"
     if checkout.exists():
         shutil.rmtree(checkout)
     checkout.mkdir(parents=True, exist_ok=True)
@@ -400,14 +365,6 @@ def publish(
     existing = checkout / "ota.json"
     history = checkout / "history.json"
 
-    if site is not None:
-        _copy_site(site, checkout, cname=cname)
-        # Brand the copied page with the actual repository name. This runs
-        # before the fresh ota.json is written, so only site assets change.
-        _brand_site(checkout, repo)
-    elif cname:
-        util.write_text(checkout / "CNAME", cname + "\n")
-
     index = generate_index(
         dist,
         info=info,
@@ -418,6 +375,5 @@ def publish(
     )
     util.write_json(checkout / "ota.json", index)
     util.write_json(dist / "ota.json", index)
-    util.write_text(checkout / ".nojekyll", "")
-    util.log(f"OTA site rendered to {checkout}")
+    util.log(f"OTA data rendered to {checkout}")
     return index

@@ -120,7 +120,9 @@ OTA 源码在 24.10 上会因 `ucode-mod-fs` 缺少 `statvfs` 无法启动，`ot
 
 1. 上传 Artifact（仅固件，保留 14 天）；
 2. 更新 tag / Release 名均为 `mediatek_filogic` 的 Release；
-3. 把 `ota.json`、`history.json` 和下载页推送到 `gh-pages`。
+3. 把 `ota.json`、`history.json` 和下载页推送到 `gh-pages`；
+4. 用 `wrangler` 部署到 Cloudflare Pages 项目 `zerowrt-ota`，保证
+   `ota.tatalvpai.vip` 与 `gh-pages` 同步。
 
 ## 产物
 

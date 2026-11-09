@@ -457,10 +457,24 @@ package/base-files/files/etc/uci-defaults/90-luci-app-ota
 4. 追加 `history.json`；
 5. 用 `GITHUB_TOKEN` 推回。
 
-### 6.3 Pages
+### 6.3 Pages 与 Cloudflare
 
-Settings → Pages → Deploy from a branch → `gh-pages` / `/`。
+`gh-pages` 由 GitHub Pages 托管，同时 `ota.tatalvpai.vip` 实际指向 Cloudflare
+Pages 项目 `zerowrt-ota`。Cloudflare Pages 是 **Direct Upload / ad hoc** 部署，
+不会因为 `gh-pages` 有新提交而自动更新，所以构建末尾必须显式部署：
+
+```text
+gh-pages 最新内容
+  → npx wrangler@4.158.0 pages deploy
+  → Cloudflare Pages 项目 zerowrt-ota（production branch: gh-pages）
+```
+
+`build.yml` 的 **Deploy OTA page to Cloudflare Pages** 步骤使用仓库 Secrets
+`CLOUDFLARE_API_TOKEN` 和 `CLOUDFLARE_ACCOUNT_ID`。也可以手动运行
+`Deploy OTA Pages` workflow 同步当前 `gh-pages`。
+
 默认索引地址：`https://ota.tatalvpai.vip/ota.json`。
+
 
 ## 7. 产物过滤
 

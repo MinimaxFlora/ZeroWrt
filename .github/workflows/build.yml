@@ -228,8 +228,10 @@ jobs:
           OTA_URL: ${{ inputs.ota_url }}
         run: |
           mkdir -p /tmp/zerowrt-ota-live
-          curl -fsSL "$OTA_URL" -o /tmp/zerowrt-ota-live/ota.json || true
-          curl -fsSL "${OTA_URL%/*}/history.json" -o /tmp/zerowrt-ota-live/history.json || true
+          curl -fL --retry 3 --retry-delay 2 "$OTA_URL" \
+            -o /tmp/zerowrt-ota-live/ota.json
+          curl -fL --retry 3 --retry-delay 2 "${OTA_URL%/*}/history.json" \
+            -o /tmp/zerowrt-ota-live/history.json || true
 
       - name: Render OTA page
         if: success()

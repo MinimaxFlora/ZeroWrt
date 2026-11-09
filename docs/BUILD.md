@@ -64,7 +64,7 @@ Release 和 Cloudflare Pages。
 | `openwrt-passwall-packages` | `Openwrt-Passwall/openwrt-passwall-packages` | `da712cf0` |
 | `OpenClash` | `vernesong/OpenClash` | `e553e82e` |
 | `luci-theme-argon` | `jerrykuku/luci-theme-argon` | `c6d63bd6` |
-| `luci-app-ota` | `MinimaxFlora/luci-app-ota` | `8d06675c` |
+| `luci-app-ota` | `MinimaxFlora/luci-app-ota` | `88267f2b` |
 
 Go 1.27 不放在 `package/new`，而是替换 feed 目录：
 
@@ -260,7 +260,7 @@ if (L.hasSystemFeature('offloading')) { ... }
 `ucode-mod-fs` 没有该导出时自动跳过，较新的 ucode 仍保留检查。
 
 ```text
-luci-app-ota @ 8d06675c
+luci-app-ota @ 88267f2b
 package/new/luci-app-ota/root/usr/bin/ota
 ```
 

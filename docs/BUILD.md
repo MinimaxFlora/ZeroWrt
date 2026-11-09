@@ -19,7 +19,7 @@
 `6e1f514b99156ca05921defcb0d1f31df3157c4d`；临时升级可用
 `ZEROWRT_SOURCE_REF=<branch-or-sha>` 覆盖，正式发布前应把新 commit 写回
 `profiles.SOURCE_REF`。需要写权限的是 `GITHUB_TOKEN`（Actions 自动提供），用于
-Release 和 `gh-pages`。
+Release 和 Cloudflare Pages。
 
 ## 2. 工作流顺序
 
@@ -52,7 +52,7 @@ Release 和 `gh-pages`。
 14. **build collect**：只收集固件，见第 7 节。
 15. **Release**：tag 和 Release 名都是 `mediatek_filogic`，正文来自
     `docs/release-notes/mediatek_filogic.md`。
-16. **ota publish**：把 `ota.json`、`history.json` 和下载页推送到 `gh-pages`。
+16. **ota publish**：在本地渲染 `ota.json`、`history.json` 和下载页。
 
 ## 3. 插件替换
 
@@ -447,29 +447,30 @@ package/base-files/files/etc/uci-defaults/90-luci-app-ota
 }
 ```
 
-`publish` 会：
+`ota publish` 在本地渲染：
 
-1. clone `gh-pages`（不存在则创建）；
+1. 从线上 `ota.json` / `history.json` 复制已有数据；
 2. 复制 `luci-app-ota/site`，删除上游 `CNAME`（除非显式传 `--cname`）；
 3. 合并已有 `ota.json` 的其它设备条目；
 4. 追加 `history.json`；
-5. 用 `GITHUB_TOKEN` 推回。
+5. 输出到 `dist/ota-site`，由下一步部署。
 
-### 6.3 Pages 与 Cloudflare
+### 6.3 Cloudflare Pages
 
-`gh-pages` 由 GitHub Pages 托管，同时 `ota.tatalvpai.vip` 实际指向 Cloudflare
-Pages 项目 `zerowrt-ota`。Cloudflare Pages 是 **Direct Upload / ad hoc** 部署，
-不会因为 `gh-pages` 有新提交而自动更新，所以构建末尾必须显式部署：
+`ota.tatalvpai.vip` 指向 Cloudflare Pages 项目 `zerowrt-ota`。该项目是
+**Direct Upload / ad hoc** 部署，不会因为 Git 提交自动更新，所以构建末尾必须
+显式部署：
 
 ```text
-gh-pages 最新内容
+dist/ota-site
   → npx wrangler@4.158.0 pages deploy
   → Cloudflare Pages 项目 zerowrt-ota（production branch: gh-pages）
 ```
 
 `build.yml` 的 **Deploy OTA page to Cloudflare Pages** 步骤使用仓库 Secrets
-`CLOUDFLARE_API_TOKEN` 和 `CLOUDFLARE_ACCOUNT_ID`。也可以手动运行
-`Deploy OTA Pages` workflow 同步当前 `gh-pages`。
+`CLOUDFLARE_API_TOKEN` 和 `CLOUDFLARE_ACCOUNT_ID`。
+
+不再使用 GitHub Pages，也不推送 `gh-pages`。
 
 默认索引地址：`https://ota.tatalvpai.vip/ota.json`。
 

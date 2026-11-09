@@ -222,10 +222,18 @@ jobs:
           overwrite_files: true
           fail_on_unmatched_files: true
 
-      - name: Publish OTA page
+      - name: Download current OTA index
         if: success()
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OTA_URL: ${{ inputs.ota_url }}
+        run: |
+          mkdir -p /tmp/zerowrt-ota-live
+          curl -fsSL "$OTA_URL" -o /tmp/zerowrt-ota-live/ota.json || true
+          curl -fsSL "${OTA_URL%/*}/history.json" -o /tmp/zerowrt-ota-live/history.json || true
+
+      - name: Render OTA page
+        if: success()
+        env:
           OTA_CNAME: ${{ inputs.ota_cname }}
         run: |
           python3 scripts/zerowrt.py ota publish \
@@ -233,9 +241,11 @@ jobs:
             --dist dist \
             --repo "$GITHUB_REPOSITORY" \
             --tag mediatek_filogic \
-            --branch gh-pages \
             --site "$ZEROWRT_SOURCE_DIR/package/new/luci-app-ota/site" \
-            --cname "$OTA_CNAME"
+            --cname "$OTA_CNAME" \
+            --out dist/ota-site \
+            --existing /tmp/zerowrt-ota-live/ota.json \
+            --history /tmp/zerowrt-ota-live/history.json
 
       - name: Deploy OTA page to Cloudflare Pages
         if: success()
@@ -243,10 +253,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          rm -rf /tmp/zerowrt-ota-pages
-          git clone --depth 1 --branch gh-pages \
-            "https://github.com/${GITHUB_REPOSITORY}.git" /tmp/zerowrt-ota-pages
-          npx --yes wrangler@4.158.0 pages deploy /tmp/zerowrt-ota-pages \
+          npx --yes wrangler@4.158.0 pages deploy dist/ota-site \
             --project-name=zerowrt-ota \
             --branch=gh-pages \
             --commit-dirty=true

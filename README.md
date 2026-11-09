@@ -120,9 +120,11 @@ OTA 插件已直接兼容 24.10：`fs.statvfs` 不存在时跳过可选的空间
 
 1. 上传 Artifact（仅固件，保留 14 天）；
 2. 更新 tag / Release 名均为 `mediatek_filogic` 的 Release；
-3. 把 `ota.json`、`history.json` 和下载页推送到 `gh-pages`；
+3. 下载线上 `ota.json` / `history.json`，在本地渲染下载页并合并多设备条目；
 4. 用 `wrangler` 部署到 Cloudflare Pages 项目 `zerowrt-ota`，保证
-   `ota.tatalvpai.vip` 与 `gh-pages` 同步。
+   `ota.tatalvpai.vip` 与本次构建同步。
+
+不再推送 `gh-pages`，也不再使用 GitHub Pages。
 
 ## 产物
 
@@ -204,7 +206,7 @@ python -m ruff check scripts tests
 │       ├── config.py               # 复制 configs/<设备>.config / 批量生成
 │       ├── customize.py            # 版本/IP/WiFi/banner/Argon
 │       ├── luci.py                 # 状态页帮助反馈 + zh_Hans 翻译
-│       ├── ota.py                  # OTA 元数据、索引、gh-pages
+│       ├── ota.py                  # OTA 元数据、索引、下载页渲染
 │       ├── packages.py             # 插件替换与 feed 去重
 │       ├── profiles.py             # 12 个设备
 │       ├── settings.py             # 输入校验

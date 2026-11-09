@@ -189,12 +189,11 @@ def cmd_ota_publish(args: argparse.Namespace) -> None:
         info=info,
         repo=repo,
         tag=tag,
-        branch=args.branch,
         site=Path(args.site) if args.site else None,
         cname=args.cname,
-        token=args.token,
-        no_push=args.no_push,
         out=Path(args.out) if args.out else None,
+        existing_source=Path(args.existing) if args.existing else None,
+        history_source=Path(args.history) if args.history else None,
     )
 
 
@@ -348,21 +347,20 @@ def build_parser() -> argparse.ArgumentParser:
     ota_index.add_argument("--url-base", default="", help="asset URL prefix instead of GitHub Releases")
     ota_index.set_defaults(func=cmd_ota_index)
 
-    ota_publish = ota_sub.add_parser("publish", help="publish ota.json and the download page to gh-pages")
+    ota_publish = ota_sub.add_parser("publish", help="render ota.json and the download page")
     _add_tree(ota_publish)
     ota_publish.add_argument("--dist", default="dist")
     ota_publish.add_argument("--repo", default="", help="GitHub repository owner/name")
     ota_publish.add_argument("--tag", default="", help=f"release tag (default: {profiles.RELEASE_TAG})")
-    ota_publish.add_argument("--branch", default="gh-pages")
     ota_publish.add_argument("--site", default="", help="static download page directory")
     ota_publish.add_argument(
         "--cname",
         default=settings.DEFAULT_OTA_CNAME,
         help=f"custom domain written to CNAME (default: {settings.DEFAULT_OTA_CNAME})",
     )
-    ota_publish.add_argument("--token", default=None, help="GitHub token (default: GH_TOKEN)")
-    ota_publish.add_argument("--no-push", action="store_true", help="write the site locally only")
-    ota_publish.add_argument("--out", default="", help="output directory for --no-push")
+    ota_publish.add_argument("--out", default="", help="output directory")
+    ota_publish.add_argument("--existing", default="", help="existing ota.json to merge")
+    ota_publish.add_argument("--history", default="", help="existing history.json to append")
     ota_publish.set_defaults(func=cmd_ota_publish)
 
     build_cmd = sub.add_parser("build", help="download, compile and collect")

@@ -1,4 +1,4 @@
-"""OTA metadata, update index and gh-pages publishing.
+"""OTA metadata, update index and static download-page rendering.
 
 The firmware carries ``luci-app-ota``; for it to see a new release the build
 has to do three things:
@@ -18,7 +18,6 @@ from __future__ import annotations
 import os
 import re
 import shutil
-import tempfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -360,7 +359,7 @@ def _copy_site(site: Path, target: Path, *, cname: str) -> None:
     target = Path(target)
     if site.is_dir():
         # Never copy the upstream project's CNAME: it points at a different
-        # domain. An existing gh-pages CNAME is preserved unless --cname is
+        # domain. An existing CNAME is preserved unless --cname is explicitly set,
         # given, so re-publishing does not silently drop a custom domain.
         shutil.copytree(
             site,
@@ -375,83 +374,31 @@ def _copy_site(site: Path, target: Path, *, cname: str) -> None:
     (target / ".nojekyll").write_text("", encoding="utf-8")
 
 
-def _initialise_checkout(checkout: Path, repo: str, branch: str) -> None:
-    checkout.mkdir(parents=True, exist_ok=True)
-    util.run(["git", "init", "-q", str(checkout)], quiet=True)
-    util.run(["git", "-C", str(checkout), "checkout", "-q", "-b", branch], quiet=True)
-    util.run(["git", "-C", str(checkout), "remote", "add", "origin", f"https://github.com/{repo}.git"], quiet=True)
-    util.run(["git", "-C", str(checkout), "config", "user.name", "ZeroWrt Builder"], quiet=True)
-    util.run(["git", "-C", str(checkout), "config", "user.email", "builder@zerowrt.invalid"], quiet=True)
-    util.write_text(checkout / ".nojekyll", "")
-
-
-def _checkout_gh_pages(checkout: Path, repo: str, branch: str, token: str | None) -> bool:
-    """Clone *branch*; return False when the branch does not exist yet."""
-    env = util.git_environment(token)
-    code, output = util.run(
-        ["git", "ls-remote", "--heads", f"https://github.com/{repo}.git", branch],
-        env=env,
-        capture=True,
-        quiet=True,
-        check=False,
-    )
-    if code != 0:
-        raise util.BuildError(f"cannot query {repo} for the {branch} branch:\n{output[-2000:]}")
-    if not output.strip():
-        util.log(f"{branch} branch does not exist yet; creating it")
-        _initialise_checkout(checkout, repo, branch)
-        return False
-    util.clone(repo, checkout, ref=branch, token=token, depth=1)
-    util.run(["git", "-C", str(checkout), "checkout", "-q", "-B", branch], quiet=True)
-    util.run(["git", "-C", str(checkout), "config", "user.name", "ZeroWrt Builder"], quiet=True)
-    util.run(["git", "-C", str(checkout), "config", "user.email", "builder@zerowrt.invalid"], quiet=True)
-    return True
-
-
-def _commit_and_push(checkout: Path, repo: str, branch: str, token: str | None, message: str) -> None:
-    util.run(["git", "-C", str(checkout), "add", "-A"], quiet=True)
-    code, _ = util.run(["git", "-C", str(checkout), "diff", "--cached", "--quiet"], check=False, quiet=True)
-    if code == 0:
-        util.log("OTA page is already up to date; nothing to commit")
-        return
-    util.run(["git", "-C", str(checkout), "commit", "-q", "-m", message], quiet=True)
-    env = util.git_environment(token)
-    util.run(
-        ["git", "-C", str(checkout), "push", "origin", f"HEAD:refs/heads/{branch}"],
-        env=env,
-        display=f"git push origin {branch}",
-    )
-    util.log(f"published to {repo}@{branch}")
-
-
 def publish(
     *,
     dist: Path,
     info: dict,
     repo: str,
     tag: str,
-    branch: str = "gh-pages",
     site: Path | None = None,
     cname: str = "",
-    token: str | None = None,
-    no_push: bool = False,
     out: Path | None = None,
+    existing_source: Path | None = None,
+    history_source: Path | None = None,
 ) -> dict:
     dist = Path(dist)
-    token = token or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
-
-    if no_push:
-        checkout = Path(out) if out else dist / "site"
-        if checkout.exists():
-            shutil.rmtree(checkout)
-        checkout.mkdir(parents=True, exist_ok=True)
-        existing = checkout / "ota.json"
-        history = checkout / "history.json"
-    else:
-        checkout = Path(tempfile.mkdtemp(prefix="zerowrt-pages-"))
-        _checkout_gh_pages(checkout, repo, branch, token)
-        existing = checkout / "ota.json"
-        history = checkout / "history.json"
+    checkout = Path(out) if out else dist / "site"
+    if checkout.exists():
+        shutil.rmtree(checkout)
+    checkout.mkdir(parents=True, exist_ok=True)
+    # Cloudflare Pages is the only origin; there is no branch to read the
+    # previous multi-device index from, so the workflow downloads it first.
+    if existing_source and Path(existing_source).is_file():
+        shutil.copy2(existing_source, checkout / "ota.json")
+    if history_source and Path(history_source).is_file():
+        shutil.copy2(history_source, checkout / "history.json")
+    existing = checkout / "ota.json"
+    history = checkout / "history.json"
 
     if site is not None:
         _copy_site(site, checkout, cname=cname)
@@ -472,16 +419,5 @@ def publish(
     util.write_json(checkout / "ota.json", index)
     util.write_json(dist / "ota.json", index)
     util.write_text(checkout / ".nojekyll", "")
-
-    if not no_push:
-        _commit_and_push(
-            checkout,
-            repo,
-            branch,
-            token,
-            f"OTA index: {info.get('device', '')} {info.get('version', '')}",
-        )
-        shutil.rmtree(checkout, ignore_errors=True)
-    else:
-        util.log(f"OTA site written to {checkout} (no push)")
+    util.log(f"OTA site rendered to {checkout}")
     return index

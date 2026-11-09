@@ -95,6 +95,35 @@ class OtaTest(unittest.TestCase):
                 existing=existing,
             )
 
+    def test_publish_merges_live_index_and_history(self) -> None:
+        site = self.root / "site"
+        site.mkdir()
+        (site / "index.html").write_text("page", encoding="utf-8")
+        existing = self.root / "existing.json"
+        existing.write_text(
+            json.dumps({"schema": 2, "devices": {"other_device": {"version": "20260101"}}}),
+            encoding="utf-8",
+        )
+        history = self.root / "history.json"
+        history.write_text(
+            json.dumps({"schema": 1, "releases": [{"version": "20260101", "device": "other_device", "build_date": 1}]}),
+            encoding="utf-8",
+        )
+        index = ota.publish(
+            dist=self.dist,
+            info=self.info,
+            repo="owner/repo",
+            tag="mediatek_filogic",
+            site=site,
+            out=self.root / "merged",
+            existing_source=existing,
+            history_source=history,
+        )
+        self.assertIn("other_device", index["devices"])
+        self.assertIn("netcore_n60-pro", index["devices"])
+        merged_history = json.loads((self.root / "merged" / "history.json").read_text(encoding="utf-8"))
+        self.assertGreaterEqual(len(merged_history["releases"]), 2)
+
     def test_publish_no_push(self) -> None:
         site = self.root / "site"
         site.mkdir()
@@ -107,7 +136,6 @@ class OtaTest(unittest.TestCase):
             repo="owner/repo",
             tag="mediatek_filogic",
             site=site,
-            no_push=True,
             out=out,
         )
         self.assertIn("netcore_n60-pro", index["devices"])

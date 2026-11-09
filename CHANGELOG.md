@@ -16,7 +16,8 @@
 - 状态页加入“帮助与反馈”三个按钮，并在 `base.po` 补齐四条简体中文翻译。
 - 删除防火墙 zones 页面的 `Routing/NAT Offloading` 流量卸载区块。
 - 升级 `luci-app-ota`，兼容 24.10 ucode 缺少 `statvfs` 的环境。
-- 构建后同步部署 `gh-pages` 到 Cloudflare Pages `zerowrt-ota`，修复自定义域名索引停留在旧版本。
+- 构建后部署下载页到 Cloudflare Pages `zerowrt-ota`，修复自定义域名索引停留在旧版本。
+- 移除 GitHub Pages / `gh-pages` 发布流程；索引改为从线上读取并合并。
 - 加入 WireGuard：`luci-proto-wireguard`、`wireguard-tools`、`kmod-wireguard`。
 - 替换 PassWall、PassWall packages、OpenClash、Argon 主题、OTA。
 - Argon 配置页已合并进 `luci-theme-argon`，不再单独克隆

@@ -30,7 +30,7 @@ ZeroWrt 面向 **MediaTek Filogic（MT7986）** 路由器，源码固定为：
 | 分支 | `openwrt-24.10-6.6`（默认固定在 commit `6e1f514b`） |
 | 目标 | `mediatek/filogic` |
 | 配置来源 | `configs/<设备>.config`（`./scripts/diffconfig.sh` 生成的差异配置） |
-| 发布 tag / Release | `zerowrt-<device>-<run_id>`（每次构建唯一，保留历史） |
+| 发布 tag / Release | `mediatek_filogic`（固定 tag，资产名带 run_id 保留历史） |
 
 每次工作流只编译 **一个设备**。`config apply` 把 `configs/<设备>.config` 复制成
 源码树的 `.config`，再执行一次 `make defconfig` 展开默认值；仓库里每个配置约 380 行，
@@ -119,7 +119,7 @@ OTA 插件已直接兼容 24.10：`fs.statvfs` 不存在时跳过可选的空间
 构建成功后：
 
 1. 上传 Artifact（仅固件，保留 14 天）；
-2. 创建唯一 tag `zerowrt-<device>-<run_id>` 的 Release，保留历史版本；
+2. 更新 `mediatek_filogic` Release，固件资产名带 `run_id`，不覆盖旧资产；
 3. 生成本次固件的 OTA entry；
 4. 触发 [Zerowrt-Website](https://github.com/MinimaxFlora/Zerowrt-Website) 的
    `firmware-release` workflow，由站点仓库更新 `ota.json` / `history.json` 并部署 Cloudflare Pages。
@@ -225,9 +225,10 @@ python -m ruff check scripts tests
 `bl31-uboot.fip` / `preloader.bin` / `initramfs-recovery.itb`。manifests、buildinfo、
 profiles.json、sha256sums 和 DDR bl2 都不会进入 `dist/`。
 
-**为什么每次构建都用新的 Release tag？**
-每次构建使用唯一 tag，旧 Release 和旧固件资产都会保留；OTA 索引按设备 key 合并，
-历史版本仍可从更新日志页下载。
+**为什么固件资产名要带 run_id？**
+Tag 和 Release 名固定为 `mediatek_filogic`，但固件资产名带 `run_id`（例如
+`zerowrt-<run_id>-mediatek-filogic-...bin`），因此旧资产不会被覆盖；OTA 索引按设备
+key 合并，历史版本仍可从更新日志页下载。
 
 **为什么 PassWall 没有 Sing-Box？**
 `sing-box` 源码已删除，`.config` 里显式

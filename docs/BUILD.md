@@ -13,7 +13,7 @@
 | 内核 | 6.6 |
 | 设备配置 | `configs/<device>.config`（`diffconfig.sh` 差异配置） |
 | 重新生成 | `scripts/zerowrt_core/config.py` 的 `config generate` |
-| Release tag | `zerowrt-<device>-<run_id>`（每次构建唯一） |
+| Release tag | `mediatek_filogic`（固定；资产名带 `run_id`） |
 
 源码是公开仓库，不需要 `SOURCE_TOKEN`。源码默认固定到 commit
 `6e1f514b99156ca05921defcb0d1f31df3157c4d`；临时升级可用
@@ -435,7 +435,7 @@ package/base-files/files/etc/uci-defaults/90-luci-app-ota
     "netcore_n60-pro": {
       "version": "20261108",
       "build_date": 1762524000,
-      "url": "https://github.com/<owner>/<repo>/releases/download/zerowrt-<device>-<run_id>/<image>",
+      "url": "https://github.com/<owner>/<repo>/releases/download/mediatek_filogic/zerowrt-<run_id>-<image>",
       "sha256": "...",
       "size": 0,
       "file": "<image>",

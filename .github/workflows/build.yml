@@ -179,6 +179,15 @@ jobs:
             --tree "$ZEROWRT_SOURCE_DIR" \
             --out dist
 
+      - name: Version firmware assets
+        run: |
+          for file in dist/*; do
+            [ -f "$file" ] || continue
+            base=$(basename "$file")
+            short=${base#zerowrt-}
+            mv "$file" "dist/zerowrt-${GITHUB_RUN_ID}-${short}"
+          done
+
       - name: Build summary
         if: success()
         run: |
@@ -207,8 +216,8 @@ jobs:
         if: success()
         uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
-          tag_name: zerowrt-${{ inputs.device }}-${{ github.run_id }}
-          name: ZeroWrt ${{ inputs.device }} ${{ github.run_id }}
+          tag_name: mediatek_filogic
+          name: mediatek_filogic
           target_commitish: ${{ github.sha }}
           body_path: docs/release-notes/mediatek_filogic.md
           files: dist/*
@@ -226,7 +235,7 @@ jobs:
             --tree "$ZEROWRT_SOURCE_DIR" \
             --dist dist \
             --repo "$GITHUB_REPOSITORY" \
-            --tag zerowrt-${{ inputs.device }}-${{ github.run_id }} \
+            --tag mediatek_filogic \
             --site-repo MinimaxFlora/Zerowrt-Website
 
       - name: Trim build logs

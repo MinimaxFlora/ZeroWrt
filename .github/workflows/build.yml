@@ -257,7 +257,7 @@ jobs:
         run: |
           npx --yes wrangler@4.158.0 pages deploy dist/ota-site \
             --project-name=zerowrt-ota \
-            --branch=gh-pages \
+            --branch=main \
             --commit-dirty=true
 
       - name: Trim build logs

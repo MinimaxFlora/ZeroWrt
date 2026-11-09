@@ -464,11 +464,10 @@ package/base-files/files/etc/uci-defaults/90-luci-app-ota
 ```text
 dist/ota-site
   → npx wrangler@4.158.0 pages deploy
-  → Cloudflare Pages 项目 zerowrt-ota（内部 production branch 标签为 gh-pages）
+  → Cloudflare Pages 项目 zerowrt-ota（production branch: main）
 ```
 
-这里的 `gh-pages` 只是 Cloudflare Pages 项目的部署标签；GitHub 仓库不再有
-`gh-pages` 分支，也不再启用 GitHub Pages。
+GitHub 仓库不再有 `gh-pages` 分支，也不再启用 GitHub Pages。
 
 `build.yml` 的 **Deploy OTA page to Cloudflare Pages** 步骤使用仓库 Secrets
 `CLOUDFLARE_API_TOKEN` 和 `CLOUDFLARE_ACCOUNT_ID`。

@@ -89,6 +89,9 @@ ZeroWrt 面向 **MediaTek Filogic（MT7986）** 路由器，源码固定为：
 | OpenClash | `vernesong/OpenClash` | `package/new/OpenClash` |
 | Argon 主题（含配置页） | `jerrykuku/luci-theme-argon` | `package/new/luci-theme-argon` |
 | OTA | `MinimaxFlora/luci-app-ota` | `package/new/luci-app-ota` |
+
+OTA 源码在 24.10 上会因 `ucode-mod-fs` 缺少 `statvfs` 无法启动，`ota_compat.py`
+在克隆后自动移除这一可选预检查；索引检查和下载本身不受影响。
 | Go 1.27 | `sbwml/packages_lang_golang` | 替换 `feeds/packages/lang/golang` |
 
 外部包都固定到 commit（见 `packages.py`），不会跟随分支头漂移；更新时改常量并重新生成 configs。
@@ -200,6 +203,7 @@ python -m ruff check scripts tests
 │       ├── customize.py            # 版本/IP/WiFi/banner/Argon
 │       ├── luci.py                 # 状态页帮助反馈 + zh_Hans 翻译
 │       ├── ota.py                  # OTA 元数据、索引、gh-pages
+│       ├── ota_compat.py           # 24.10 ucode statvfs 兼容补丁
 │       ├── packages.py             # 插件替换与 feed 去重
 │       ├── profiles.py             # 12 个设备
 │       ├── settings.py             # 输入校验

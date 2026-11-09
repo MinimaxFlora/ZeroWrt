@@ -253,6 +253,21 @@ if (L.hasSystemFeature('offloading')) { ... }
 删除后校验 `offloading_type`、`flow_offloading`、`Routing/NAT Offloading`
 都不再出现；重复执行不会破坏文件。
 
+### 4.9 OTA 与 24.10 ucode 兼容
+
+`luci-app-ota` 的 `/usr/bin/ota` 使用 `fs.statvfs()` 做下载前剩余空间检查，
+但 OpenWrt 24.10 的 `ucode-mod-fs` 没有导出 `statvfs`，脚本会在启动时直接报
+`Module does not export statvfs`，于是 `ubus call luci.ota info` 返回
+`no output from /usr/bin/ota`。
+
+`ota_compat.py` 在克隆 OTA 源码后删除该可选预检查，保留下载器的实际写入校验：
+
+```text
+package/new/luci-app-ota/root/usr/bin/ota
+```
+
+补丁后验证 `statvfs` 不再出现，且 `const size` 仍传给 `ota-download`。
+
 ## 5. 设备配置
 
 ### 5.1 已生成配置

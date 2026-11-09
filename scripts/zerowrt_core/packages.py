@@ -20,7 +20,7 @@ import os
 import re
 from pathlib import Path
 
-from . import util
+from . import ota_compat, util
 
 PASSWALL_REPO = "Openwrt-Passwall/openwrt-passwall"
 PASSWALL_REF = "f19da54330424c54e16fd636cee5d76a2a6ee102"
@@ -215,6 +215,7 @@ def add_ota_app(tree: Path) -> Path:
         raise util.BuildError(f"luci-app-ota checkout is missing a Makefile: {dest}")
     if not (dest / "root" / "usr" / "bin" / "ota").exists():
         raise util.BuildError(f"luci-app-ota checkout is incomplete: {dest}")
+    ota_compat.patch(tree)
     util.log("OTA app added: package/new/luci-app-ota")
     return dest
 

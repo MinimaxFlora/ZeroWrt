@@ -378,7 +378,7 @@ def build_parser() -> argparse.ArgumentParser:
     ota_dispatch.add_argument("--tag", default="", help=f"release tag (default: {profiles.RELEASE_TAG})")
     ota_dispatch.add_argument(
         "--site-repo",
-        default="MinimaxFlora/1Panel-Website",
+        default="MinimaxFlora/Zerowrt-Website",
         help="website repository that owns data and deployment",
     )
     ota_dispatch.add_argument("--token", default=None, help="website dispatch token (default: OTA_SITE_TOKEN)")

@@ -217,7 +217,7 @@ jobs:
           overwrite_files: true
           fail_on_unmatched_files: true
 
-      - name: Trigger 1Panel-Website
+      - name: Trigger Zerowrt-Website
         if: success()
         env:
           OTA_SITE_TOKEN: ${{ secrets.OTA_SITE_TOKEN }}
@@ -227,7 +227,7 @@ jobs:
             --dist dist \
             --repo "$GITHUB_REPOSITORY" \
             --tag mediatek_filogic \
-            --site-repo MinimaxFlora/1Panel-Website
+            --site-repo MinimaxFlora/Zerowrt-Website
 
       - name: Trim build logs
         if: failure()

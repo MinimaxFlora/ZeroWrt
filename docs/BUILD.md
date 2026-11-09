@@ -52,7 +52,7 @@ Release 和 Cloudflare Pages。
 14. **build collect**：只收集固件，见第 7 节。
 15. **Release**：tag 和 Release 名都是 `mediatek_filogic`，正文来自
     `docs/release-notes/mediatek_filogic.md`。
-16. **ota dispatch**：把本次固件 entry 发送给 1Panel-Website。
+16. **ota dispatch**：把本次固件 entry 发送给 Zerowrt-Website。
 
 ## 3. 插件替换
 
@@ -461,16 +461,16 @@ package/base-files/files/etc/uci-defaults/90-luci-app-ota
 ```
 
 索引合并、`history.json` 更新、页面构建和部署全部在
-[1Panel-Website](https://github.com/MinimaxFlora/1Panel-Website) 完成。
+[Zerowrt-Website](https://github.com/MinimaxFlora/Zerowrt-Website) 完成。
 
 ### 6.3 Cloudflare Pages
 
 `ota.tatalvpai.vip` 指向 Cloudflare Pages 项目 `zerowrt-ota`，由
-1Panel-Website 的 **Deploy Site** workflow 直接部署：
+Zerowrt-Website 的 **Deploy Site** workflow 直接部署：
 
 ```text
 ZeroWrt: ota dispatch
-  → 1Panel-Website repository_dispatch
+  → Zerowrt-Website repository_dispatch
   → 更新 docs/public/ota.json + history.json
   → pnpm install --frozen-lockfile && pnpm build
   → npx wrangler@4.158.0 pages deploy docs/.vitepress/dist
@@ -479,7 +479,7 @@ ZeroWrt: ota dispatch
 
 ZeroWrt 只需要 Secret `OTA_SITE_TOKEN`（触发站点仓库 workflow）；
 Cloudflare 的 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 只放在
-1Panel-Website 仓库。ZeroWrt 不再 checkout、构建或部署站点。
+Zerowrt-Website 仓库。ZeroWrt 不再 checkout、构建或部署站点。
 
 GitHub 仓库不再有 `gh-pages` 分支，也不再启用 GitHub Pages。
 

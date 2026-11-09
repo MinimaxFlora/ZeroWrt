@@ -132,7 +132,7 @@ class OtaTest(unittest.TestCase):
                 info=self.info,
                 repo="owner/repo",
                 tag="mediatek_filogic",
-                site_repo="owner/1Panel-Website",
+                site_repo="owner/Zerowrt-Website",
                 token="token",
             )
             request = urlopen.call_args[0][0]

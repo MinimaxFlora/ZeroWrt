@@ -21,4 +21,6 @@ jobs:
             "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/pages/projects")
           echo "HTTP $code"
           jq -r '.result[]?.name // empty' /tmp/projects.json || true
+          jq -c '.result | map({name, subdomain, domains})' /tmp/projects.json || true
+          jq -c '.result' /tmp/projects.json || true
           jq -r '.errors[]?.message // empty' /tmp/projects.json || true

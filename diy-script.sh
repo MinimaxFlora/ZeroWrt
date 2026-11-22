@@ -34,16 +34,13 @@ sed -i "s/DISTRIB_REVISION='[^']*'/DISTRIB_REVISION=' By MinimaxFlora'/g" packag
 sed -i "s|^OPENWRT_RELEASE=\".*\"|OPENWRT_RELEASE=\"ZeroWrt 标准版 @R$(date +%Y%m%d) BY MinimaxFlora\"|" package/base-files/files/usr/lib/os-release
 
 # 移除要替换的包
-rm -rf feeds/packages/lang/{golang,rust}
+rm -rf feeds/packages/lang/golang
 rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/{luci-app-airplay2,luci-app-argon-config,luci-app-diskman,luci-app-mosdns,luci-app-nikki,luci-app-passwall,luci-app-passwall2,luci-app-lucky}
 rm -rf feeds/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,v2ray-plugin,xray-plugin,geoview,shadow-tls,mihomo,nikki,smartdns,mosdns,lucky}
 
 # Go 1.27
 git clone --depth=1 -b 27.x https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
-
-# Rust
-git clone --depth=1 https://github.com/sbwml/packages_lang_rust feeds/packages/lang/rust
 
 # PassWall
 git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages

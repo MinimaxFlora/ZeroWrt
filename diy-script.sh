@@ -36,7 +36,7 @@ sed -i "s|^OPENWRT_RELEASE=\".*\"|OPENWRT_RELEASE=\"ZeroWrt 标准版 @R$(date +
 # 移除要替换的包
 rm -rf feeds/packages/lang/{golang,rust}
 rm -rf feeds/luci/themes/luci-theme-argon
-rm -rf feeds/applications/{luci-app-airplay2,luci-app-argon-config,luci-app-diskman,luci-app-homeproxy,luci-app-mosdns,luci-app-nikki,luci-app-passwall,luci-app-passwall2,luci-app-lucky}
+rm -rf feeds/luci/applications/{luci-app-airplay2,luci-app-argon-config,luci-app-diskman,luci-app-mosdns,luci-app-nikki,luci-app-passwall,luci-app-passwall2,luci-app-lucky}
 rm -rf feeds/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,v2ray-plugin,xray-plugin,geoview,shadow-tls,smartdns,mosdns,lucky}
 
 # Go 1.27

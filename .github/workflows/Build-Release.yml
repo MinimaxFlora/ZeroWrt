@@ -11,20 +11,38 @@ on:
         type: string
 
 env:
+  # ── 固定配置 ──────────────────────────────────────────────
   REPO_URL: https://github.com/coolsnowwolf/lede
   REPO_BRANCH: master
-  CONFIG_FILE: ${{ inputs.CONFIG_FILE }}
   DIY_SCRIPT: diy-script.sh
-  CACHE_TOOLCHAIN: true
-  UPLOAD_BIN_DIR: false
-  FIRMWARE_RELEASE: true
-  FIRMWARE_TAG: ${{ inputs.FIRMWARE_TAG }}
+  CACHE_TOOLCHAIN: 'true'
+  UPLOAD_BIN_DIR: 'false'
+  FIRMWARE_RELEASE: 'true'
   TZ: Asia/Shanghai
-  
+  CONFIG_FILE: ${{ inputs.CONFIG_FILE }}
+  FIRMWARE_TAG: ${{ inputs.FIRMWARE_TAG }}
+
+  # ── 运行时变量：先在此声明默认值，仅为通过工作流静态校验
+  #    （否则编辑器会报 Context access might be invalid: XXX）。
+  #    真实值由各步骤写入 $GITHUB_ENV 覆盖，GITHUB_ENV 的优先级
+  #    高于 workflow 级 env，所以下面的占位值不会影响实际构建。
+  OPENWRT_PATH: /builder/openwrt
+  SOURCE_REPO: lede
+  DEVICE_TARGET: ''
+  DEVICE_SUBTARGET: ''
+  KERNEL: ''
+  DATE: ''
+  FILE_DATE: ''
+  COMMIT_AUTHOR: ''
+  COMMIT_DATE: ''
+  COMMIT_MESSAGE: ''
+  COMMIT_HASH: ''
+  FIRMWARE_PATH: ''
+
 jobs:
   Release:
     runs-on: ubuntu-24.04
-    if: ${{ github.event.repository.owner.id == github.event.sender.id }}
+    if: github.event.repository.owner.id == github.event.sender.id
     timeout-minutes: 360
     permissions:
       contents: write
@@ -38,11 +56,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check Config File
+        run: |
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "::error::配置文件不存在: $CONFIG_FILE（请确认仓库中存在该文件，或在调用方 with.CONFIG_FILE 里改成正确路径）"
+            exit 1
+          fi
+
       - name: Initialize the build environment
         id: init
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
+          # shellcheck disable=SC2046  # 故意按空格拆分，docker images -q 返回多行 ID
           docker rmi -f $(docker images -q) 2>/dev/null || true
           [[ -n "${AGENT_TOOLSDIRECTORY}" ]] && sudo rm -rf "${AGENT_TOOLSDIRECTORY}"
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android 2>/dev/null
@@ -50,6 +76,7 @@ jobs:
           sudo rm -f /swapfile /mnt/swapfile
           sudo apt-get -y update
           sudo apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
+          # shellcheck disable=SC2046  # 依赖列表本身就是空格分隔的参数
           sudo apt-get -y install $(curl -fsSL https://ophub.org/ubuntu2404-make-openwrt-depends)
           sudo systemctl daemon-reload
           # sudo apt-get -y full-upgrade
@@ -62,8 +89,8 @@ jobs:
           sudo timedatectl set-ntp true
           date -u
           timedatectl status || true
-          echo "status=success" >> ${GITHUB_OUTPUT}
-          
+          echo "status=success" >> "$GITHUB_OUTPUT"
+
       - name: Create virtual disk for extended storage
         id: disk
         run: |
@@ -81,41 +108,41 @@ jobs:
           sudo mount "${build_dev}" /builder
           sudo chown -R runner:runner /builder
           df -Th
-          echo "status=success" >> ${GITHUB_OUTPUT}
+          echo "status=success" >> "$GITHUB_OUTPUT"
 
       - name: Clone Source Code
         id: codes
         working-directory: /builder
         run: |
-          git clone -q --single-branch --depth=1 --branch=$REPO_BRANCH $REPO_URL openwrt
+          git clone -q --single-branch --depth=1 --branch="$REPO_BRANCH" "$REPO_URL" openwrt
           cd openwrt
-          echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
+          echo "OPENWRT_PATH=$PWD" >> "$GITHUB_ENV"
           COMMIT_AUTHOR=$(git show -s --date=short --format="作者: %an")
-          echo "COMMIT_AUTHOR=$COMMIT_AUTHOR" >> $GITHUB_ENV
+          echo "COMMIT_AUTHOR=$COMMIT_AUTHOR" >> "$GITHUB_ENV"
           COMMIT_DATE=$(git show -s --date=short --format="时间: %ci")
-          echo "COMMIT_DATE=$COMMIT_DATE" >> $GITHUB_ENV
+          echo "COMMIT_DATE=$COMMIT_DATE" >> "$GITHUB_ENV"
           COMMIT_MESSAGE=$(git show -s --date=short --format="内容: %s")
-          echo "COMMIT_MESSAGE=$COMMIT_MESSAGE" >> $GITHUB_ENV
+          echo "COMMIT_MESSAGE=$COMMIT_MESSAGE" >> "$GITHUB_ENV"
           COMMIT_HASH=$(git show -s --date=short --format="hash: %H")
-          echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
+          echo "COMMIT_HASH=$COMMIT_HASH" >> "$GITHUB_ENV"
 
       - name: Install Feeds
         run: |
-          cd $OPENWRT_PATH
+          cd "$OPENWRT_PATH"
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-        
+
       - name: Generate Variables
         run: |
-          cp $CONFIG_FILE $OPENWRT_PATH/.config
-          cd $OPENWRT_PATH
+          cp "$CONFIG_FILE" "$OPENWRT_PATH/.config"
+          cd "$OPENWRT_PATH"
           make defconfig > /dev/null 2>&1
-          SOURCE_REPO="$(echo $REPO_URL | awk -F '/' '{print $(NF)}')"
-          echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
-          DEVICE_TARGET=$(cat .config | grep CONFIG_TARGET_BOARD | awk -F '"' '{print $2}')
-          echo "DEVICE_TARGET=$DEVICE_TARGET" >> $GITHUB_ENV
-          DEVICE_SUBTARGET=$(cat .config | grep CONFIG_TARGET_SUBTARGET | awk -F '"' '{print $2}')
-          echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> $GITHUB_ENV
+          SOURCE_REPO=$(basename "$REPO_URL")
+          echo "SOURCE_REPO=$SOURCE_REPO" >> "$GITHUB_ENV"
+          DEVICE_TARGET=$(grep '^CONFIG_TARGET_BOARD=' .config | cut -d'"' -f2)
+          echo "DEVICE_TARGET=$DEVICE_TARGET" >> "$GITHUB_ENV"
+          DEVICE_SUBTARGET=$(grep '^CONFIG_TARGET_SUBTARGET=' .config | cut -d'"' -f2)
+          echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> "$GITHUB_ENV"
 
       - name: Cache Toolchain
         if: env.CACHE_TOOLCHAIN == 'true'
@@ -127,16 +154,24 @@ jobs:
 
       - name: Load Custom Configuration
         run: |
-          [ -e files ] && mv files $OPENWRT_PATH/files
-          [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
-          chmod +x $GITHUB_WORKSPACE/scripts/*.sh
-          chmod +x $DIY_SCRIPT
-          cd $OPENWRT_PATH
-          $GITHUB_WORKSPACE/$DIY_SCRIPT
+          if [ -d files ]; then
+            mv files "$OPENWRT_PATH/files"
+          fi
+          if [ -f "$CONFIG_FILE" ]; then
+            mv "$CONFIG_FILE" "$OPENWRT_PATH/.config"
+          fi
+          # 仓库里 scripts/ 下可能没有 *.sh（只有 banner 之类的资源文件），
+          # 直接 chmod 通配符会让整步因为「找不到文件」失败，这里先判断再 chmod。
+          chmod +x "$GITHUB_WORKSPACE/$DIY_SCRIPT"
+          if compgen -G "$GITHUB_WORKSPACE/scripts/*.sh" > /dev/null; then
+            chmod +x "$GITHUB_WORKSPACE"/scripts/*.sh
+          fi
+          cd "$OPENWRT_PATH"
+          "$GITHUB_WORKSPACE/$DIY_SCRIPT"
 
       - name: Download DL Package
         run: |
-          cd $OPENWRT_PATH
+          cd "$OPENWRT_PATH"
           make defconfig
           make download -j8
           find dl -size -1024c -exec ls -l {} \;
@@ -145,20 +180,20 @@ jobs:
       - name: Compile Firmware
         id: compile
         run: |
-          cd $OPENWRT_PATH
+          cd "$OPENWRT_PATH"
           echo -e "$(nproc) thread compile"
-          make -j$(nproc) || make -j1 || make -j1 V=s
-          echo "status=success" >> $GITHUB_OUTPUT
-          echo "DATE=$(date +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_ENV
-          echo "FILE_DATE=$(date +"%Y.%m.%d")" >> $GITHUB_ENV
+          make -j"$(nproc)" || make -j1 || make -j1 V=s
+          echo "status=success" >> "$GITHUB_OUTPUT"
+          echo "DATE=$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_ENV"
+          echo "FILE_DATE=$(date +'%Y.%m.%d')" >> "$GITHUB_ENV"
 
       - name: Check Space Usage
-        if: (!cancelled())
+        if: '!cancelled()'
         run: df -hT
 
       - name: Upload Bin Directory
         if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.SOURCE_REPO }}-bin-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}-${{ env.FILE_DATE }}
           path: ${{ env.OPENWRT_PATH }}/bin
@@ -166,18 +201,18 @@ jobs:
       - name: Organize Files
         if: steps.compile.outputs.status == 'success'
         run: |
-          cd $OPENWRT_PATH/bin/targets/*/*
+          cd "$OPENWRT_PATH"/bin/targets/*/*
           cat sha256sums
-          cp $OPENWRT_PATH/.config build.config
-          mv -f $OPENWRT_PATH/bin/packages/*/*/*.apk packages
+          cp "$OPENWRT_PATH/.config" build.config
+          mv -f "$OPENWRT_PATH"/bin/packages/*/*/*.apk packages
           tar -zcf Packages.tar.gz packages
           rm -rf packages feeds.buildinfo version.buildinfo
-          echo "KERNEL=$(cat *.manifest | grep ^kernel | cut -d- -f2 | tr -d ' ')" >> $GITHUB_ENV
-          echo "FIRMWARE_PATH=$PWD" >> $GITHUB_ENV
+          echo "KERNEL=$(cat ./*.manifest | grep ^kernel | cut -d- -f2 | tr -d ' ')" >> "$GITHUB_ENV"
+          echo "FIRMWARE_PATH=$PWD" >> "$GITHUB_ENV"
 
       - name: Upload Firmware To Artifact
         if: steps.compile.outputs.status == 'success' && env.FIRMWARE_RELEASE != 'true'
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.SOURCE_REPO }}-firmware-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}-${{ env.FILE_DATE }}
           path: ${{ env.FIRMWARE_PATH }}

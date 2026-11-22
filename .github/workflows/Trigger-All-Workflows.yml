@@ -10,15 +10,16 @@ permissions:
   actions: read
 
 jobs:
-
   X86_64:
-    uses: ./.github/workflows/Ruijie_RG_X60-NEW.yml
+    uses: ./.github/workflows/X86_64.yml
     permissions:
       contents: write
       actions: write
 
-#  Ruijie_RG_X60-NEW:
-#    uses: ./.github/workflows/Ruijie_RG_X60-NEW.yml
-#    permissions:
-#      contents: write
-#      actions: write
+  # 需要增加其它设备时，先建好对应设备的工作流文件再取消注释，
+  # 否则整条触发链条会因为引用了不存在的工作流而直接失败。
+  # Ruijie_RG_X60-NEW:
+  #   uses: ./.github/workflows/Ruijie_RG_X60-NEW.yml
+  #   permissions:
+  #     contents: write
+  #     actions: write

@@ -50,6 +50,9 @@ git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall-package
 git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
 git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall2 package/passwall-luci2
 
+# OpenWrt-nikki
+git clone --depth 1 https://github.com/nikkinikki-org/OpenWrt-nikki package/OpenWrt-nikki && rm -rf package/OpenWrt-nikki/mihomo-alpha
+
 # Argon 主题
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 

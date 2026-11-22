@@ -37,7 +37,7 @@ sed -i "s|^OPENWRT_RELEASE=\".*\"|OPENWRT_RELEASE=\"ZeroWrt 标准版 @R$(date +
 rm -rf feeds/packages/lang/{golang,rust}
 rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/applications/{luci-app-airplay2,luci-app-argon-config,luci-app-diskman,luci-app-homeproxy,luci-app-mosdns,luci-app-nikki,luci-app-passwall,luci-app-passwall2}
-rm -rf feeds/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,v2ray-plugin,xray-plugin,geoview,shadow-tls,smartdns}
+rm -rf feeds/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,v2ray-plugin,xray-plugin,geoview,shadow-tls,smartdns,mosdns,}
 
 # Go 1.27
 git clone --depth=1 -b 27.x https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
@@ -55,6 +55,18 @@ git clone --depth 1 https://github.com/nikkinikki-org/OpenWrt-nikki package/Open
 
 # Argon 主题
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
+
+# MosDNS
+git clone --depth 1 https://github.com/sbwml/luci-app-mosdns package/luci-app-mosdns
+
+# OpenList
+git clone --depth 1 https://github.com/sbwml/luci-app-openlist2 package/luci-app-openlist2
+
+# Diskman
+git clone --depth 1 https://github.com/sbwml/luci-app-diskman package/luci-app-diskman
+
+# Airconnect
+git clone --depth 1 https://github.com/sbwml/luci-app-airconnect package/luci-app-airconnect
 
 # 更改 Argon 主题背景
 cp -f $GITHUB_WORKSPACE/images/bg1.webp package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.webp

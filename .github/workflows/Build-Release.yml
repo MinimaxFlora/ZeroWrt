@@ -129,6 +129,11 @@ jobs:
       - name: Install Feeds
         run: |
           cd "$OPENWRT_PATH"
+          # 用仓库自带的 scripts/feeds.conf.default 覆盖源码树的 feeds 源
+          # （feeds.conf 若存在会优先于 feeds.conf.default，这里两个都写，避免被旧文件顶掉）
+          cp -f "$GITHUB_WORKSPACE/scripts/feeds.conf.default" feeds.conf.default
+          cp -f "$GITHUB_WORKSPACE/scripts/feeds.conf.default" feeds.conf
+          cat feeds.conf
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 

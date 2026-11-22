@@ -16,6 +16,9 @@ sed -i "s|^root:[^:]*:|root:${default_password}:|" package/base-files/files/etc/
 mkdir -p files/etc
 cp -f $GITHUB_WORKSPACE/scripts/banner files/etc/banner
 
+# Kernel 版本
+sed -i 's/KERNEL_PATCHVER:=6\.18/KERNEL_PATCHVER:=7.3/' target/linux/x86/Makefile
+
 # TTYD 免登录
 sed -i 's|/bin/login|/bin/login -f root|g' feeds/packages/utils/ttyd/files/ttyd.config
 sed -i 's/services/system/g' feeds/luci/applications/luci-app-ttyd/root/usr/share/luci/menu.d/luci-app-ttyd.json

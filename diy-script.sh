@@ -46,12 +46,12 @@ git clone --depth=1 -b 27.x https://github.com/sbwml/packages_lang_golang feeds/
 git clone --depth=1 https://github.com/sbwml/packages_lang_rust feeds/packages/lang/rust
 
 # PassWall
-git clone https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
-git clone https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
-git clone https://github.com/Openwrt-Passwall/openwrt-passwall2 package/passwall-luci2
+git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
+git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
+git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall2 package/passwall-luci2
 
 # Argon 主题
-git clone https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
+git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 
 # 更改 Argon 主题背景
 cp -f $GITHUB_WORKSPACE/images/bg1.webp package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.webp

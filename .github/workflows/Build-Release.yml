@@ -9,6 +9,21 @@ on:
       FIRMWARE_TAG:
         required: true
         type: string
+      # ── OTA：设备标识写进固件，必须与 ota.json 里的 key 一致 ──
+      # x86 用 x86_64（插件会自动加 +efi / +bios 变体）；
+      # 路由器用 profile 名，例如 ruijie_rg-x60-new。
+      OTA_DEVICE:
+        required: false
+        type: string
+        default: ''
+      OTA_TARGET:
+        required: false
+        type: string
+        default: ''
+      OTA_MODEL:
+        required: false
+        type: string
+        default: ''
 
 env:
   # ── 固定配置 ──────────────────────────────────────────────
@@ -21,6 +36,11 @@ env:
   TZ: Asia/Shanghai
   CONFIG_FILE: ${{ inputs.CONFIG_FILE }}
   FIRMWARE_TAG: ${{ inputs.FIRMWARE_TAG }}
+  OTA_DEVICE: ${{ inputs.OTA_DEVICE }}
+  OTA_TARGET: ${{ inputs.OTA_TARGET }}
+  OTA_MODEL: ${{ inputs.OTA_MODEL }}
+  # 固件里默认写入的更新索引（用户可在 LuCI 里改）
+  OTA_API_URL: https://ota.tatalvpai.vip/ota.json
 
   # ── 运行时变量：先在此声明默认值，仅为通过工作流静态校验
   #    （否则编辑器会报 Context access might be invalid: XXX）。
@@ -38,6 +58,8 @@ env:
   COMMIT_MESSAGE: ''
   COMMIT_HASH: ''
   FIRMWARE_PATH: ''
+  OTA_BUILD_DATE: ''
+  OTA_VERSION: ''
 
 jobs:
   Release:
@@ -145,6 +167,9 @@ jobs:
           echo "DEVICE_TARGET=$DEVICE_TARGET" >> "$GITHUB_ENV"
           DEVICE_SUBTARGET=$(grep '^CONFIG_TARGET_SUBTARGET=' .config | cut -d'"' -f2)
           echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> "$GITHUB_ENV"
+          # OTA：一次构建只取一个时间戳，build.json、version.date 与 ota.json 共用
+          echo "OTA_BUILD_DATE=$(date +%s)" >> "$GITHUB_ENV"
+          echo "OTA_VERSION=$(TZ=Asia/Shanghai date +%Y%m%d)" >> "$GITHUB_ENV"
 
       - name: Cache Toolchain
         if: env.CACHE_TOOLCHAIN == 'true'
@@ -171,10 +196,28 @@ jobs:
           cd "$OPENWRT_PATH"
           "$GITHUB_WORKSPACE/$DIY_SCRIPT"
 
+      - name: Verify OTA Metadata
+        run: |
+          cd "$OPENWRT_PATH"
+          # 没有这两样，固件里的 OTA 页面只会提示「未配置更新索引」
+          # 或无法在索引里找到自己，必须让构建直接失败。
+          test -s package/base-files/files/etc/ota/build.json
+          test -s package/base-files/files/etc/uci-defaults/90-luci-app-ota
+          cat package/base-files/files/etc/ota/build.json
+          cat package/base-files/files/etc/uci-defaults/90-luci-app-ota
+          test -f ota-meta.json
+          grep -q '"device"' ota-meta.json
+
       - name: Download DL Package
         run: |
           cd "$OPENWRT_PATH"
           make defconfig
+          # OTA 插件来自本地 package/ 目录，defconfig 会重新展开符号；
+          # 一旦被丢掉，固件里就没有升级页面，这里直接失败。
+          grep -q '^CONFIG_PACKAGE_luci-app-ota=y' .config || {
+            echo "::error::CONFIG_PACKAGE_luci-app-ota 没进 .config，OTA 将无法使用"
+            exit 1
+          }
           make download -j8
           find dl -size -1024c -exec ls -l {} \;
           find dl -size -1024c -exec rm -f {} \;
@@ -209,6 +252,18 @@ jobs:
           mv -f "$OPENWRT_PATH"/bin/packages/*/*/*.ipk packages
           tar -zcf Packages.tar.gz packages
           rm -rf packages feeds.buildinfo version.buildinfo
+          # ── OTA：发布构建元数据与更新索引 ──────────────────────────────
+          # ota.json 会合并线上已有的索引（$OTA_API_URL），所以同一份文件
+          # 可以同时包含 x86 与各路由器的条目；上传到下载站后立即生效。
+          cp -f "$OPENWRT_PATH/ota-meta.json" ./
+          OTA_CHANGELOG="**ZeroWrt ${OTA_VERSION}**"$'\n\n'"- 平台: ${DEVICE_TARGET}/${DEVICE_SUBTARGET}"$'\n'"- 构建时间: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          python3 "$GITHUB_WORKSPACE/scripts/gen_ota_index.py" \
+            --dir "$PWD" \
+            --tag "$FIRMWARE_TAG" \
+            --merge "$OTA_API_URL" \
+            --changelog "$OTA_CHANGELOG" \
+            --out ota.json
+          cat ota.json
           echo "KERNEL=$(cat ./*.manifest | grep ^kernel | cut -d- -f2 | tr -d ' ')" >> "$GITHUB_ENV"
           echo "FIRMWARE_PATH=$PWD" >> "$GITHUB_ENV"
 

@@ -17,3 +17,5 @@ jobs:
     with:
       CONFIG_FILE: configs/x86_64.config
       FIRMWARE_TAG: X86_64
+      OTA_DEVICE: x86_64
+      OTA_TARGET: x86/64

@@ -53,6 +53,9 @@ git clone --depth 1 https://github.com/nikkinikki-org/OpenWrt-nikki package/Open
 # Argon 主题
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 
+# Brutal 主题
+git clone --depth 1 https://github.com/MinimaxFlora/luci-theme-brutal package/luci-theme-brutal
+
 # MosDNS
 git clone --depth 1 https://github.com/sbwml/luci-app-mosdns package/luci-app-mosdns
 

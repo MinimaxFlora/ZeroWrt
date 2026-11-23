@@ -34,7 +34,7 @@ to a release.
 | System | ttyd (no login prompt on the LAN), Argon and Brutal themes (Brutal is the default), nano, yq, coreutils, ramfree |
 | Update | **luci-app-ota**: check, download with SHA256 verification, `sysupgrade -T` pre-check, install with settings kept — plus a CLI (`ota`) |
 
-Chinese translations are compiled in for every app listed above.
+Chinese translations are compiled in for the main LuCI apps.
 
 ## Download and install
 
@@ -50,8 +50,8 @@ Chinese translations are compiled in for every app listed above.
    On Windows use balenaEtcher or Rufus (DD mode) with the decompressed `.img`.
 
 3. Boot the device. LuCI is at <http://10.0.0.1/>, SSH as `root` / `password`.
-4. Grow the overlay if the disk is larger than the image: open **System → Disk Man**, select the
-   root partition and use *Expand* (or `cfdisk` + `resize2fs` / `mkfs.f2fs`), then reboot.
+4. Grow the overlay if the disk is larger than the image: open **System → DiskMan**, select the root
+   partition and use *Expand*, then reboot.
 
 Verify the download against the `sha256sums` published with each release before flashing.
 

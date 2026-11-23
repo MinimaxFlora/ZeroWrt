@@ -29,9 +29,8 @@ sed -i 's/procd_set_param stderr 1/procd_set_param stderr 0/g' feeds/packages/ut
 # 版本设置
 sed -i 's/VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),OpenWrt)/VERSION_DIST:=$(if $(VERSION_DIST),$(VERSION_DIST),ZeroWrt)/' include/version.mk
 sed -i 's/VERSION_MANUFACTURER:=$(if $(VERSION_MANUFACTURER),$(VERSION_MANUFACTURER),OpenWrt)/VERSION_MANUFACTURER:=$(if $(VERSION_MANUFACTURER),$(VERSION_MANUFACTURER),ZeroWrt)/' include/version.mk
-sed -i "s/DISTRIB_DESCRIPTION='[^']*'/DISTRIB_DESCRIPTION='ZeroWrt-$(date +%Y%m%d)'/g" package/base-files/files/etc/openwrt_release
-sed -i "s/DISTRIB_REVISION='[^']*'/DISTRIB_REVISION=' By MinimaxFlora'/g" package/base-files/files/etc/openwrt_release
-sed -i "s|^OPENWRT_RELEASE=\".*\"|OPENWRT_RELEASE=\"ZeroWrt 标准版 @R$(date +%Y%m%d) BY MinimaxFlora\"|" package/base-files/files/usr/lib/os-release
+sed -i "s/DISTRIB_DESCRIPTION='LEDE '/DISTRIB_DESCRIPTION='ZeroWrt '/" package/lean/default-settings/files/zzz-default-settings
+sed -i 's/OPENWRT_RELEASE="LEDE R@BUILD_DATE@"/OPENWRT_RELEASE="ZeroWrt R@BUILD_DATE@"/' package/lean/default-settings/files/zzz-default-settings
 
 # 修改默认主题
 sed -i 's/luci-theme-design/luci-theme-brutal/g' include/target.mk

@@ -33,6 +33,9 @@ sed -i "s/DISTRIB_DESCRIPTION='[^']*'/DISTRIB_DESCRIPTION='ZeroWrt-$(date +%Y%m%
 sed -i "s/DISTRIB_REVISION='[^']*'/DISTRIB_REVISION=' By MinimaxFlora'/g" package/base-files/files/etc/openwrt_release
 sed -i "s|^OPENWRT_RELEASE=\".*\"|OPENWRT_RELEASE=\"ZeroWrt 标准版 @R$(date +%Y%m%d) BY MinimaxFlora\"|" package/base-files/files/usr/lib/os-release
 
+# 修改默认主题
+sed -i 's/luci-theme-design/luci-theme-brutal/g' include/target.mk
+
 # 移除要替换的包
 rm -rf feeds/packages/lang/golang
 rm -rf feeds/luci/themes/luci-theme-argon

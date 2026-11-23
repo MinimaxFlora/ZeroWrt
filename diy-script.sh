@@ -54,10 +54,10 @@ git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall2 packag
 git clone --depth 1 https://github.com/nikkinikki-org/OpenWrt-nikki package/OpenWrt-nikki && rm -rf package/OpenWrt-nikki/mihomo-alpha
 
 # Argon 主题
-# git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
+git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 
 # 更改 Argon 主题背景
-# cp -f $GITHUB_WORKSPACE/images/bg1.webp package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.webp
+cp -f $GITHUB_WORKSPACE/images/bg1.webp package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.webp
 
 # Brutal 主题
 git clone --depth 1 https://github.com/MinimaxFlora/luci-theme-brutal package/luci-theme-brutal

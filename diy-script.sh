@@ -51,7 +51,10 @@ git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall2 packag
 git clone --depth 1 https://github.com/nikkinikki-org/OpenWrt-nikki package/OpenWrt-nikki && rm -rf package/OpenWrt-nikki/mihomo-alpha
 
 # Argon 主题
-git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
+# git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
+
+# 更改 Argon 主题背景
+# cp -f $GITHUB_WORKSPACE/images/bg1.webp package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.webp
 
 # Brutal 主题
 git clone --depth 1 https://github.com/MinimaxFlora/luci-theme-brutal package/luci-theme-brutal
@@ -71,8 +74,8 @@ git clone --depth 1 https://github.com/sbwml/luci-app-airconnect package/luci-ap
 # Lucky
 git clone --depth 1 https://github.com/gdy666/luci-app-lucky package/luci-app-lucky
 
-# 更改 Argon 主题背景
-cp -f $GITHUB_WORKSPACE/images/bg1.webp package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.webp
+# OTA 在线更新
+git clone --depth 1 https://github.com/MinimaxFlora/luci-app-ota package/luci-app-ota
 
 ./scripts/feeds update -a
 ./scripts/feeds install -a

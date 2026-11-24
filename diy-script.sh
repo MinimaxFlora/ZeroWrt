@@ -75,7 +75,6 @@ git clone --depth 1 https://github.com/sbwml/luci-app-airconnect package/luci-ap
 
 # Lucky
 git clone --depth 1 https://github.com/gdy666/luci-app-lucky package/luci-app-lucky
-sed -i "s/option enabled '1'/option enabled '0'/g" package/luci-app-lucky/lucky/files/luckyuci
 
 # OTA 在线更新
 git clone --depth 1 https://github.com/MinimaxFlora/luci-app-ota package/luci-app-ota

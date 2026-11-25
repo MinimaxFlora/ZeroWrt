@@ -61,6 +61,9 @@ cp -f $GITHUB_WORKSPACE/images/bg1.webp package/luci-theme-argon/htdocs/luci-sta
 # Brutal 主题
 git clone --depth 1 https://github.com/MinimaxFlora/luci-theme-brutal package/luci-theme-brutal
 
+# bash-completion 自动补全
+git clone --depth 1 https://github.com/MinimaxFlora/bash-completion package/bash-completion
+
 # MosDNS
 git clone --depth 1 https://github.com/sbwml/luci-app-mosdns package/luci-app-mosdns
 

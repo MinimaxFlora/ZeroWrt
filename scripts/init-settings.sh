@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# 设置默认主题
+uci set luci.main.mediaurlbase='/luci-static/brutal'
+uci commit luci
+
+# 网络诊断
+if [ $(uci -q get luci.diag.ping) = "openwrt.org" ]; then
+    uci set luci.diag.dns='www.qq.com'
+    uci set luci.diag.ping='www.qq.com'
+    uci set luci.diag.route='www.qq.com'
+    uci commit luci
+fi
+
 # Nikki 配置
 uci set nikki.mixin.geoip_format='dat'
 uci set nikki.mixin.geodata_loader='standard'

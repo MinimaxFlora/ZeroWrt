@@ -14,6 +14,11 @@ if [ $(uci -q get luci.diag.ping) = "openwrt.org" ]; then
     uci commit luci
 fi
 
+# TCP 拥塞控制配置
+uci set firewall.@defaults[0].tcpcca='bbr'
+uci commit firewall
+/etc/init.d/firewall restart
+
 # Nikki 配置
 uci set nikki.mixin.geoip_format='dat'
 uci set nikki.mixin.geodata_loader='standard'

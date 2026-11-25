@@ -2,6 +2,7 @@
 
 # 设置默认主题
 uci set luci.main.mediaurlbase='/luci-static/brutal'
+uci set brutal.global.mode='light'
 uci commit luci
 
 # 网络诊断

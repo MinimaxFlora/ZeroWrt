@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# 稀疏克隆
+function git_sparse_clone() {
+  branch="$1" repourl="$2" && shift 2
+  git clone --depth=1 -b $branch --single-branch --filter=blob:none --sparse $repourl
+  repodir=$(echo $repourl | awk -F '/' '{print $(NF)}')
+  cd $repodir && git sparse-checkout set $@
+  mv -f $@ ../new/package
+  cd .. && rm -rf $repodir
+}
+
 # 修改主机名称
 sed -i 's/LEDE/ZeroWrt/g' package/base-files/files/bin/config_generate
 sed -i 's/LEDE/ZeroWrt/g' package/base-files/luci/bin/config_generate
@@ -63,6 +73,9 @@ git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall2 packag
 
 # OpenWrt-nikki
 git clone --depth 1 https://github.com/nikkinikki-org/OpenWrt-nikki package/OpenWrt-nikki && rm -rf package/OpenWrt-nikki/mihomo-alpha
+
+# OpenClash
+git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
 
 # Argon 主题
 git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon

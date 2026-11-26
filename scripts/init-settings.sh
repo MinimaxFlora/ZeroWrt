@@ -26,6 +26,10 @@ uci set nikki.mixin.geosite_url='https://testingcf.jsdelivr.net/gh/Loyalsoldier/
 uci set nikki.mixin.geoip_dat_url='https://testingcf.jsdelivr.net/gh/Loyalsoldier/v2ray-rules-dat@release/geoip.dat'
 uci set nikki.mixin.geox_auto_update='1'
 uci set nikki.mixin.geox_update_interval='24'
+uci set nikki.mixin.api_secret='1234567890'
+uci set nikki.@authentication[0].username='zerowrt'
+uci set nikki.@authentication[0].password='1234567890'
+uci set nikki.mixin.tun_device='zerowrt'
 uci commit nikki
 
 exit 0

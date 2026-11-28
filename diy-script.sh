@@ -105,7 +105,7 @@ git_sparse_clone main https://github.com/sbwml/openwrt_pkgs luci-app-socat
 #   * build_date 与新索引里的时间戳比较，才判断得出「有新版本」
 # 同时写入默认索引地址（/etc/uci-defaults/90-luci-app-ota），用户改过的配置优先。
 # 各设备的工作流通过环境变量覆盖 OTA_DEVICE / OTA_TARGET / OTA_MODEL。
-OTA_META_TOOL="package/luci-app-ota/tools/embed_ota_meta.py"
+OTA_META_TOOL="package/new/luci-app-ota/tools/embed_ota_meta.py"
 if [ ! -f "$OTA_META_TOOL" ]; then
 	echo "::error::luci-app-ota 没有克隆成功（缺少 $OTA_META_TOOL），OTA 无法工作"
 	exit 1

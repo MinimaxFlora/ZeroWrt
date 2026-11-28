@@ -96,7 +96,7 @@ git clone --depth 1 https://github.com/sbwml/luci-app-airconnect package/new/luc
 git clone --depth 1 https://github.com/gdy666/luci-app-lucky package/new/luci-app-lucky
 git clone --depth 1 https://github.com/MinimaxFlora/luci-app-ota package/new/luci-app-ota
 git clone --depth 1 https://github.com/muink/luci-app-netspeedtest package/new/luci-app-netspeedtest
-git_sparse_clone openwrt-25.12 https://github.com/openwrt/packages net/librespeed-go
+git clone --depth 1 https://github.com/MinimaxFlora/librespeed-go package/new/librespeed-go
 git_sparse_clone main https://github.com/sbwml/openwrt_pkgs luci-app-socat
 
 # ── OTA 构建元数据 ────────────────────────────────────────────────────────────

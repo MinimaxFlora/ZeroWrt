@@ -6,7 +6,7 @@ function git_sparse_clone() {
   git clone --depth=1 -b $branch --single-branch --filter=blob:none --sparse $repourl
   repodir=$(echo $repourl | awk -F '/' '{print $(NF)}')
   cd $repodir && git sparse-checkout set $@
-  mv -f $@ ../package
+  mv -f $@ ../package/new
   cd .. && rm -rf $repodir
 }
 
@@ -66,46 +66,38 @@ rm -rf feeds/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2sock
 # Go 1.27
 git clone --depth=1 -b 27.x https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
 
-# PassWall
-git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
-git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
-git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall2 package/passwall-luci2
-
-# OpenWrt-nikki
-git clone --depth 1 https://github.com/nikkinikki-org/OpenWrt-nikki package/OpenWrt-nikki && rm -rf package/OpenWrt-nikki/mihomo-alpha
-
-# OpenClash
+# 科学插件
+git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/new/passwall-packages
+git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall package/new/passwall-luci
+git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall2 package/new/passwall-luci2
+git clone --depth 1 https://github.com/nikkinikki-org/OpenWrt-nikki package/new/OpenWrt-nikki && rm -rf package/new/OpenWrt-nikki/mihomo-alpha
 git_sparse_clone master https://github.com/vernesong/OpenClash luci-app-openclash
 
-# Argon 主题
-git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
-
-# 更改 Argon 主题背景
+# 主题插件
+git clone --depth 1 https://github.com/jerrykuku/luci-theme-argon package/new/luci-theme-argon
 cp -f $GITHUB_WORKSPACE/images/bg1.webp package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.webp
+git clone --depth 1 https://github.com/MinimaxFlora/luci-theme-brutal package/new/luci-theme-brutal
+git clone --depth 1 https://github.com/anothaDev/luci-theme-vantage package/new/luci-theme-vantage
+git clone --depth 1 https://github.com/itsmaiGe/luci-theme-7dollar package/new/luci-theme-7dollar
+git clone --depth 1 https://github.com/eamonxg/luci-theme-aurora package/new/luci-theme-aurora
+git clone --depth 1 https://github.com/eamonxg/luci-app-aurora-config package/new/luci-app-aurora-config
+git clone --depth 1 https://github.com/eamonxg/luci-theme-shadcn package/new/luci-theme-shadcn
+git clone --depth 1 https://github.com/NXN-MAX/OpenWRT-Athena package/new/OpenWRT-Athena
+git clone --depth 1 https://github.com/zzsj0928/luci-theme-liquid package/new/luci-theme-liquid
+git clone --depth 1 https://github.com/mrjoechen/luci-theme-carbon package/new/luci-theme-carbon
 
-# Brutal 主题
-git clone --depth 1 https://github.com/MinimaxFlora/luci-theme-brutal package/luci-theme-brutal
-
-# bash-completion 自动补全
-git clone --depth 1 https://github.com/MinimaxFlora/bash-completion package/bash-completion
-
-# MosDNS
-git clone --depth 1 https://github.com/sbwml/luci-app-mosdns package/luci-app-mosdns
-
-# OpenList
-git clone --depth 1 https://github.com/sbwml/luci-app-openlist2 package/luci-app-openlist2
-
-# Diskman
-git clone --depth 1 https://github.com/sbwml/luci-app-diskman package/luci-app-diskman
-
-# Airconnect
-git clone --depth 1 https://github.com/sbwml/luci-app-airconnect package/luci-app-airconnect
-
-# Lucky
-git clone --depth 1 https://github.com/gdy666/luci-app-lucky package/luci-app-lucky
-
-# OTA 在线更新
-git clone --depth 1 https://github.com/MinimaxFlora/luci-app-ota package/luci-app-ota
+# 通用插件
+git clone --depth 1 https://github.com/OneNAS-space/luci-app-adguardhome package/new/luci-app-adguardhome
+git clone --depth 1 https://github.com/MinimaxFlora/bash-completion package/new/bash-completion
+git clone --depth 1 https://github.com/sbwml/luci-app-mosdns package/new/luci-app-mosdns
+git clone --depth 1 https://github.com/sbwml/luci-app-openlist2 package/new/luci-app-openlist2
+git clone --depth 1 https://github.com/sbwml/luci-app-diskman package/new/luci-app-diskman
+git clone --depth 1 https://github.com/sbwml/luci-app-airconnect package/new/luci-app-airconnect
+git clone --depth 1 https://github.com/gdy666/luci-app-lucky package/new/luci-app-lucky
+git clone --depth 1 https://github.com/MinimaxFlora/luci-app-ota package/new/luci-app-ota
+git clone --depth 1 https://github.com/muink/luci-app-netspeedtest package/new/luci-app-netspeedtest
+git_sparse_clone openwrt-25.12 https://github.com/openwrt/packages net/librespeed-go
+git_sparse_clone main https://github.com/sbwml/openwrt_pkgs luci-app-socat
 
 # ── OTA 构建元数据 ────────────────────────────────────────────────────────────
 # luci-app-ota 靠 /etc/ota/build.json 知道自己是哪台设备、什么时候编译的：

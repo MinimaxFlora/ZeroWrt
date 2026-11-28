@@ -60,8 +60,8 @@ sed -i 's/luci-theme-design/luci-theme-brutal/g' include/target.mk
 # 移除要替换的包
 rm -rf feeds/packages/lang/golang
 rm -rf feeds/luci/themes/luci-theme-argon
-rm -rf feeds/luci/applications/{luci-app-argon-config,luci-app-diskman,luci-app-mosdns,luci-app-nikki,luci-app-passwall,luci-app-passwall2,luci-app-lucky}
-rm -rf feeds/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,v2ray-plugin,xray-plugin,geoview,shadow-tls,mihomo,nikki,smartdns,mosdns,lucky}
+rm -rf feeds/luci/applications/{luci-app-adguardhome,luci-app-argon-config,luci-app-diskman,luci-app-mosdns,luci-app-nikki,luci-app-passwall,luci-app-passwall2,luci-app-lucky}
+rm -rf feeds/packages/net/{adguardhome,xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,v2ray-plugin,xray-plugin,geoview,shadow-tls,mihomo,nikki,smartdns,mosdns,lucky}
 
 # Go 1.27
 git clone --depth=1 -b 27.x https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang

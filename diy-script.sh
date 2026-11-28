@@ -87,7 +87,7 @@ git clone --depth 1 https://github.com/zzsj0928/luci-theme-liquid package/new/lu
 git clone --depth 1 https://github.com/mrjoechen/luci-theme-carbon package/new/luci-theme-carbon
 
 # 通用插件
-git clone --depth 1 https://github.com/OneNAS-space/luci-app-adguardhome package/new/luci-app-adguardhome
+git clone --depth 1 https://github.com/MinimaxFlora/luci-app-adguardhome package/new/luci-app-adguardhome
 git clone --depth 1 https://github.com/MinimaxFlora/bash-completion package/new/bash-completion
 git clone --depth 1 https://github.com/sbwml/luci-app-mosdns package/new/luci-app-mosdns
 git clone --depth 1 https://github.com/sbwml/luci-app-openlist2 package/new/luci-app-openlist2
